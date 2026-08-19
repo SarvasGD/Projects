@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Jumble Validator – Финальный (с форматированием)</title>
+<style>
+:root{--bg:#fff;--text:#000;--accent:#1e3a8a;--border:#000;--ok:#166534;--err:#991b1b;--warn:#92400e;--light:#f3f4f6;--gray:#6b7280}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:2rem;max-width:1400px;margin:0 auto}
+h1{font-size:1.75rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;margin-bottom:1.5rem}
+.drop-zone{border:2px dashed var(--border);border-radius:4px;padding:3rem;text-align:center;cursor:pointer;margin-bottom:1.5rem}
+.drop-zone.dragover{background:var(--light)}
+.btn{background:var(--accent);color:#fff;border:none;padding:.6rem 1.2rem;font-weight:600;cursor:pointer;border-radius:3px;margin-right:.5rem}
+.btn:hover{opacity:.9}
+.summary{display:flex;gap:1.5rem;margin:1rem 0;font-weight:600;flex-wrap:wrap}
+.stat{padding:.75rem 1.5rem;border:1px solid var(--border);border-radius:4px;background:var(--light)}
+.stat.pass{border-left:4px solid var(--ok)}.stat.fail{border-left:4px solid var(--err)}
+.level-card{border:1px solid var(--border);margin-bottom:1rem;border-radius:4px;overflow:hidden}
+.level-card.pass{border-left:4px solid var(--ok)}.level-card.fail{border-left:4px solid var(--err)}
+.level-header{padding:.5rem 1rem;background:var(--light);font-weight:600;display:flex;justify-content:space-between}
+.badge{font-size:.8rem;padding:.2rem .6rem;border-radius:3px}.badge.pass{background:#dcfce7;color:var(--ok)}.badge.fail{background:#fce4ec;color:var(--err)}
+.level-body{padding:1rem}
+.error-list{list-style:none;padding:0}
+.error-list li{background:#fff5f5;border:1px solid #fecaca;padding:.5rem;margin-bottom:.25rem;font-family:monospace;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;margin:.5rem 0;font-size:.85rem}
+th,td{border:1px solid var(--border);padding:.3rem .5rem;text-align:left;vertical-align:top}
+th{background:var(--light)}
+.old-obv{text-decoration:line-through;color:var(--err);margin-right:.5rem}
+.fix-suggest{color:var(--accent);font-weight:bold}
+.old-prefilled{text-decoration:line-through;color:var(--err)}
+.new-prefilled{color:var(--accent);font-weight:bold}
+.info-row{font-size:.85rem;color:var(--gray);margin-top:.5rem;font-family:monospace}
+.warn-banner{background:#fffbeb;border:1px solid #fcd34d;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;font-size:.9rem;color:var(--warn)}
+</style>
+</head>
+<body>
+<h1>🧩 Jumble Validator – Финальный (форматирование как в примере)</h1>
+<div id="dropZone" class="drop-zone">
+  <div>📁 Перетащите JSON-файл сюда или кликните для выбора</div>
+  <input type="file" id="fileInput" accept=".json" hidden>
+</div>
+<div id="results"></div>
+<script>
+(function() {
+  const dz = document.getElementById('dropZone');
+  const fi = document.getElementById('fileInput');
+  const res = document.getElementById('results');
+  let lastResults = null;
+  let lastFixedData = null;
+  let lastFilename = 'levels';
+
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files.length)loadFile(e.dataTransfer.files[0])});
+  fi.addEventListener('change',e=>{if(e.target.files.length)loadFile(e.target.files[0])});
+
+  function loadFile(file){
+    if(!file.name.endsWith('.json')){alert('Нужен .json файл');return}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      let raw=e.target.result,warns=[],data;
+      try{data=JSON.parse(raw)}
+      catch(err1){
+        raw=raw.replace(/(?<!\\)"(?=(?:[^"]*"[^"]*")*[^"]*$)/g,"'");
+        try{data=JSON.parse(raw);warns.push('⚠️ Автоисправлены кавычки.')}
+        catch(err2){res.innerHTML='<p style="color:var(--err)">Ошибка парсинга JSON.</p>';return}
+      }
+      lastFilename=file.name.replace(/\.json$/i,'');
+      process(data,file.name,warns);
+    };
+    reader.readAsText(file);
+  }
+
+  // ----- CORE LOGIC -----
+  const MIN_OBV=2,MAX_OBV=3;
+  const safeExtract=(word,obv)=>{
+    if(!obv||!obv.length)return'';
+    let r=[];
+    for(let idx of obv){
+      if(idx<1||idx>word.length)return null;
+      r.push(word[idx-1]);
+    }
+    return r.join('');
+  };
+  const countStars=s=>(s.match(/\*/g)||[]).length;
+  const letterFreq=s=>{let f={};for(let c of s){if(/[A-Za-z]/.test(c)){c=c.toUpperCase();f[c]=(f[c]||0)+1}}return f};
+  const subtractFreq=(a,b)=>{let r={};for(let k in a)r[k]=a[k];for(let k in b){r[k]=(r[k]||0)-b[k];if(r[k]<0)return null;if(r[k]===0)delete r[k]}return r};
+  const freqToString=f=>Object.keys(f).sort().map(k=>k.repeat(f[k])).join('');
+  const diffFreqs=(ef,nf)=>{let x={},m={};for(let k in ef){let d=ef[k]-(nf[k]||0);if(d>0)x[k]=d}for(let k in nf){let d=nf[k]-(ef[k]||0);if(d>0)m[k]=d}return{extra:x,missing:m}};
+  const findLetterPositions=(word,letter,excl)=>{
+    let pos=[],up=word.toUpperCase(),ul=letter.toUpperCase();
+    for(let i=0;i<up.length;i++){if(up[i]===ul&&!excl.includes(i+1))pos.push(i+1)}
+    return pos;
+  };
+
+  function fixPrefilledByFinal(pf,fn){
+    let r='',pi=0,fi=0;
+    while(pi<pf.length||fi<fn.length){
+      while(fi<fn.length&&!/[A-Za-z]/.test(fn[fi])){
+        if(pi<pf.length&&pf[pi]===fn[fi]){r+=pf[pi];pi++}
+        fi++;
+      }
+      if(pi>=pf.length&&fi>=fn.length)break;
+      if(pi<pf.length&&pf[pi]!=='*'){r+=pf[pi];pi++;continue}
+      let sl=0;while(pi<pf.length&&pf[pi]==='*'){sl++;pi++}
+      let ll=0;while(fi<fn.length&&/[A-Za-z]/.test(fn[fi])){ll++;fi++}
+      r+='*'.repeat(ll);
+    }
+    return r;
+  }
+
+  function autoFixObv(words,neededFreq){
+    let rem={...neededFreq},asgn=words.map(()=>[]);
+    for(let l in rem){
+      while(rem[l]>0){
+        let bw=-1,bp=-1;
+        for(let wi=0;wi<words.length;wi++){
+          if(asgn[wi].length>=MAX_OBV)continue;
+          let pos=findLetterPositions(words[wi].word,l,asgn[wi]);
+          if(pos.length>0){bw=wi;bp=pos[0];break}
+        }
+        if(bw>=0){asgn[bw].push(bp);rem[l]--}else break;
+      }
+    }
+    for(let wi=0;wi<words.length;wi++){
+      let w=words[wi].word;
+      while(asgn[wi].length<MIN_OBV&&asgn[wi].length<w.length){
+        for(let i=0;i<w.length;i++){if(!asgn[wi].includes(i+1)){asgn[wi].push(i+1);break}}
+      }
+      asgn[wi].sort((a,b)=>a-b);
+    }
+    return asgn;
+  }
+
+  function processLevel(ld){
+    let err=[],lv=ld.level??'?',pf=ld.prefilled||'',fn=ld.final||'';
+    let words=(ld.words||[]).map(w=>({...w,obv:[...(w.obv||[])],word:w.word||''}));
+    let fixed=JSON.parse(JSON.stringify(ld));
+    fixed.words=words.map(w=>({...w,obv:[...w.obv]}));
+
+    let sc=countStars(pf),to=words.reduce((s,w)=>s+w.obv.length,0);
+    let fpf=pf,sfixed=false;
+    if(sc!==to){
+      if(sc>to){
+        fpf=fixPrefilledByFinal(pf,fn);
+        let nsc=countStars(fpf);
+        if(nsc===to){sfixed=true;err.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. prefilled исправлен.`);sc=nsc;fixed.prefilled=fpf}
+        else err.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. prefilled не удалось исправить.`);
+      }else err.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. Лишние индексы в obv.`);
+    }
+
+    let wrds=words.map((w,i)=>{let p=safeExtract(w.word,w.obv);return{word:w.word,origObv:[...w.obv],extracted:p||'',hasErr:p===null,sugObv:[...w.obv],lettOk:true}});
+    let extr=wrds.map(w=>w.extracted).join('');
+    let preL=fpf.replace(/\*/g,''),nf=subtractFreq(letterFreq(fn),letterFreq(preL));
+    let anagramOk=true;
+    if(!nf){err.push('❌ Шаг 2a: В prefilled есть буквы, которых нет в final.');anagramOk=false}
+    else{
+      let nl=freqToString(nf),el=freqToString(letterFreq(extr));
+      if(nl!==el){
+        anagramOk=false;
+        let d=diffFreqs(letterFreq(extr),nf);
+        err.push('❌ Шаг 2b (Анаграмма): не совпадает.');
+        err.push(`   Ожидалось: "${nl}" / Получено: "${el}"`);
+        if(freqToString(d.extra))err.push(`   Лишние: ${freqToString(d.extra)}`);
+        if(freqToString(d.missing))err.push(`   Не хватает: ${freqToString(d.missing)}`);
+        let asgn=autoFixObv(words,nf);
+        let se='';
+        for(let i=0;i<words.length;i++){let p=safeExtract(words[i].word,asgn[i]);se+=(p||'');wrds[i].sugObv=[...asgn[i]]}
+        if(freqToString(letterFreq(se))===nl){
+          err.push('💡 Предложены исправленные obv (лимит 2–3 буквы на слово).');
+          for(let i=0;i<words.length;i++){fixed.words[i].obv=[...asgn[i]];fixed.words[i].letters=safeExtract(words[i].word,asgn[i])||''}
+        }else{
+          err.push('⚠️ Автоподбор не смог найти точное решение. Нужна ручная проверка.');
+          for(let i=0;i<words.length;i++)wrds[i].sugObv=[...wrds[i].origObv];
+        }
+      }else{
+        for(let i=0;i<words.length;i++){
+          let w=words[i];
+          if(w.letters!==undefined&&w.letters!==wrds[i].extracted){wrds[i].lettOk=false;err.push(`ℹ️ Слово ${i+1} ('${w.word}'): letters "${w.letters}" ≠ извлечено "${wrds[i].extracted}". Обновлено.`);fixed.words[i].letters=wrds[i].extracted}
+          else if(w.letters===undefined)fixed.words[i].letters=wrds[i].extracted;
+        }
+      }
+    }
+    for(let i=0;i<words.length;i++){
+      if(wrds[i].hasErr){
+        err.push(`❌ Слово ${i+1} ('${words[i].word}'): индекс вне границ.`);
+        let vo=words[i].obv.filter(x=>x>=1&&x<=words[i].word.length);
+        if(vo.length>0){fixed.words[i].obv=vo;fixed.words[i].letters=safeExtract(words[i].word,vo)||'';wrds[i].sugObv=[...vo]}
+      }
+    }
+    for(let i=0;i<fixed.words.length;i++)fixed.words[i].letters=safeExtract(fixed.words[i].word,fixed.words[i].obv)||'';
+    let passed=err.length===0||err.every(e=>e.startsWith('ℹ️')||e.startsWith('💡')||e.startsWith('⚠️ Шаг 1'));
+    return{level:lv,passed,errors:err,prefilled:pf,fixedPrefilled:fpf,final:fn,extracted:extr,starCount:sc,totalObv:to,starFixed:sfixed,anagramOk,wordReport:wrds,fixed};
+  }
+
+  // ----- CUSTOM JSON FORMATTER (стиль как в примере) -----
+  function formatJSON(obj, indent=0){
+    const TAB='\t';
+    const I=level=>TAB.repeat(level);
+    if(obj===null)return'null';
+    if(typeof obj==='boolean')return obj.toString();
+    if(typeof obj==='number')return obj.toString();
+    if(typeof obj==='string')return JSON.stringify(obj);
+    if(Array.isArray(obj)){
+      if(obj.length===0)return'[]';
+      // Если все элементы примитивные и массив короткий — в одну строку
+      let allPrimitive=obj.every(x=>typeof x!=='object'||x===null);
+      if(allPrimitive){
+        let oneLine='['+obj.map(x=>typeof x==='string'?JSON.stringify(x):String(x)).join(', ')+']';
+        if(oneLine.length<80)return oneLine;
+      }
+      // Многострочный массив
+      let result='[\n';
+      for(let i=0;i<obj.length;i++){
+        result+=I(indent+1)+formatJSON(obj[i],indent+1);
+        if(i<obj.length-1)result+=',';
+        result+='\n';
+      }
+      result+=I(indent)+']';
+      return result;
+    }
+    if(typeof obj==='object'){
+      let keys=Object.keys(obj);
+      if(keys.length===0)return'{}';
+      let result='{\n';
+      for(let i=0;i<keys.length;i++){
+        let k=keys[i];
+        let val=obj[k];
+        result+=I(indent+1)+JSON.stringify(k)+': ';
+        // Специальная обработка для "words": открывающая скобка на следующей строке
+        if(k==='words'&&Array.isArray(val)){
+          result+='\n'+I(indent+1)+formatJSON(val,indent+1);
+        }else{
+          result+=formatJSON(val,indent+1);
+        }
+        if(i<keys.length-1)result+=',';
+        result+='\n';
+      }
+      result+=I(indent)+'}';
+      return result;
+    }
+    return JSON.stringify(obj);
+  }
+
+  // ----- ОТЧЁТ -----
+  function generateReport(results,filename){
+    let r=`Отчёт о проверке: ${filename}\n${'='.repeat(60)}\n`;
+    let total=results.length,passed=results.filter(r=>r.passed).length,failed=total-passed;
+    r+=`Всего уровней: ${total}\nПройдено: ${passed}\nС ошибками: ${failed}\n\n`;
+    for(let res of results){
+      if(res.passed&&res.errors.length===0)continue;
+      r+=`─── Уровень ${res.level} ${res.passed?'(OK)':'(ОШИБКИ)'} ───\n`;
+      r+=`prefilled: "${res.prefilled}"`;
+      if(res.starFixed)r+=` → "${res.fixedPrefilled}"`;
+      r+=`\nfinal: "${res.final}"\nИзвлечено: "${res.extracted}"\n`;
+      for(let e of res.errors)r+=`  ${e}\n`;
+      if(res.wordReport.some(wr=>JSON.stringify(wr.origObv)!==JSON.stringify(wr.sugObv))){
+        r+='\n  Изменения obv:\n';
+        for(let i=0;i<res.wordReport.length;i++){
+          let wr=res.wordReport[i];
+          if(JSON.stringify(wr.origObv)!==JSON.stringify(wr.sugObv))r+=`    Слово ${i+1} (${wr.word}): [${wr.origObv.join(', ')}] → [${wr.sugObv.join(', ')}]\n`;
+        }
+      }
+      r+='\n';
+    }
+    return r;
+  }
+
+  function downloadJSON(data,filename){
+    let jsonStr='[\n';
+    for(let i=0;i<data.length;i++){
+      jsonStr+=formatJSON(data[i],1);
+      if(i<data.length-1)jsonStr+=',';
+      jsonStr+='\n';
+    }
+    jsonStr+=']\n';
+    let blob=new Blob([jsonStr],{type:'application/json'});
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement('a');a.href=url;a.download=filename;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }
+
+  function downloadText(text,filename){
+    let blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement('a');a.href=url;a.download=filename;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }
+
+  function process(data,filename,warns){
+    let levels=Array.isArray(data)?data:(data?.levels||[data]);
+    if(!levels.length){res.innerHTML='<p>Файл не содержит уровней.</p>';return}
+    let results=levels.map(processLevel);
+    lastResults=results;
+    lastFixedData=results.map(r=>r.fixed);
+    let total=results.length,passed=results.filter(r=>r.passed).length,failed=total-passed;
+    let html='';
+    if(warns.length)warns.forEach(w=>html+=`<div class="warn-banner">${w}</div>`);
+    html+=`<div class="summary"><div class="stat">📄 ${filename}</div><div class="stat">Уровней: ${total}</div><div class="stat pass">✅ Пройдено: ${passed}</div><div class="stat fail">❌ Ошибок: ${failed}</div></div>`;
+    html+=`<div style="margin-bottom:1rem"><button class="btn" onclick="downloadReport()">📄 Скачать отчёт (TXT)</button><button class="btn" onclick="downloadFixedJSON()">📥 Скачать исправленный JSON</button></div>`;
+    for(let r of results){
+      let cls=r.passed?'pass':'fail';
+      html+=`<div class="level-card ${cls}"><div class="level-header"><span>Уровень ${r.level}</span><span class="badge ${cls}">${r.passed?'OK':'ОШИБКИ'}</span></div>`;
+      if(!r.passed||r.errors.length>0){
+        html+=`<div class="level-body">`;
+        let pfd=r.starFixed?`<span class="old-prefilled">"${r.prefilled}"</span> → <span class="new-prefilled">"${r.fixedPrefilled}"</span>`:`"${r.prefilled}"`;
+        html+=`<div class="info-row">prefilled: ${pfd} | extracted: "${r.extracted}" | final: "${r.final}"</div>`;
+        if(r.errors.length>0){html+=`<ul class="error-list">`;r.errors.forEach(e=>html+=`<li>${e.replace(/\n/g,'<br>')}</li>`);html+=`</ul>`}
+        html+=`<table><tr><th>#</th><th>Слово</th><th>Текущий obv</th><th>Извлечено</th><th>→ Предлагаемый obv</th><th>Новое letters</th></tr>`;
+        r.wordReport.forEach((wr,i)=>{
+          let same=JSON.stringify(wr.origObv)===JSON.stringify(wr.sugObv);
+          let obvd=same?`[${wr.origObv.join(', ')}]`:`<span class="old-obv">[${wr.origObv.join(', ')}]</span> <span class="fix-suggest">[${wr.sugObv.join(', ')}]</span>`;
+          let nl=safeExtract(wr.word,wr.sugObv)||'';
+          html+=`<tr><td>${i+1}</td><td>${wr.word}</td><td>${obvd}</td><td>${wr.extracted}</td><td>${obvd}</td><td>${nl}</td></tr>`;
+        });
+        html+=`</table></div>`;
+      }
+      html+=`</div>`;
+    }
+    res.innerHTML=html;
+    window.downloadReport=()=>{if(!lastResults){alert('Нет данных');return}downloadText(generateReport(lastResults,filename),`${lastFilename}_report.txt`)};
+    window.downloadFixedJSON=()=>{if(!lastFixedData){alert('Нет данных');return}downloadJSON(lastFixedData,`${lastFilename}_fixed.json`)};
+  }
+})();
+</script>
+</body>
+</html>

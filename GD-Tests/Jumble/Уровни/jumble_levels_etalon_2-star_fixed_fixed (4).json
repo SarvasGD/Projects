@@ -1,0 +1,4491 @@
+[
+  {
+    "level": 1,
+    "final": "\"WADE\" A MINUTE",
+    "prefilled": "\"****\" A ******",
+    "words": [
+      {
+        "scrambled": "YARRT",
+        "word": "TARRY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "TA"
+      },
+      {
+        "scrambled": "YUTIN",
+        "word": "UNITY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "UN"
+      },
+      {
+        "scrambled": "SMOTED",
+        "word": "MODEST",
+        "obv": [
+          1,
+          3,
+          4
+        ],
+        "letters": "MDE"
+      },
+      {
+        "scrambled": "WAHLIE",
+        "word": "AWHILE",
+        "obv": [
+          2,
+          4,
+          6
+        ],
+        "letters": "WIE"
+      }
+    ],
+    "clue": "WHAT HE SAID ON THEIR QUICK VISIT TO THE SEASHORE",
+    "desc": "Three men on a beach. One man holds his shoes and stands in the water saying 'Hold on, I want to feel the water', while the other two men say 'C'mon, George, we're late!'."
+  },
+  {
+    "level": 2,
+    "final": "A WORDY BIRDIE",
+    "prefilled": "A ***** ******",
+    "words": [
+      {
+        "scrambled": "RARIF",
+        "word": "FRIAR",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "RR"
+      },
+      {
+        "scrambled": "ADDIE",
+        "word": "AIDED",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "DED"
+      },
+      {
+        "scrambled": "YAWMID",
+        "word": "MIDWAY",
+        "obv": [
+          2,
+          4,
+          6
+        ],
+        "letters": "IWY"
+      },
+      {
+        "scrambled": "BOLIFE",
+        "word": "FOIBLE",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "OIB"
+      }
+    ],
+    "clue": "HOW HE DESCRIBED HIS PARROT",
+    "desc": "A man and a woman stand in a room looking at a parrot in a cage. The parrot says 'Hello you beautiful doll AAWK!', and the man says 'He has quite a vocabulary'."
+  },
+  {
+    "level": 3,
+    "final": "\"STOOD\" FOR",
+    "prefilled": "\"*****\" ***",
+    "words": [
+      {
+        "scrambled": "OINES",
+        "word": "NOISE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "OS"
+      },
+      {
+        "scrambled": "DUNOB",
+        "word": "BOUND",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "OD"
+      },
+      {
+        "scrambled": "DROAFE",
+        "word": "FEDORA",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "FR"
+      },
+      {
+        "scrambled": "DIRTOR",
+        "word": "TORRID",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "TO"
+      }
+    ],
+    "clue": "THE CROWD GOT UP FOR THE PLEDGE OF ALLEGIANCE BECAUSE THAT'S WHAT THEY ---",
+    "desc": "A group of people stand with their hands over their hearts, pledging allegiance to the flag. One of them says '...to the flag of the ...'."
+  },
+  {
+    "level": 4,
+    "final": "HEIR FORCE",
+    "prefilled": "**** *****",
+    "words": [
+      {
+        "scrambled": "YERAW",
+        "word": "WEARY",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "ER"
+      },
+      {
+        "scrambled": "POCHE",
+        "word": "EPOCH",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "CH"
+      },
+      {
+        "scrambled": "FITTOU",
+        "word": "OUTFIT",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "OFI"
+      },
+      {
+        "scrambled": "FARREY",
+        "word": "RAREFY",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "RE"
+      }
+    ],
+    "clue": "WHEN THE CHARTER PILOT'S SON TOOK OVER THE BUSINESS, IT BECAME AN ---",
+    "desc": "Two men stand on an airfield looking at a small airplane. One says 'The new planes will help us expand'."
+  },
+  {
+    "level": 5,
+    "final": "\"PANE\" RELIEF",
+    "prefilled": "\"****\" ******",
+    "words": [
+      {
+        "scrambled": "WALBY",
+        "word": "BYLAW",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "LA"
+      },
+      {
+        "scrambled": "FITAH",
+        "word": "FAITH",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "FI"
+      },
+      {
+        "scrambled": "RUNEPY",
+        "word": "PENURY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "PEN"
+      },
+      {
+        "scrambled": "NERGEE",
+        "word": "RENEGE",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "REE"
+      }
+    ],
+    "clue": "WHEN HIS SON HELPED WITH THE BROKEN WINDOW, THE DOCTOR GOT ---",
+    "desc": "A father and his son stand near a broken window with tools on the floor. The son says 'Let me give you a hand', and the father replies 'Why, thanks!'."
+  },
+  {
+    "level": 6,
+    "final": "WORTH A \"DARN\"",
+    "prefilled": "***** A \"****\"",
+    "words": [
+      {
+        "scrambled": "HARAJ",
+        "word": "RAJAH",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "RAH"
+      },
+      {
+        "scrambled": "DOLMY",
+        "word": "MOLDY",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "OD"
+      },
+      {
+        "scrambled": "YAIWAR",
+        "word": "AIRWAY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "RW"
+      },
+      {
+        "scrambled": "UNRATT",
+        "word": "TRUANT",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "TN"
+      }
+    ],
+    "clue": "MOM TRASHED JUNIOR'S SOCK BECAUSE IT WASN'T ---",
+    "desc": "A mother stands by a washing machine holding up a small sock, while her son stands barefoot. She says to him 'You need a bigger size'."
+  },
+  {
+    "level": 7,
+    "final": "HIS \"MANE\" JOB",
+    "prefilled": "*** \"****\" ***",
+    "words": [
+      {
+        "scrambled": "HORAB",
+        "word": "ABHOR",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "BH"
+      },
+      {
+        "scrambled": "MUBIE",
+        "word": "IMBUE",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "IM"
+      },
+      {
+        "scrambled": "LAROSI",
+        "word": "SAILOR",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "SAL"
+      },
+      {
+        "scrambled": "TENJIC",
+        "word": "INJECT",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "NJE"
+      }
+    ],
+    "clue": "THE GROOMER BRUSHED THE SHOW HORSE'S HAIR BECAUSE IT WAS ---",
+    "desc": "A groomer is brushing a horse in a stable and says to the horse, 'You need to look your best today'."
+  },
+  {
+    "level": 8,
+    "final": "\"DIS-TRESSED\"",
+    "prefilled": "\"***-*******\"",
+    "words": [
+      {
+        "scrambled": "YAASS",
+        "word": "ASSAY",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "SS"
+      },
+      {
+        "scrambled": "GUSET",
+        "word": "GUEST",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "EST"
+      },
+      {
+        "scrambled": "LADDEY",
+        "word": "DEADLY",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "DED"
+      },
+      {
+        "scrambled": "RACCIT",
+        "word": "ARCTIC",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "RI"
+      }
+    ],
+    "clue": "WHEN THE RAIN RUINED HER HAIRDO, SHE WAS ---",
+    "desc": "A man and woman run through the rain. The woman's hair is completely ruined and she exclaims, 'Oh! I just had it done'."
+  },
+  {
+    "level": 9,
+    "final": "A \"BUMPER\" CROP",
+    "prefilled": "A \"******\" ****",
+    "words": [
+      {
+        "scrambled": "ZIERP",
+        "word": "PRIZE",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "PRE"
+      },
+      {
+        "scrambled": "PORDO",
+        "word": "DROOP",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "ROP"
+      },
+      {
+        "scrambled": "BREEMM",
+        "word": "MEMBER",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "MB"
+      },
+      {
+        "scrambled": "SCUMEL",
+        "word": "MUSCLE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "UC"
+      }
+    ],
+    "clue": "WHAT THE FARMER ACQUIRED WHEN HE BOUGHT THE JUNKYARD.",
+    "desc": "Two men stand in a junkyard filled with old cars and scrap. One says to the other, 'I'll sell all of this and plant corn'."
+  },
+  {
+    "level": 10,
+    "final": "OLD HAT",
+    "prefilled": "*** ***",
+    "words": [
+      {
+        "scrambled": "BYBEA",
+        "word": "ABBEY",
+        "obv": [
+          1
+        ],
+        "letters": "A"
+      },
+      {
+        "scrambled": "ULIPP",
+        "word": "PUPIL",
+        "obv": [
+          5
+        ],
+        "letters": "L"
+      },
+      {
+        "scrambled": "DRAHLY",
+        "word": "HARDLY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "HR"
+      },
+      {
+        "scrambled": "HARTOU",
+        "word": "AUTHOR",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "TH"
+      }
+    ],
+    "clue": "THE MILLINERY SHOP LOST SALES BECAUSE THE MERCHANDISE WAS ...",
+    "desc": "Two women look through a shop window at strange, unappealing hats. One says to the other, 'Not very stylish'."
+  },
+  {
+    "level": 11,
+    "final": "A \"BUNDLE\"",
+    "prefilled": "A \"******\"",
+    "words": [
+      {
+        "scrambled": "YILCI",
+        "word": "ICILY",
+        "obv": [
+          4
+        ],
+        "letters": "L"
+      },
+      {
+        "scrambled": "RABDN",
+        "word": "BRAND",
+        "obv": [
+          5
+        ],
+        "letters": "D"
+      },
+      {
+        "scrambled": "TANUBE",
+        "word": "BUTANE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "BN"
+      },
+      {
+        "scrambled": "FLUFEM",
+        "word": "MUFFLE",
+        "obv": [
+          2,
+          6
+        ],
+        "letters": "UE"
+      }
+    ],
+    "clue": "WHAT IT TAKES TO SHIP A PACKAGE CROSS COUNTRY.",
+    "desc": "A woman stands at a shipping counter with a large box. The clerk tells her, 'Fill out the forms. It will cost around $50'."
+  },
+  {
+    "level": 12,
+    "final": "\"BUY-OLOGIST\"",
+    "prefilled": "\"***-*******\"",
+    "words": [
+      {
+        "scrambled": "SUGIE",
+        "word": "GUISE",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "GS"
+      },
+      {
+        "scrambled": "BANIC",
+        "word": "CABIN",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "IN"
+      },
+      {
+        "scrambled": "BOLTAC",
+        "word": "COBALT",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "CLT"
+      },
+      {
+        "scrambled": "JYLFOU",
+        "word": "JOYFUL",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "JOF"
+      }
+    ],
+    "clue": "HIS WIFE WAS A CHEMIST, BUT HE CONSIDERED HER A ---",
+    "desc": "A woman walks in carrying shopping bags and says, 'I ran into the best bargains'. The husband, reading a book, looks up with a pun-based expression."
+  },
+  {
+    "level": 13,
+    "final": "\"BRUSHED\" UP",
+    "prefilled": "\"*******\" **",
+    "words": [
+      {
+        "scrambled": "DYSUK",
+        "word": "DUSKY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "DU"
+      },
+      {
+        "scrambled": "RIPEV",
+        "word": "VIPER",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "PE"
+      },
+      {
+        "scrambled": "BELFEE",
+        "word": "FEEBLE",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "EE"
+      },
+      {
+        "scrambled": "COSHUL",
+        "word": "SLOUCH",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "SOC"
+      }
+    ],
+    "clue": "WHAT THE BEAUTICIANS DID BEFORE THE COSMETICS EXAM.",
+    "desc": "Two women are at a makeup counter applying cosmetics. One says, 'First the eyebrows, then the eyelashes'."
+  },
+  {
+    "level": 14,
+    "final": "\"FLOATED\" THE IDEA",
+    "prefilled": "\"*******\" *** ****",
+    "words": [
+      {
+        "scrambled": "MUGAT",
+        "word": "GAMUT",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "AU"
+      },
+      {
+        "scrambled": "ELLAD",
+        "word": "LADLE",
+        "obv": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "letters": "LADL"
+      },
+      {
+        "scrambled": "FRIVED",
+        "word": "FERVID",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "FEV"
+      },
+      {
+        "scrambled": "RAYPOD",
+        "word": "PARODY",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "ARO"
+      }
+    ],
+    "clue": "WHEN HER HUSBAND WANTED TO TAKE A HOT-AIR BALLOON RIDE, HE ---",
+    "desc": "A man and woman sit on a grassy field looking up at two hot air balloons. The woman asks, 'What do you think about doing that?'."
+  },
+  {
+    "level": 15,
+    "final": "\"EXHAUST-ED\"",
+    "prefilled": "\"*******-**\"",
+    "words": [
+      {
+        "scrambled": "TRAAL",
+        "word": "ALTAR",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "AT"
+      },
+      {
+        "scrambled": "UPMEL",
+        "word": "PLUME",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "UE"
+      },
+      {
+        "scrambled": "LEUXED",
+        "word": "DELUXE",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "DEX"
+      },
+      {
+        "scrambled": "CLISHE",
+        "word": "CHISEL",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "HS"
+      }
+    ],
+    "clue": "WHAT ROVER FELT LIKE AFTER CHASING THE CAR.",
+    "desc": "A dog with its tongue hanging out stands on a road exhausted, surrounded by dust clouds from a passing car."
+  },
+  {
+    "level": 16,
+    "final": "IN \"TIERS\"",
+    "prefilled": "** \"*****\"",
+    "words": [
+      {
+        "scrambled": "TIPAL",
+        "word": "PLAIT",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "IT"
+      },
+      {
+        "scrambled": "TURTE",
+        "word": "UTTER",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "TE"
+      },
+      {
+        "scrambled": "REBISC",
+        "word": "SCRIBE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "SB"
+      },
+      {
+        "scrambled": "NADDIC",
+        "word": "CANDID",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ND"
+      }
+    ],
+    "clue": "WHEN THEIR TEAM LOST THE BIG GAME, THE HOME CROWD WAS ---",
+    "desc": "Two dejected fans walk away from a stadium. One says, 'This was our big chance', the other says, 'I can't believe they beat us'."
+  },
+  {
+    "level": 17,
+    "final": "PIER PRESSURE",
+    "prefilled": "**** ********",
+    "words": [
+      {
+        "scrambled": "ORRIP",
+        "word": "PRIOR",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "RIO"
+      },
+      {
+        "scrambled": "PHEES",
+        "word": "SHEEP",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "SHE"
+      },
+      {
+        "scrambled": "SOUPOR",
+        "word": "POROUS",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "POU"
+      },
+      {
+        "scrambled": "REPIME",
+        "word": "EMPIRE",
+        "obv": [
+          1,
+          3,
+          4
+        ],
+        "letters": "EPI"
+      }
+    ],
+    "clue": "WHAT AN OVERLOADED DOCK CAN CREATE",
+    "desc": "A man in a small motorboat nearly crashes into a crowded dock. Someone shouts from a big boat, 'Out of my way!'."
+  },
+  {
+    "level": 18,
+    "final": "GOOD \"SERVER\"",
+    "prefilled": "**** \"******\"",
+    "words": [
+      {
+        "scrambled": "VARFO",
+        "word": "FAVOR",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "OR"
+      },
+      {
+        "scrambled": "SACEE",
+        "word": "CEASE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "ES"
+      },
+      {
+        "scrambled": "JORNAG",
+        "word": "JARGON",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "RGO"
+      },
+      {
+        "scrambled": "VILDER",
+        "word": "DRIVEL",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "DVE"
+      }
+    ],
+    "clue": "THE WAITER WON THE TENNIS MATCH BECAUSE HE WAS A ---",
+    "desc": "A waiter holds a serving tray while watching a tennis match on a court. Someone off-screen yells, 'An ace! He wins'."
+  },
+  {
+    "level": 19,
+    "final": "\"ALTARED\"",
+    "prefilled": "\"*******\"",
+    "words": [
+      {
+        "scrambled": "ALVAN",
+        "word": "NAVAL",
+        "obv": [
+          5
+        ],
+        "letters": "L"
+      },
+      {
+        "scrambled": "ULARR",
+        "word": "RURAL",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "RA"
+      },
+      {
+        "scrambled": "NEBATE",
+        "word": "BEATEN",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "AT"
+      },
+      {
+        "scrambled": "GEPLED",
+        "word": "PLEDGE",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ED"
+      }
+    ],
+    "clue": "WHEN THE SEAMSTRESS GOT MARRIED, HER LIFE WAS ---",
+    "desc": "A bride and groom stand at an altar. A guest remarks, 'She made her own dress'."
+  },
+  {
+    "level": 20,
+    "final": "HIS CASH \"FLOW\"",
+    "prefilled": "*** **** \"****\"",
+    "words": [
+      {
+        "scrambled": "WHISS",
+        "word": "SWISH",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "SW"
+      },
+      {
+        "scrambled": "LECEX",
+        "word": "EXCEL",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "CE"
+      },
+      {
+        "scrambled": "PHORGE",
+        "word": "GOPHER",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "GP"
+      },
+      {
+        "scrambled": "FHABLE",
+        "word": "BEHALF",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "AL"
+      }
+    ],
+    "clue": "WHAT THE PLUMBER IMPROVED WHEN HE UNPLUGGED THE SINK.",
+    "desc": "A plumber stands proudly next to an unclogged sink. He says to the homeowner, 'It's running good now'."
+  },
+  {
+    "level": 21,
+    "final": "\"HAND\" MADE",
+    "prefilled": "\"****\" ****",
+    "words": [
+      {
+        "scrambled": "VEDEL",
+        "word": "DELVE",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "DE"
+      },
+      {
+        "scrambled": "CAGIM",
+        "word": "MAGIC",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "MA"
+      },
+      {
+        "scrambled": "MADENT",
+        "word": "TANDEM",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "TAN"
+      },
+      {
+        "scrambled": "HIENAL",
+        "word": "INHALE",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "IN"
+      }
+    ],
+    "clue": "DESPITE THE LATEST TRAINING EQUIPMENT, THE BOXER'S PUNCHES WERE ...",
+    "desc": "A boxer punches a bag in a gym surrounded by high-tech gear. Observers in the background say, 'He's a natural'."
+  },
+  {
+    "level": 22,
+    "final": "\"SUMMER-IZED\" IT",
+    "prefilled": "\"*******-****\" **",
+    "words": [
+      {
+        "scrambled": "SUMOY",
+        "word": "MOUSY",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "MS"
+      },
+      {
+        "scrambled": "RUZEA",
+        "word": "AZURE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "ZR"
+      },
+      {
+        "scrambled": "DEDUIG",
+        "word": "GUIDED",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "GDE"
+      },
+      {
+        "scrambled": "MINUME",
+        "word": "IMMUNE",
+        "obv": [
+          1,
+          2,
+          6
+        ],
+        "letters": "IME"
+      }
+    ],
+    "clue": "WHEN THE PUPIL TOLD THE CLASS WHAT HE DID ON VACATION, HE ---",
+    "desc": "A student stands in front of a class and gives a report: 'I went to the beach, swam, and visited my grandparents. End of story.'"
+  },
+  {
+    "level": 23,
+    "final": "TRACK \"MEET\"",
+    "prefilled": "***** \"****\"",
+    "words": [
+      {
+        "scrambled": "THEFC",
+        "word": "FETCH",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "ET"
+      },
+      {
+        "scrambled": "TRYAR",
+        "word": "TARRY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "TR"
+      },
+      {
+        "scrambled": "CRENAK",
+        "word": "CANKER",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "CAN"
+      },
+      {
+        "scrambled": "MORRET",
+        "word": "TREMOR",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "TE"
+      }
+    ],
+    "clue": "WHEN THE RUNNERS SPOTTED EACH OTHER AT THE HORSE RACES, IT BECAME A ---",
+    "desc": "Two runners meet at the horse racing track. One asks, 'What are you doing here?', the other replies, 'Trying to win some money'."
+  },
+  {
+    "level": 24,
+    "final": "ITS UPS AND DOWNS",
+    "prefilled": "*** *** *** *****",
+    "words": [
+      {
+        "scrambled": "NARBD",
+        "word": "BRAND",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "ND"
+      },
+      {
+        "scrambled": "CHOPE",
+        "word": "EPOCH",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "PO"
+      },
+      {
+        "scrambled": "SWAALY",
+        "word": "ALWAYS",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "WY"
+      },
+      {
+        "scrambled": "YESANU",
+        "word": "UNEASY",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "US"
+      }
+    ],
+    "clue": "DIFFICULT TO AVOID IF YOU WORK IN AN ELEVATOR BUILDING.",
+    "desc": "A group of annoyed people stand in an elevator listening to loud music. One man says, 'That music drives me nuts'."
+  },
+  {
+    "level": 25,
+    "final": "\"GIFTED\" CHILD",
+    "prefilled": "\"******\" *****",
+    "words": [
+      {
+        "scrambled": "CEDDI",
+        "word": "DICED",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "DD"
+      },
+      {
+        "scrambled": "GIHLT",
+        "word": "LIGHT",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "LIH"
+      },
+      {
+        "scrambled": "LAIFAC",
+        "word": "FACIAL",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "FAC"
+      },
+      {
+        "scrambled": "TIGBLE",
+        "word": "GIBLET",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "GET"
+      }
+    ],
+    "clue": "GIVING JUNIOR A HEAP OF EDUCATIONAL TOYS MADE HIM A ---",
+    "desc": "A mother gives her son educational toys for his birthday. She says, 'Happy Birthday!'. The boy looks at a complex toy and says, 'Oh, boy. It's a kind of computer'."
+  },
+  {
+    "level": 26,
+    "final": "COULD \"SOCKET\"",
+    "prefilled": "***** \"******\"",
+    "words": [
+      {
+        "scrambled": "ALOCK",
+        "word": "CLOAK",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "CLK"
+      },
+      {
+        "scrambled": "GUNST",
+        "word": "STUNG",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "ST"
+      },
+      {
+        "scrambled": "CROUTY",
+        "word": "OUTCRY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "OUT"
+      },
+      {
+        "scrambled": "COBDIE",
+        "word": "BODICE",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "ODC"
+      }
+    ],
+    "clue": "THE ELECTRICIAN JOINED THE BASEBALL TEAM BECAUSE HE ---",
+    "desc": "A baseball player hits the ball hard. A man in the dugout says, 'He put a charge in that one'."
+  },
+  {
+    "level": 27,
+    "final": "A REAL CUT UP",
+    "prefilled": "A **** *** **",
+    "words": [
+      {
+        "scrambled": "GUVEA",
+        "word": "VAGUE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "AU"
+      },
+      {
+        "scrambled": "DYPET",
+        "word": "TYPED",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "TP"
+      },
+      {
+        "scrambled": "UNRICH",
+        "word": "URCHIN",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "URC"
+      },
+      {
+        "scrambled": "VARMEL",
+        "word": "MARVEL",
+        "obv": [
+          5,
+          6
+        ],
+        "letters": "EL"
+      }
+    ],
+    "clue": "WHAT THE SURGEON TURNED INTO AT THE ANNUAL PARTY.",
+    "desc": "A man dances wildly at a party with loud music. Someone in the background says, 'Look at him go'."
+  },
+  {
+    "level": 28,
+    "final": "THE \"UNION\" RATE",
+    "prefilled": "*** \"*****\" ****",
+    "words": [
+      {
+        "scrambled": "FLECT",
+        "word": "CLEFT",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "EF"
+      },
+      {
+        "scrambled": "CEMIN",
+        "word": "MINCE",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "IN"
+      },
+      {
+        "scrambled": "INJOUR",
+        "word": "JUNIOR",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "JOR"
+      },
+      {
+        "scrambled": "ORMOAN",
+        "word": "MAROON",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "MO"
+      }
+    ],
+    "clue": "WHAT IT COSTS TO GET HITCHED.",
+    "desc": "A couple stands at a clerk's desk with a sign 'Marriage Licenses'. The clerk says, 'That will be $75'."
+  },
+  {
+    "level": 29,
+    "final": "ENTRANCE",
+    "prefilled": "********",
+    "words": [
+      {
+        "scrambled": "RYCED",
+        "word": "DECRY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "CR"
+      },
+      {
+        "scrambled": "NUCEL",
+        "word": "UNCLE",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "NE"
+      },
+      {
+        "scrambled": "TAMLED",
+        "word": "MALTED",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "ML"
+      },
+      {
+        "scrambled": "UNBREM",
+        "word": "NUMBER",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "NE"
+      }
+    ],
+    "clue": "A BEAUTY QUEEN WILL MAKE HER ENTRANCE TO---",
+    "desc": "Two women watch a beauty queen descend a staircase. One says, 'Oh, she's lovely', the other adds, 'Such poise'."
+  },
+  {
+    "level": 30,
+    "final": "OVER HIS HEAD",
+    "prefilled": "**** *** ****",
+    "words": [
+      {
+        "scrambled": "HIFAT",
+        "word": "FAITH",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "AIH"
+      },
+      {
+        "scrambled": "APROV",
+        "word": "VAPOR",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "VOR"
+      },
+      {
+        "scrambled": "DOUSEX",
+        "word": "EXODUS",
+        "obv": [
+          1,
+          4,
+          6
+        ],
+        "letters": "EDS"
+      },
+      {
+        "scrambled": "NAHDDE",
+        "word": "HANDED",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "HE"
+      }
+    ],
+    "clue": "THE OWNER DIDN'T REPAIR THE ROOF BECAUSE IT WAS ---",
+    "desc": "Two people stand in front of a house with a badly damaged roof. The man points up and says, 'This is a big job'."
+  },
+  {
+    "level": 31,
+    "final": "EASY TO \"DIGEST\"",
+    "prefilled": "**** ** \"******\"",
+    "words": [
+      {
+        "scrambled": "BAITH",
+        "word": "HABIT",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "IT"
+      },
+      {
+        "scrambled": "DESTE",
+        "word": "STEED",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "SD"
+      },
+      {
+        "scrambled": "REJESY",
+        "word": "JERSEY",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "JEY"
+      },
+      {
+        "scrambled": "GASYRS",
+        "word": "GRASSY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "GRA"
+      }
+    ],
+    "clue": "SHE FOLLOWED THE DIET BOOK BECAUSE IT WAS ---",
+    "desc": "Two women cook in a kitchen. One says, 'The recipes are tasty and I've lost 15 pounds'."
+  },
+  {
+    "level": 32,
+    "final": "IT'S A \"WRAP\"",
+    "prefilled": "**'* A \"****\"",
+    "words": [
+      {
+        "scrambled": "LIMYK",
+        "word": "MILKY",
+        "obv": [
+          2
+        ],
+        "letters": "I"
+      },
+      {
+        "scrambled": "ORVAB",
+        "word": "BRAVO",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "RA"
+      },
+      {
+        "scrambled": "STERJE",
+        "word": "JESTER",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ST"
+      },
+      {
+        "scrambled": "DRUPAW",
+        "word": "UPWARD",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "UP"
+      }
+    ],
+    "clue": "WHAT THE DIRECTOR SAID WHEN HIS WIFE KNITTED HIM A SWEATER.",
+    "desc": "A director sits in a chair, looking at a sweater held by his wife. He says, 'Looks perfect'."
+  },
+  {
+    "level": 33,
+    "final": "THE \"FEED\" LIMIT",
+    "prefilled": "*** \"****\" *****",
+    "words": [
+      {
+        "scrambled": "EXIDO",
+        "word": "OXIDE",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ID"
+      },
+      {
+        "scrambled": "NUMIS",
+        "word": "MINUS",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "MI"
+      },
+      {
+        "scrambled": "WHENEP",
+        "word": "NEPHEW",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "NH"
+      },
+      {
+        "scrambled": "FALOTA",
+        "word": "AFLOAT",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "AFA"
+      }
+    ],
+    "clue": "THE CROSS-COUNTRY TRUCKER STAYED THIN WHEN HE WATCHED THIS ---",
+    "desc": "A trucker sits at a diner counter. The waitress says, 'Just salad and lean meat'."
+  },
+  {
+    "level": 34,
+    "final": "IT WAS \"PEDESTRIAN\"",
+    "prefilled": "** *** \"**********\"",
+    "words": [
+      {
+        "scrambled": "HINEW",
+        "word": "WHINE",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "NE"
+      },
+      {
+        "scrambled": "DROLE",
+        "word": "OLDER",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "DE"
+      },
+      {
+        "scrambled": "TIPPEC",
+        "word": "PEPTIC",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "PET"
+      },
+      {
+        "scrambled": "ASTUNE",
+        "word": "UNSEAT",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "SEA"
+      }
+    ],
+    "clue": "WHY THE PLAY DIDN'T HAVE A LONG RUN",
+    "desc": "People leave a theater after a show. One man says, 'Nothing special', another adds, 'Rather lame'."
+  },
+  {
+    "level": 35,
+    "final": "CURTAIN CALL",
+    "prefilled": "******* ****",
+    "words": [
+      {
+        "scrambled": "VENIA",
+        "word": "NAIVE",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "NAI"
+      },
+      {
+        "scrambled": "TALEE",
+        "word": "ELATE",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "LAT"
+      },
+      {
+        "scrambled": "LACCIO",
+        "word": "CALICO",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "CLC"
+      },
+      {
+        "scrambled": "LUNYUR",
+        "word": "UNRULY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "UR"
+      }
+    ],
+    "clue": "WHEN THE DRAPERY SALESMAN VISITED THE THEATER, IT WAS A ---",
+    "desc": "Two men stand on a theater stage. One says, 'They are starting to look shaggy'. The salesman replies, 'I can make you a good deal'."
+  },
+  {
+    "level": 36,
+    "final": "A CLOSE SHAVE",
+    "prefilled": "A ***** *****",
+    "words": [
+      {
+        "scrambled": "LOVAC",
+        "word": "VOCAL",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "OC"
+      },
+      {
+        "scrambled": "VEELA",
+        "word": "LEAVE",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "EA"
+      },
+      {
+        "scrambled": "COSHOL",
+        "word": "SCHOOL",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "SCH"
+      },
+      {
+        "scrambled": "STOJEL",
+        "word": "JOSTLE",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "STL"
+      }
+    ],
+    "clue": "WHAT THE RECKLESS DRIVER GAVE THE BARBER.",
+    "desc": "A barber jumps in shock as a car crashes into the shop. One says, 'My heart skipped a beat'. The other says, 'He almost hit you'."
+  },
+  {
+    "level": 37,
+    "final": "MAN OF \"LETTERS\"",
+    "prefilled": "*** ** \"*******\"",
+    "words": [
+      {
+        "scrambled": "TUINY",
+        "word": "UNITY",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "NT"
+      },
+      {
+        "scrambled": "SOSBA",
+        "word": "BASSO",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "AS"
+      },
+      {
+        "scrambled": "RECLEY",
+        "word": "CELERY",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "CEE"
+      },
+      {
+        "scrambled": "LEMITY",
+        "word": "TIMELY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "TIM"
+      }
+    ],
+    "clue": "THE MAILMAN RECEIVED AN ADVANCED DEGREE BECAUSE HE WAS A ---",
+    "desc": "People at a graduation ceremony. Someone says, 'He's been studying for years'."
+  },
+  {
+    "level": 38,
+    "final": "FROM CHASE",
+    "prefilled": "**** *****",
+    "words": [
+      {
+        "scrambled": "IMCUS",
+        "word": "MUSIC",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "MU"
+      },
+      {
+        "scrambled": "FAHFC",
+        "word": "CHAFE",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "CF"
+      },
+      {
+        "scrambled": "CHOROT",
+        "word": "COHORT",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "COO"
+      },
+      {
+        "scrambled": "HAMMEY",
+        "word": "MAYHEM",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "MH"
+      }
+    ],
+    "clue": "HOW ONE CAN GET ACHES.",
+    "desc": "A man runs after a dog, shouting 'C'mere boy! Here boy! Stop!'."
+  },
+  {
+    "level": 39,
+    "final": "\"SWIMMINGLY\"",
+    "prefilled": "\"**********\"",
+    "words": [
+      {
+        "scrambled": "REMEG",
+        "word": "MERGE",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "MG"
+      },
+      {
+        "scrambled": "NEWIT",
+        "word": "TWINE",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "WIN"
+      },
+      {
+        "scrambled": "MELFYS",
+        "word": "MYSELF",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "MSL"
+      },
+      {
+        "scrambled": "INJEYT",
+        "word": "JITNEY",
+        "obv": [
+          2,
+          6
+        ],
+        "letters": "IY"
+      }
+    ],
+    "clue": "HOW THE TEENS GOT ALONG WHEN THEY MET AT THE POOL.",
+    "desc": "A boy and a girl sit on the edge of a swimming pool. The boy says, 'C'mon. I'll race you'."
+  },
+  {
+    "level": 40,
+    "final": "\"WIRED\" FOR MONEY",
+    "prefilled": "\"*****\" *** *****",
+    "words": [
+      {
+        "scrambled": "WYDDO",
+        "word": "DOWDY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "DW"
+      },
+      {
+        "scrambled": "RIGMY",
+        "word": "GRIMY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "IM"
+      },
+      {
+        "scrambled": "NEMDIP",
+        "word": "IMPEND",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "IEN"
+      },
+      {
+        "scrambled": "BONKER",
+        "word": "BROKEN",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "BRK"
+      }
+    ],
+    "clue": "WHAT THE DOWN-AND-OUT HANDYMAN DID WHEN HE NEEDED CASH.",
+    "desc": "A handyman with tools on his belt talks to a woman holding a broken lamp. She asks, 'Can you fix these lamps?'. He replies, 'Sure. You need new cords'."
+  },
+  {
+    "level": 41,
+    "final": "\"FORGE\" AHEAD",
+    "prefilled": "\"*****\" *****",
+    "words": [
+      {
+        "scrambled": "JAHAR",
+        "word": "RAJAH",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "AA"
+      },
+      {
+        "scrambled": "EBBIR",
+        "word": "BRIBE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "RB"
+      },
+      {
+        "scrambled": "CAFFEE",
+        "word": "EFFACE",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "EFA"
+      },
+      {
+        "scrambled": "GOINID",
+        "word": "INDIGO",
+        "obv": [
+          3,
+          5,
+          6
+        ],
+        "letters": "DGO"
+      }
+    ],
+    "clue": "A BUSY BLACKSMITH WILL DO THIS.",
+    "desc": "A blacksmith works hard at his anvil. Another man says, 'Time for dinner'. The blacksmith replies, 'No time. Too much work'."
+  },
+  {
+    "level": 42,
+    "final": "CANCEL HIS CARD",
+    "prefilled": "****** *** ****",
+    "words": [
+      {
+        "scrambled": "INCCY",
+        "word": "CYNIC",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "CN"
+      },
+      {
+        "scrambled": "DOLYD",
+        "word": "ODDLY",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "DL"
+      },
+      {
+        "scrambled": "DEGAMA",
+        "word": "DAMAGE",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "DAG"
+      },
+      {
+        "scrambled": "DARcco",
+        "word": "ACCORD",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "CCR"
+      }
+    ],
+    "clue": "HOW TO KEEP A RHINO FROM CHARGING.",
+    "desc": "Two people approach a rhino carefully. One whispers, 'shhh', the other says, 'Don't upset him'."
+  },
+  {
+    "level": 43,
+    "final": "A \"HANDSOME\" SUM",
+    "prefilled": "A \"********\" ***",
+    "words": [
+      {
+        "scrambled": "UNOMT",
+        "word": "MOUNT",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "MON"
+      },
+      {
+        "scrambled": "SNAIE",
+        "word": "ANISE",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "ASE"
+      },
+      {
+        "scrambled": "MOSHNA",
+        "word": "HANSOM",
+        "obv": [
+          1,
+          4,
+          6
+        ],
+        "letters": "HSM"
+      },
+      {
+        "scrambled": "DEGUMS",
+        "word": "SMUDGE",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "UD"
+      }
+    ],
+    "clue": "WHAT THE MALE MODEL RECEIVED WHEN HE POSED IN THE SUIT.",
+    "desc": "A model in a suit poses for a photographer. The photographer says, 'Perfect. Worth every penny'."
+  },
+  {
+    "level": 44,
+    "final": "A \"LAME\" EXCUSE",
+    "prefilled": "A \"****\" ******",
+    "words": [
+      {
+        "scrambled": "PRUCO",
+        "word": "CROUP",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "CU"
+      },
+      {
+        "scrambled": "YLSYH",
+        "word": "SHYLY",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "SL"
+      },
+      {
+        "scrambled": "NEEXTT",
+        "word": "EXTENT",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "EXE"
+      },
+      {
+        "scrambled": "MANTED",
+        "word": "TANDEM",
+        "obv": [
+          2,
+          5,
+          6
+        ],
+        "letters": "AEM"
+      }
+    ],
+    "clue": "WHAT HE GAVE HIS BOSS WHEN HE WAS LATE FOR THE MEETING.",
+    "desc": "An employee stands in front of a desk with a bag of doughnuts. He says, 'I hurt my ankle, but I got the doughnuts'."
+  },
+  {
+    "level": 45,
+    "final": "DUES AND DON'TS",
+    "prefilled": "**** *** ****'*",
+    "words": [
+      {
+        "scrambled": "TUBIL",
+        "word": "BUILT",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "UL"
+      },
+      {
+        "scrambled": "EPSIO",
+        "word": "POISE",
+        "obv": [
+          5
+        ],
+        "letters": "E"
+      },
+      {
+        "scrambled": "SHOIMD",
+        "word": "MODISH",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "MOD"
+      },
+      {
+        "scrambled": "REDUNE",
+        "word": "ENDURE",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "EN"
+      }
+    ],
+    "clue": "MEMBERS OF COUNTRY CLUBS HAVE THESE.",
+    "desc": "Two men walk past a club with signs. One asks, 'How many tee times do we need?'."
+  },
+  {
+    "level": 46,
+    "final": "A TOUGH BARGAIN",
+    "prefilled": "A ***** *******",
+    "words": [
+      {
+        "scrambled": "BUTIC",
+        "word": "CUBIT",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "BIT"
+      },
+      {
+        "scrambled": "NARCK",
+        "word": "CRANK",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "ANK"
+      },
+      {
+        "scrambled": "GURCOH",
+        "word": "GROUCH",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "GOC"
+      },
+      {
+        "scrambled": "GOAFER",
+        "word": "FORAGE",
+        "obv": [
+          1,
+          3,
+          4
+        ],
+        "letters": "FRA"
+      }
+    ],
+    "clue": "WHAT HE DROVE WHEN HE BOUGHT A USED CAR.",
+    "desc": "A man stands proudly next to a used convertible. He says, 'I always wanted a convertible and I got a good deal'."
+  },
+  {
+    "level": 47,
+    "final": "THEY \"BEAMED\"",
+    "prefilled": "**** \"******\"",
+    "words": [
+      {
+        "scrambled": "DEVEL",
+        "word": "DELVE",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "DEE"
+      },
+      {
+        "scrambled": "CHITK",
+        "word": "THICK",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "TH"
+      },
+      {
+        "scrambled": "EMBACE",
+        "word": "BECAME",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "BEA"
+      },
+      {
+        "scrambled": "YODMEB",
+        "word": "EMBODY",
+        "obv": [
+          2,
+          6
+        ],
+        "letters": "MY"
+      }
+    ],
+    "clue": "WHAT THE IRONWORKERS DID WHEN THEY BUILT THE TOWER.",
+    "desc": "Two ironworkers stand on a high beam. One says, 'This is the last one'. The other replies, 'Another job well done'."
+  },
+  {
+    "level": 48,
+    "final": "THE SHORT HAND",
+    "prefilled": "*** ***** ****",
+    "words": [
+      {
+        "scrambled": "BASAH",
+        "word": "ABASH",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "SH"
+      },
+      {
+        "scrambled": "MARAD",
+        "word": "DRAMA",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "DR"
+      },
+      {
+        "scrambled": "STINCH",
+        "word": "SNITCH",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "SIC"
+      },
+      {
+        "scrambled": "BROSAB",
+        "word": "ABSORB",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "OR"
+      }
+    ],
+    "clue": "THE SECRETARY CONCENTRATED ON THIS.",
+    "desc": "A secretary sits at a desk writing while her boss talks. Her thought bubble says, 'It's almost five o'clock'."
+  },
+  {
+    "level": 49,
+    "final": "SKIN DIVERS",
+    "prefilled": "**** ******",
+    "words": [
+      {
+        "scrambled": "PRUNS",
+        "word": "SPURN",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "SRN"
+      },
+      {
+        "scrambled": "MEVON",
+        "word": "VENOM",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "VE"
+      },
+      {
+        "scrambled": "FLIECK",
+        "word": "FICKLE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "IK"
+      },
+      {
+        "scrambled": "SIMYAD",
+        "word": "DISMAY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "DIS"
+      }
+    ],
+    "clue": "WHAT THE MOSQUITOES TURNED INTO WHEN THEY SPOTTED THE BEACH PARTY.",
+    "desc": "People at a beach party swat mosquitoes. One says, 'I'm getting bit'. Another says, 'Me, too!'."
+  },
+  {
+    "level": 50,
+    "final": "A \"FLACK\" JACKET",
+    "prefilled": "A \"*****\" ******",
+    "words": [
+      {
+        "scrambled": "YARAR",
+        "word": "ARRAY",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "AA"
+      },
+      {
+        "scrambled": "HECKT",
+        "word": "KETCH",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "KEC"
+      },
+      {
+        "scrambled": "FACTRY",
+        "word": "CRAFTY",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "CFT"
+      },
+      {
+        "scrambled": "CALKAJ",
+        "word": "JACKAL",
+        "obv": [
+          1,
+          4,
+          6
+        ],
+        "letters": "JKL"
+      }
+    ],
+    "clue": "THIS WILL SPRUCE UP A PRESS AGENT'S WARDROBE.",
+    "desc": "A man tries on a jacket in a store. Another man says, 'It looks good on you'. He replies, 'It'll make me stand out'."
+  },
+  {
+    "level": 51,
+    "final": "\"PINNED\" HIM",
+    "prefilled": "\"******\" ***",
+    "words": [
+      {
+        "scrambled": "MYFIL",
+        "word": "FILMY",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "IM"
+      },
+      {
+        "scrambled": "OEPLE",
+        "word": "ELOPE",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "EP"
+      },
+      {
+        "scrambled": "DINNAL",
+        "word": "INLAND",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "IND"
+      },
+      {
+        "scrambled": "CHUPIC",
+        "word": "HICCUP",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "HI"
+      }
+    ],
+    "clue": "WHAT THE ACUPUNCTURIST DID WHEN HE TREATED THE WRESTLER.",
+    "desc": "A wrestler lies on a table. The acupuncturist says, 'Don't move a muscle'."
+  },
+  {
+    "level": 52,
+    "final": "COMMON \"CENTS\"",
+    "prefilled": "****** \"*****\"",
+    "words": [
+      {
+        "scrambled": "SOOGE",
+        "word": "GOOSE",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "OOS"
+      },
+      {
+        "scrambled": "UROCC",
+        "word": "OCCUR",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "OC"
+      },
+      {
+        "scrambled": "NITMAR",
+        "word": "MARTIN",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "MTI"
+      },
+      {
+        "scrambled": "MECION",
+        "word": "INCOME",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "INO"
+      }
+    ],
+    "clue": "WHAT SHE USED TO BUY THE RIPEST APPLE.",
+    "desc": "A woman at a fruit stand holds an apple. The vendor says, 'A quarter'."
+  },
+  {
+    "level": 53,
+    "final": "NO MORE STARS",
+    "prefilled": "** **** *****",
+    "words": [
+      {
+        "scrambled": "URROF",
+        "word": "FUROR",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "ROR"
+      },
+      {
+        "scrambled": "JOMAR",
+        "word": "MAJOR",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "MAO"
+      },
+      {
+        "scrambled": "ENKASH",
+        "word": "SHAKEN",
+        "obv": [
+          1,
+          6
+        ],
+        "letters": "SN"
+      },
+      {
+        "scrambled": "CYSTOL",
+        "word": "COSTLY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ST"
+      }
+    ],
+    "clue": "EASY TO GET FROM ASTRONOMERS.",
+    "desc": "Children run excitedly toward a telescope in an observatory. A man says, 'Come take a look'."
+  },
+  {
+    "level": 54,
+    "final": "PAIN AT THE \"PUMP\"",
+    "prefilled": "**** ** *** \"****\"",
+    "words": [
+      {
+        "scrambled": "DRIAP",
+        "word": "RAPID",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "PI"
+      },
+      {
+        "scrambled": "PYTEM",
+        "word": "EMPTY",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "MP"
+      },
+      {
+        "scrambled": "DIALIN",
+        "word": "INLAID",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "INL"
+      },
+      {
+        "scrambled": "PLOUCE",
+        "word": "COUPLE",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "UP"
+      }
+    ],
+    "clue": "WHAT SHE EXPERIENCED WHEN SHE DANCED IN HER NEW SHOES.",
+    "desc": "People dance at a street festival. One woman grimaces and says, 'My foot is killing me'."
+  },
+  {
+    "level": 55,
+    "final": "\"JOINED\" UP",
+    "prefilled": "\"******\" **",
+    "words": [
+      {
+        "scrambled": "ROMNI",
+        "word": "MINOR",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "IO"
+      },
+      {
+        "scrambled": "UNFYN",
+        "word": "FUNNY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "NN"
+      },
+      {
+        "scrambled": "BECKED",
+        "word": "BEDECK",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "BE"
+      },
+      {
+        "scrambled": "REPJUM",
+        "word": "JUMPER",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "JM"
+      }
+    ],
+    "clue": "WHAT THE SOLDIERS DID WHEN THEY DECIDED TO GET MARRIED.",
+    "desc": "Two soldiers stand in front of a 'Justice of the Peace' sign. One says, 'Let's do it now'."
+  },
+  {
+    "level": 56,
+    "final": "A TOUGH \"COOKIE\"",
+    "prefilled": "A ***** \"******\"",
+    "words": [
+      {
+        "scrambled": "KAROC",
+        "word": "CROAK",
+        "obv": [
+          1,
+          3,
+          4
+        ],
+        "letters": "COA"
+      },
+      {
+        "scrambled": "LOMOB",
+        "word": "BLOOM",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "OM"
+      },
+      {
+        "scrambled": "NUGHAT",
+        "word": "NAUGHT",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "UGH"
+      },
+      {
+        "scrambled": "TENNIA",
+        "word": "INNATE",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "ITE"
+      }
+    ],
+    "clue": "WHAT THE STAFF CONSIDERED THE BAKER.",
+    "desc": "In a busy bakery, a baker shouts, 'Let's go! Let's go! We need more chocolate chips'."
+  },
+  {
+    "level": 57,
+    "final": "LADIES",
+    "prefilled": "******",
+    "words": [
+      {
+        "scrambled": "AKDEB",
+        "word": "BAKED",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "AE"
+      },
+      {
+        "scrambled": "RUPUS",
+        "word": "USURP",
+        "obv": [
+          2
+        ],
+        "letters": "S"
+      },
+      {
+        "scrambled": "DECLUD",
+        "word": "CUDDLE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "UD"
+      },
+      {
+        "scrambled": "CADDIN",
+        "word": "CANDID",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "CD"
+      }
+    ],
+    "clue": "WHERE IDEALS CAN COME FROM.",
+    "desc": "Two men watch a woman walking her son. One says, 'He's been raised well'."
+  },
+  {
+    "level": 58,
+    "final": "\"PLANE\" FOOD",
+    "prefilled": "\"*****\" ****",
+    "words": [
+      {
+        "scrambled": "PYPIN",
+        "word": "NIPPY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "NP"
+      },
+      {
+        "scrambled": "SELOO",
+        "word": "LOOSE",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "LOE"
+      },
+      {
+        "scrambled": "DOBENY",
+        "word": "BEYOND",
+        "obv": [
+          4,
+          6
+        ],
+        "letters": "OD"
+      },
+      {
+        "scrambled": "CAFEED",
+        "word": "DEFACE",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "FA"
+      }
+    ],
+    "clue": "WHAT AIR TRAVELERS GET, EVEN IN FIRST CLASS.",
+    "desc": "A flight attendant serves a small sandwich. The passenger says, 'Nothing special these days'."
+  },
+  {
+    "level": 59,
+    "final": "LIP SERVICE",
+    "prefilled": "*** *******",
+    "words": [
+      {
+        "scrambled": "UPTIL",
+        "word": "TULIP",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "LIP"
+      },
+      {
+        "scrambled": "YOIRN",
+        "word": "IRONY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "IR"
+      },
+      {
+        "scrambled": "LOVENC",
+        "word": "CLOVEN",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "CVE"
+      },
+      {
+        "scrambled": "YERGES",
+        "word": "GEYSER",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "ES"
+      }
+    ],
+    "clue": "WHAT THE SHOPPER RECEIVED AT THE COSMETICS COUNTER.",
+    "desc": "A woman sits at a makeup counter. The clerk says, 'Try this. It's one of our most popular shades'."
+  },
+  {
+    "level": 60,
+    "final": "CASTER OIL",
+    "prefilled": "****** ***",
+    "words": [
+      {
+        "scrambled": "REFIA",
+        "word": "AFIRE",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "ARE"
+      },
+      {
+        "scrambled": "CROWE",
+        "word": "COWER",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "CO"
+      },
+      {
+        "scrambled": "LAVASS",
+        "word": "VASSAL",
+        "obv": [
+          3,
+          6
+        ],
+        "letters": "SL"
+      },
+      {
+        "scrambled": "CISTEB",
+        "word": "BISECT",
+        "obv": [
+          2,
+          6
+        ],
+        "letters": "IT"
+      }
+    ],
+    "clue": "WHAT THE DOCTOR USED WHEN HIS DESK CHAIR SQUEAKED.",
+    "desc": "A doctor squirts oil on his chair. He says, 'That should do it'."
+  },
+  {
+    "level": 61,
+    "final": "BARE BACK",
+    "prefilled": "**** ****",
+    "words": [
+      {
+        "scrambled": "LAVIE",
+        "word": "ALIVE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "AE"
+      },
+      {
+        "scrambled": "INBAC",
+        "word": "CABIN",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "AB"
+      },
+      {
+        "scrambled": "NUBERK",
+        "word": "BUNKER",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "KE"
+      },
+      {
+        "scrambled": "CAUABS",
+        "word": "ABACUS",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "AA"
+      }
+    ],
+    "clue": "HOW THE RANCH KIDS RODE THEIR HORSES ON A HOT DAY.",
+    "desc": "Kids ride their horses under a hot sun. The dad says, 'O.K. Dad'. The father warns, 'Don't ride them too hard'."
+  },
+  {
+    "level": 62,
+    "final": "GOOD \"COVERAGE\"",
+    "prefilled": "**** \"********\"",
+    "words": [
+      {
+        "scrambled": "DUGAR",
+        "word": "GUARD",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "GRD"
+      },
+      {
+        "scrambled": "RABEG",
+        "word": "BARGE",
+        "obv": [
+          2,
+          4,
+          5
+        ],
+        "letters": "AGE"
+      },
+      {
+        "scrambled": "REVORF",
+        "word": "FERVOR",
+        "obv": [
+          2,
+          4,
+          5
+        ],
+        "letters": "EVO"
+      },
+      {
+        "scrambled": "LOCHOS",
+        "word": "SCHOOL",
+        "obv": [
+          2,
+          4,
+          5
+        ],
+        "letters": "COO"
+      }
+    ],
+    "clue": "WHAT THE INSURANCE AGENT'S DAUGHTER GOT WHEN HE TUCKED HER IN.",
+    "desc": "A father tucks his daughter into bed. The daughter says, 'Sweet dreams. Night, Daddy'."
+  },
+  {
+    "level": 63,
+    "final": "RUSTLERS",
+    "prefilled": "********",
+    "words": [
+      {
+        "scrambled": "REESA",
+        "word": "ERASE",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "RS"
+      },
+      {
+        "scrambled": "TELIT",
+        "word": "TITLE",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "LE"
+      },
+      {
+        "scrambled": "ETTORP",
+        "word": "POTTER",
+        "obv": [
+          3,
+          6
+        ],
+        "letters": "TR"
+      },
+      {
+        "scrambled": "GUMPSY",
+        "word": "GYPSUM",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "SU"
+      }
+    ],
+    "clue": "UNWRAPPING THEIR TREATS DURING THE COWBOY MOVIE MADE THEM ---",
+    "desc": "People in a movie theater unwrap noisy snacks. Someone shushes them with 'SHHH!'."
+  },
+  {
+    "level": 64,
+    "final": "A \"SHADY\" DEAL",
+    "prefilled": "A \"*****\" ****",
+    "words": [
+      {
+        "scrambled": "POASY",
+        "word": "SOAPY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "AP"
+      },
+      {
+        "scrambled": "PHULS",
+        "word": "PLUSH",
+        "obv": [
+          5
+        ],
+        "letters": "H"
+      },
+      {
+        "scrambled": "DUPLED",
+        "word": "PUDDLE",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "DDL"
+      },
+      {
+        "scrambled": "ZARBLE",
+        "word": "BLAZER",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "LZ"
+      }
+    ],
+    "clue": "ACCEPTABLE WHEN RENTING A BEACH UMBRELLA",
+    "desc": "Two people stand by a beach umbrella rental stand. One says, 'This will keep us out of the sun'. The attendant replies, '$5.00 an hour'."
+  },
+  {
+    "level": 65,
+    "final": "SIR PRIZE",
+    "prefilled": "*** *****",
+    "words": [
+      {
+        "scrambled": "HIRMT",
+        "word": "MIRTH",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "IR"
+      },
+      {
+        "scrambled": "PARPE",
+        "word": "PAPER",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "PE"
+      },
+      {
+        "scrambled": "RUVESS",
+        "word": "VERSUS",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "VES"
+      },
+      {
+        "scrambled": "ANIZIN",
+        "word": "ZINNIA",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "ZI"
+      }
+    ],
+    "clue": "WHEN HE WON THE DISTINGUISHED GENTLEMAN CONTEST, IT WAS A ---",
+    "desc": "A man is announced as the winner at a party. He says, 'Well I'll be...'."
+  },
+  {
+    "level": 66,
+    "final": "A \"JOY\" RIDE",
+    "prefilled": "A \"***\" ****",
+    "words": [
+      {
+        "scrambled": "GEFUD",
+        "word": "FUDGE",
+        "obv": [
+          3
+        ],
+        "letters": "D"
+      },
+      {
+        "scrambled": "MYKUR",
+        "word": "MURKY",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "RY"
+      },
+      {
+        "scrambled": "NIWWON",
+        "word": "WINNOW",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "WN"
+      },
+      {
+        "scrambled": "REYJES",
+        "word": "JERSEY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "JE"
+      }
+    ],
+    "clue": "THE FIRST THING THE TEEN TOOK WHEN HE GOT HIS DRIVER'S LICENSE.",
+    "desc": "A teen holds up his new driver's license and asks his mother, 'I'm so happy. Can I have the keys, Mom?'."
+  },
+  {
+    "level": 67,
+    "final": "\"ROLLED\" OVER",
+    "prefilled": "\"******\" ****",
+    "words": [
+      {
+        "scrambled": "ZAHLE",
+        "word": "HAZEL",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "EL"
+      },
+      {
+        "scrambled": "MOVEN",
+        "word": "VENOM",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "VEO"
+      },
+      {
+        "scrambled": "LARCOR",
+        "word": "CORRAL",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "ORR"
+      },
+      {
+        "scrambled": "VIRLED",
+        "word": "DRIVEL",
+        "obv": [
+          1,
+          6
+        ],
+        "letters": "DL"
+      }
+    ],
+    "clue": "HOW THE LOSING BOWLER FELT.",
+    "desc": "A bowler watches his opponent roll another strike. He says, 'That's five in a row. I haven't got a chance'."
+  },
+  {
+    "level": 68,
+    "final": "REVOLUTION",
+    "prefilled": "**********",
+    "words": [
+      {
+        "scrambled": "TULIB",
+        "word": "BUILT",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "UI"
+      },
+      {
+        "scrambled": "TARAL",
+        "word": "ALTAR",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "LT"
+      },
+      {
+        "scrambled": "HERNUT",
+        "word": "HUNTER",
+        "obv": [
+          3,
+          5,
+          6
+        ],
+        "letters": "NER"
+      },
+      {
+        "scrambled": "DORVOE",
+        "word": "OVERDO",
+        "obv": [
+          1,
+          2,
+          6
+        ],
+        "letters": "OVO"
+      }
+    ],
+    "clue": "WHEN THE WHEEL WAS INVENTED, IT CREATED A---",
+    "desc": "Cavemen discover a huge wheel. One says, 'Now we won't have to drag everything'."
+  },
+  {
+    "level": 69,
+    "final": "ATTENTION",
+    "prefilled": "*********",
+    "words": [
+      {
+        "scrambled": "ZAMIE",
+        "word": "MAIZE",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "AIE"
+      },
+      {
+        "scrambled": "NAHCT",
+        "word": "CHANT",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "NT"
+      },
+      {
+        "scrambled": "TARDIO",
+        "word": "ADROIT",
+        "obv": [
+          4,
+          6
+        ],
+        "letters": "OT"
+      },
+      {
+        "scrambled": "INTIEF",
+        "word": "FINITE",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "NT"
+      }
+    ],
+    "clue": "WHAT HE PAID WHEN HE HIRED THE TAX ADVISOR.",
+    "desc": "A man sits at a desk with a tax advisor. The advisor says, '...and my fee is deductible'."
+  },
+  {
+    "level": 70,
+    "final": "DOWN TO EARTH",
+    "prefilled": "**** ** *****",
+    "words": [
+      {
+        "scrambled": "OMPET",
+        "word": "TEMPO",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "TO"
+      },
+      {
+        "scrambled": "DEWUN",
+        "word": "UNWED",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "NW"
+      },
+      {
+        "scrambled": "SAHDIR",
+        "word": "RADISH",
+        "obv": [
+          1,
+          2,
+          6
+        ],
+        "letters": "RAH"
+      },
+      {
+        "scrambled": "AFACED",
+        "word": "FACADE",
+        "obv": [
+          5,
+          6
+        ],
+        "letters": "DE"
+      }
+    ],
+    "clue": "THE STUDENTS ADMIRED THE ARCHAEOLOGIST BECAUSE HE WAS---",
+    "desc": "An archaeologist digs alongside students. One says, 'He treats us as equals'. Another adds, 'Doesn't put on any airs'."
+  },
+  {
+    "level": 71,
+    "final": "A PRONOUN",
+    "prefilled": "A *******",
+    "words": [
+      {
+        "scrambled": "MAXIO",
+        "word": "AXIOM",
+        "obv": [
+          4
+        ],
+        "letters": "O"
+      },
+      {
+        "scrambled": "NOARP",
+        "word": "APRON",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "RN"
+      },
+      {
+        "scrambled": "NUGMIP",
+        "word": "IMPUGN",
+        "obv": [
+          3,
+          6
+        ],
+        "letters": "PN"
+      },
+      {
+        "scrambled": "QUESMO",
+        "word": "MOSQUE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "MU"
+      }
+    ],
+    "clue": "WHAT SHE IS IN AN ENGLISH CLASS?",
+    "desc": "A teacher writes 'TEST TOMORROW' on the board. A student exclaims, 'Not again'."
+  },
+  {
+    "level": 72,
+    "final": "UNDER COVER",
+    "prefilled": "***** *****",
+    "words": [
+      {
+        "scrambled": "CERDY",
+        "word": "DECRY",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "EC"
+      },
+      {
+        "scrambled": "TOORB",
+        "word": "ROBOT",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "RO"
+      },
+      {
+        "scrambled": "UNDASE",
+        "word": "SUNDAE",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "SUN"
+      },
+      {
+        "scrambled": "FRIEVY",
+        "word": "VERIFY",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "VER"
+      }
+    ],
+    "clue": "WHEN THE EXHAUSTED SPY WENT TO BED, HE WAS ---",
+    "desc": "A spy lies in bed, snoring loudly. A walkie-talkie says, 'Come in, AJAX. Come in'."
+  },
+  {
+    "level": 73,
+    "final": "TO \"DYE\" FOR",
+    "prefilled": "** \"***\" ***",
+    "words": [
+      {
+        "scrambled": "OGOIL",
+        "word": "IGLOO",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "OO"
+      },
+      {
+        "scrambled": "NEKEL",
+        "word": "KNEEL",
+        "obv": [
+          3
+        ],
+        "letters": "E"
+      },
+      {
+        "scrambled": "WURPAD",
+        "word": "UPWARD",
+        "obv": [
+          5,
+          6
+        ],
+        "letters": "RD"
+      },
+      {
+        "scrambled": "KLYFNU",
+        "word": "FLUNKY",
+        "obv": [
+          1,
+          6
+        ],
+        "letters": "FY"
+      }
+    ],
+    "clue": "WHEN SHE CHANGED HER HAIR COLOR, IT WAS---",
+    "desc": "A woman admires her new hair color in a mirror. Her friend says, 'Oh my! It's gorgeous'."
+  },
+  {
+    "level": 74,
+    "final": "THE \"HEAD\" COACH",
+    "prefilled": "*** \"****\" *****",
+    "words": [
+      {
+        "scrambled": "CEHKT",
+        "word": "KETCH",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "CH"
+      },
+      {
+        "scrambled": "HUDCY",
+        "word": "DUCHY",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "DH"
+      },
+      {
+        "scrambled": "OSANTA",
+        "word": "SONATA",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "SNT"
+      },
+      {
+        "scrambled": "GLUCED",
+        "word": "CUDGEL",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "CE"
+      }
+    ],
+    "clue": "WHAT THE RUNNING BACK CALLED THE TEAM PSYCHIATRIST.",
+    "desc": "A football player lies on a psychiatrist's couch. He says, 'How can I stop fumbling?'."
+  },
+  {
+    "level": 75,
+    "final": "BY DEGREES",
+    "prefilled": "** *******",
+    "words": [
+      {
+        "scrambled": "ZAREC",
+        "word": "CRAZE",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "RE"
+      },
+      {
+        "scrambled": "YURUS",
+        "word": "USURY",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "SY"
+      },
+      {
+        "scrambled": "GEJLUG",
+        "word": "JUGGLE",
+        "obv": [
+          3,
+          6
+        ],
+        "letters": "GE"
+      },
+      {
+        "scrambled": "DILBOE",
+        "word": "BOILED",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "BED"
+      }
+    ],
+    "clue": "HOW THE PROFESSOR GOT HIS DOCTORATE.",
+    "desc": "A man in a graduation gown shakes hands. A woman says, 'First his bachelor's, then his master's and now, Doctor Brown'."
+  },
+  {
+    "level": 76,
+    "final": "JUST FOR \"KICKS\"",
+    "prefilled": "**** *** \"*****\"",
+    "words": [
+      {
+        "scrambled": "SYSUS",
+        "word": "FUSSY",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "US"
+      },
+      {
+        "scrambled": "SCUHR",
+        "word": "CRUSH",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "CS"
+      },
+      {
+        "scrambled": "TEMIKS",
+        "word": "KISMET",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "KIE"
+      },
+      {
+        "scrambled": "JEACKT",
+        "word": "JACKET",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "JC"
+      }
+    ],
+    "clue": "WHY THE BOXER JOINED THE SOCCER TEAM.",
+    "desc": "A boxer is running on a soccer field. He says, 'Maybe it will improve my footwork'."
+  },
+  {
+    "level": 77,
+    "final": "QUITE A \"BALL\"",
+    "prefilled": "***** A \"****\"",
+    "words": [
+      {
+        "scrambled": "CALLI",
+        "word": "LILAC",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "LIA"
+      },
+      {
+        "scrambled": "PYMUB",
+        "word": "BUMPY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "BU"
+      },
+      {
+        "scrambled": "TRULIA",
+        "word": "RITUAL",
+        "obv": [
+          3,
+          6
+        ],
+        "letters": "TL"
+      },
+      {
+        "scrambled": "QUALEP",
+        "word": "PLAQUE",
+        "obv": [
+          4,
+          6
+        ],
+        "letters": "QE"
+      }
+    ],
+    "clue": "WHEN HE WALKED IN THE WINNING RUN, THE VICTORS HAD ---",
+    "desc": "A baseball player rounds the bases. The crowd cheers, 'We're the champs! BALL FOUR! We win!'."
+  },
+  {
+    "level": 78,
+    "final": "A VISIT",
+    "prefilled": "A *****",
+    "words": [
+      {
+        "scrambled": "KESTO",
+        "word": "STOKE",
+        "obv": [
+          1
+        ],
+        "letters": "S"
+      },
+      {
+        "scrambled": "VOLCE",
+        "word": "CLOVE",
+        "obv": [
+          4
+        ],
+        "letters": "V"
+      },
+      {
+        "scrambled": "DIMADY",
+        "word": "MIDDAY",
+        "obv": [
+          2
+        ],
+        "letters": "I"
+      },
+      {
+        "scrambled": "TUPPIL",
+        "word": "PULPIT",
+        "obv": [
+          5,
+          6
+        ],
+        "letters": "IT"
+      }
+    ],
+    "clue": "WHEN HE RETURNED TO THE OLD HANGOUT, HE PAID ---",
+    "desc": "A man enters a bar and says, 'Drinks for everyone'. A regular says, 'Hey! It's Wally'."
+  },
+  {
+    "level": 79,
+    "final": "THEY \"DREW\" CROWDS",
+    "prefilled": "**** \"****\" ******",
+    "words": [
+      {
+        "scrambled": "GALOW",
+        "word": "AGLOW",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "OW"
+      },
+      {
+        "scrambled": "ROWEB",
+        "word": "BOWER",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "WR"
+      },
+      {
+        "scrambled": "CEDROF",
+        "word": "FORCED",
+        "obv": [
+          4,
+          5,
+          6
+        ],
+        "letters": "CED"
+      },
+      {
+        "scrambled": "SMARDI",
+        "word": "DISARM",
+        "obv": [
+          1,
+          3,
+          5
+        ],
+        "letters": "DSR"
+      }
+    ],
+    "clue": "WHAT THE ARTIST AND THE SMASH HIT MUSICAL HAD IN COMMON.",
+    "desc": "An artist draws portraits on the street as a crowd lines up near a theater with an 'SRO' sign."
+  },
+  {
+    "level": 80,
+    "final": "\"HOT FOOTED\" IT",
+    "prefilled": "\"*** ******\" **",
+    "words": [
+      {
+        "scrambled": "HAWTE",
+        "word": "WHEAT",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "HA"
+      },
+      {
+        "scrambled": "PREKO",
+        "word": "POKER",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "OE"
+      },
+      {
+        "scrambled": "TRUFOH",
+        "word": "FOURTH",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "FOR"
+      },
+      {
+        "scrambled": "BOYDUL",
+        "word": "DOUBLY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "DO"
+      }
+    ],
+    "clue": "WHAT THE BATHERS DID WHEN THEY HIT THE BURNING SAND",
+    "desc": "Two people stand on a beach, hopping and running. One yells 'OUCH!', the other says, 'Run for the water'."
+  },
+  {
+    "level": 81,
+    "final": "A \"GRAND\" JURY",
+    "prefilled": "A \"*****\" ****",
+    "words": [
+      {
+        "scrambled": "YOILD",
+        "word": "DOILY",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "DY"
+      },
+      {
+        "scrambled": "YUCIJ",
+        "word": "JUICY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "JU"
+      },
+      {
+        "scrambled": "NERBAN",
+        "word": "BANNER",
+        "obv": [
+          2,
+          3,
+          6
+        ],
+        "letters": "ANR"
+      },
+      {
+        "scrambled": "VORGEN",
+        "word": "GOVERN",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "GR"
+      }
+    ],
+    "clue": "HOW THE DEFENDANT DESCRIBED THE PANEL HEARING HIS CASE.",
+    "desc": "A defendant stands before a jury box. The jury responds, 'Not guilty!'."
+  },
+  {
+    "level": 82,
+    "final": "GAINED \"POUNDS\"",
+    "prefilled": "****** \"******\"",
+    "words": [
+      {
+        "scrambled": "PITED",
+        "word": "TEPID",
+        "obv": [
+          2,
+          4,
+          5
+        ],
+        "letters": "EID"
+      },
+      {
+        "scrambled": "PRUSN",
+        "word": "SPURN",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "SPU"
+      },
+      {
+        "scrambled": "DANCEN",
+        "word": "CANNED",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "CAN"
+      },
+      {
+        "scrambled": "HOGUNE",
+        "word": "ENOUGH",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "ENU"
+      }
+    ],
+    "clue": "WHAT THE DIETITIAN DID WHEN THE ENGLISH PATIENT LOST WEIGHT",
+    "desc": "A man stands on a scale. The dietitian hands him a bill and says, 'Here's my bill'. He says, 'Wonderful. I've lost another ten'."
+  },
+  {
+    "level": 83,
+    "final": "HOLDUP HOLDUP",
+    "prefilled": "****** ******",
+    "words": [
+      {
+        "scrambled": "DUPON",
+        "word": "POUND",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "POD"
+      },
+      {
+        "scrambled": "DALIP",
+        "word": "PLAID",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "PLD"
+      },
+      {
+        "scrambled": "HUCHAH",
+        "word": "HAUNCH",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "HAC"
+      },
+      {
+        "scrambled": "FEWLOU",
+        "word": "WOEFUL",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "WUL"
+      }
+    ],
+    "clue": "THE POLICE ROADBLOCK LED TO A ---",
+    "desc": "A car is stuck in a traffic jam near police cars. A driver asks, 'What's the delay?'. Someone replies, 'They're trying to catch the bank robbers'."
+  },
+  {
+    "level": 84,
+    "final": "ON THE \"DOT\"",
+    "prefilled": "** *** \"***\"",
+    "words": [
+      {
+        "scrambled": "TANCE",
+        "word": "ENACT",
+        "obv": [
+          1,
+          2,
+          5
+        ],
+        "letters": "ENT"
+      },
+      {
+        "scrambled": "TUFLE",
+        "word": "FLUTE",
+        "obv": [
+          4
+        ],
+        "letters": "T"
+      },
+      {
+        "scrambled": "BOYDEM",
+        "word": "EMBODY",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "ED"
+      },
+      {
+        "scrambled": "LOWHYL",
+        "word": "WHOLLY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "WH"
+      }
+    ],
+    "clue": "WHEN THE OLD-TIME TELEGRAPH OPERATOR SENT HIS HOURLY MESSAGE, IT WAS---",
+    "desc": "A man sends a message on a telegraph machine. Two people behind him say, 'He doesn't waste any time'."
+  },
+  {
+    "level": 85,
+    "final": "AN \"UDDER\" MESS",
+    "prefilled": "** \"*****\" ****",
+    "words": [
+      {
+        "scrambled": "DIMIO",
+        "word": "IDIOM",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "DO"
+      },
+      {
+        "scrambled": "TAUID",
+        "word": "AUDIT",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "UD"
+      },
+      {
+        "scrambled": "GYSSAR",
+        "word": "GRASSY",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "ASS"
+      },
+      {
+        "scrambled": "THERTE",
+        "word": "TETHER",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "TER"
+      }
+    ],
+    "clue": "WHEN THE CITY SLICKER TRIED MILKING A COW, THE RESULT WAS---",
+    "desc": "A man tries to milk a cow but ends up spilling milk everywhere. Someone says, 'It's supposed to go into the pail'."
+  },
+  {
+    "level": 86,
+    "final": "A DECIMAL",
+    "prefilled": "A *******",
+    "words": [
+      {
+        "scrambled": "YAARR",
+        "word": "ARRAY",
+        "obv": [
+          1
+        ],
+        "letters": "A"
+      },
+      {
+        "scrambled": "MYHRE",
+        "word": "RHYME",
+        "obv": [
+          5
+        ],
+        "letters": "E"
+      },
+      {
+        "scrambled": "FELICK",
+        "word": "FICKLE",
+        "obv": [
+          3,
+          5
+        ],
+        "letters": "CL"
+      },
+      {
+        "scrambled": "DUQILI",
+        "word": "LIQUID",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "LI"
+      }
+    ],
+    "clue": "USED BY A BANKER TO MAKE A POINT.",
+    "desc": "A man points at a board showing interest rates like 7.25%. He says, 'So the interest is 7.25'."
+  },
+  {
+    "level": 87,
+    "final": "\"EXHAUSTING\"",
+    "prefilled": "\"**********\"",
+    "words": [
+      {
+        "scrambled": "DEUXE",
+        "word": "EXUDE",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "EXU"
+      },
+      {
+        "scrambled": "TILMI",
+        "word": "LIMIT",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "IT"
+      },
+      {
+        "scrambled": "GACHER",
+        "word": "CHARGE",
+        "obv": [
+          2,
+          3,
+          5
+        ],
+        "letters": "HAG"
+      },
+      {
+        "scrambled": "YAUNES",
+        "word": "UNEASY",
+        "obv": [
+          2,
+          5
+        ],
+        "letters": "NS"
+      }
+    ],
+    "clue": "WHEN THE MECHANIC INSTALLED THE NEW MUFFLER, IT WAS---",
+    "desc": "A mechanic installs a muffler. He wipes his forehead and says, 'Whew, that was a tough one'."
+  },
+  {
+    "level": 88,
+    "final": "CARLESS",
+    "prefilled": "*******",
+    "words": [
+      {
+        "scrambled": "ACOOC",
+        "word": "COCOA",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "CA"
+      },
+      {
+        "scrambled": "FASHE",
+        "word": "SHEAF",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "SE"
+      },
+      {
+        "scrambled": "SEXCIE",
+        "word": "EXCISE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "ES"
+      },
+      {
+        "scrambled": "YARFIL",
+        "word": "FAIRLY",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "RL"
+      }
+    ],
+    "clue": "HOW THE TEEN DRIVER ENDED UP WHEN HE WAS CARELESS.",
+    "desc": "Two men argue over a scratched car. One man yells, 'It'll cost me hundreds. Give me your key!'. The other replies, 'It's just a scratch'."
+  },
+  {
+    "level": 89,
+    "final": "IT WAS A \"STAND\"",
+    "prefilled": "** *** A \"*****\"",
+    "words": [
+      {
+        "scrambled": "LAWRD",
+        "word": "DRAWL",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "DW"
+      },
+      {
+        "scrambled": "BISSA",
+        "word": "BASIS",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "AS"
+      },
+      {
+        "scrambled": "TIVNAY",
+        "word": "VANITY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "NI"
+      },
+      {
+        "scrambled": "SAUCCU",
+        "word": "CAUCUS",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "CU"
+      }
+    ],
+    "clue": "WHY THEY STAGED A SIT-IN TO SAVE THE TREES.",
+    "desc": "People chain themselves to trees. Someone says, 'They've been here for 80 years!'."
+  },
+  {
+    "level": 90,
+    "final": "THE \"SCREEN\" TEST",
+    "prefilled": "*** \"******\" ****",
+    "words": [
+      {
+        "scrambled": "STUMY",
+        "word": "MUSTY",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "ST"
+      },
+      {
+        "scrambled": "VANER",
+        "word": "RAVEN",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "RE"
+      },
+      {
+        "scrambled": "COTESK",
+        "word": "SOCKET",
+        "obv": [
+          1,
+          5,
+          6
+        ],
+        "letters": "SET"
+      },
+      {
+        "scrambled": "VECIED",
+        "word": "DEVICE",
+        "obv": [
+          2,
+          5,
+          6
+        ],
+        "letters": "ECE"
+      }
+    ],
+    "clue": "WHAT THE FLIES PASSED ON THE MOVIE SET.",
+    "desc": "A man and a woman look at a fly-covered window. The man asks, 'Where did they come from?'."
+  },
+  {
+    "level": 91,
+    "final": "A \"GAME\" SHOW",
+    "prefilled": "A \"****\" ****",
+    "words": [
+      {
+        "scrambled": "SHOWE",
+        "word": "WHOSE",
+        "obv": [
+          1,
+          4
+        ],
+        "letters": "WS"
+      },
+      {
+        "scrambled": "BAXOR",
+        "word": "BORAX",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "OR"
+      },
+      {
+        "scrambled": "MUBHEL",
+        "word": "HUMBLE",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "HM"
+      },
+      {
+        "scrambled": "HIGLES",
+        "word": "SLEIGH",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "SG"
+      }
+    ],
+    "clue": "SHOT BY THE TELEVISION HOST ON THE SAFARI.",
+    "desc": "A cameraman films elephants. The TV host says, 'I'm getting some great footage for my program'."
+  },
+  {
+    "level": 92,
+    "final": "\"ODDS\" CHOICE",
+    "prefilled": "\"****\" ******",
+    "words": [
+      {
+        "scrambled": "OUDES",
+        "word": "DOUSE",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "DOS"
+      },
+      {
+        "scrambled": "YAIDS",
+        "word": "DAISY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "DI"
+      },
+      {
+        "scrambled": "PHISBO",
+        "word": "BISHOP",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "HO"
+      },
+      {
+        "scrambled": "NECCAT",
+        "word": "ACCENT",
+        "obv": [
+          2,
+          3,
+          4
+        ],
+        "letters": "CCE"
+      }
+    ],
+    "clue": "WHEN THE RAILBIRD BET ON THE LONG SHOT, IT WAS AN ---",
+    "desc": "Two men watch a horse race. One says, 'It's a big payday'. The other says, '70 to 1. You bet on that nag?'."
+  },
+  {
+    "level": 93,
+    "final": "FALL FOR IT",
+    "prefilled": "**** *** **",
+    "words": [
+      {
+        "scrambled": "KAFLE",
+        "word": "FLAKE",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "FLA"
+      },
+      {
+        "scrambled": "LAWTZ",
+        "word": "WALTZ",
+        "obv": [
+          3,
+          4
+        ],
+        "letters": "LT"
+      },
+      {
+        "scrambled": "GOOLIG",
+        "word": "GIGOLO",
+        "obv": [
+          2,
+          4
+        ],
+        "letters": "IO"
+      },
+      {
+        "scrambled": "DRIVEF",
+        "word": "FERVID",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "FR"
+      }
+    ],
+    "clue": "THE POLITICIAN CLAIMED TO STAND FOR IT, BUT THE LISTENER DIDN'T ---",
+    "desc": "A politician stands on a soapbox saying, '...and I will balance the budget'. A man in the audience says, 'He'll say anything to get elected'."
+  },
+  {
+    "level": 94,
+    "final": "\"RELATIVE\"",
+    "prefilled": "\"********\"",
+    "words": [
+      {
+        "scrambled": "UGAVE",
+        "word": "VAGUE",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "VA"
+      },
+      {
+        "scrambled": "TUBIC",
+        "word": "CUBIT",
+        "obv": [
+          5
+        ],
+        "letters": "T"
+      },
+      {
+        "scrambled": "BEDFAL",
+        "word": "FABLED",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "LE"
+      },
+      {
+        "scrambled": "RIJEGG",
+        "word": "JIGGER",
+        "obv": [
+          5,
+          6
+        ],
+        "letters": "ER"
+      }
+    ],
+    "clue": "EVEN WHEN THE BROTHERS GOT MAD AT EACH OTHER, THEIR ANGER WAS ---",
+    "desc": "Two brothers fight over a toy train. A mother watches and says, 'They scream and holler, but soon they'll be laughing'."
+  },
+  {
+    "level": 95,
+    "final": "WORD WITH THEM",
+    "prefilled": "**** **** ****",
+    "words": [
+      {
+        "scrambled": "HEWIG",
+        "word": "WEIGH",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "WEG"
+      },
+      {
+        "scrambled": "ETTIL",
+        "word": "TITLE",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "TIT"
+      },
+      {
+        "scrambled": "HARMIO",
+        "word": "MOHAIR",
+        "obv": [
+          1,
+          2,
+          3
+        ],
+        "letters": "MOH"
+      },
+      {
+        "scrambled": "REDOWP",
+        "word": "POWDER",
+        "obv": [
+          3,
+          4,
+          5
+        ],
+        "letters": "WDE"
+      }
+    ],
+    "clue": "WHEN THE CLASS DID THE PUZZLE, THE TEACHER HAD A ---",
+    "desc": "A teacher writes an anagram on the board. She asks, 'What is this one?'."
+  },
+  {
+    "level": 96,
+    "final": "WHICH ONE",
+    "prefilled": "***** ***",
+    "words": [
+      {
+        "scrambled": "SOINY",
+        "word": "NOISY",
+        "obv": [
+          1,
+          3
+        ],
+        "letters": "NI"
+      },
+      {
+        "scrambled": "MACHP",
+        "word": "CHAMP",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "CH"
+      },
+      {
+        "scrambled": "WYIHNN",
+        "word": "WHINNY",
+        "obv": [
+          1,
+          2
+        ],
+        "letters": "WH"
+      },
+      {
+        "scrambled": "COALLE",
+        "word": "LOCALE",
+        "obv": [
+          1,
+          5
+        ],
+        "letters": "LL"
+      }
+    ],
+    "clue": "HE REMEMBERED HER BIRTHDAY, BUT CHOSE TO FORGET THIS.",
+    "desc": "A man gives a wrapped gift to a woman. She asks, 'Where's the card?'."
+  },
+  {
+    "level": 97,
+    "final": "IT WAS TOO \"HIGH\"",
+    "prefilled": "** *** *** \"****\"",
+    "words": [
+      {
+        "scrambled": "COLIG",
+        "word": "LOGIC",
+        "obv": [
+          2,
+          3
+        ],
+        "letters": "OG"
+      },
+      {
+        "scrambled": "SLUPH",
+        "word": "PLUSH",
+        "obv": [
+          4,
+          5
+        ],
+        "letters": "SH"
+      },
+      {
+        "scrambled": "LOWALT",
+        "word": "TALLOW",
+        "obv": [
+          1,
+          4,
+          5
+        ],
+        "letters": "TLO"
+      },
+      {
+        "scrambled": "GRAHAN",
+        "word": "HANGAR",
+        "obv": [
+          1,
+          2,
+          4
+        ],
+        "letters": "HAG"
+      }
+    ],
+    "clue": "WHY THE SWEATY SHOPPER DIDN'T BUY THE THERMOMETER.",
+    "desc": "A sweaty shopper looks at thermometers. A clerk says, 'They are all on sale'. The shopper replies, 'I don't need one to tell me it's hot'."
+  }
+]

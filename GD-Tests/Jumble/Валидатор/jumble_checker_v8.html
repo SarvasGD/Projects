@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumble OBV Checker v8 (Smart Replace + Robust Export)</title>
+    <style>
+        :root {
+            --bg: #ffffff; --text: #000000; --accent: #1e3a8a; --border: #000000;
+            --ok: #166534; --err: #991b1b; --warn: #92400e; --info: #0f4c81;
+            --light-gray: #f3f4f6; --gray: #6b7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.6;
+            padding: 2rem; max-width: 1150px; margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.75rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: -0.5px; border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem; margin-bottom: 1.5rem;
+        }
+        .drop-zone {
+            border: 2px dashed var(--border); border-radius: 4px;
+            padding: 3rem 2rem; text-align: center; cursor: pointer;
+            transition: background 0.2s; margin-bottom: 1.5rem;
+        }
+        .drop-zone.dragover { background: var(--light-gray); }
+        .drop-zone p { font-size: 1.1rem; color: var(--gray); }
+        .drop-zone .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        #file-input { display: none; }
+        .toolbar {
+            display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: var(--accent); color: white; border: none;
+            padding: 0.6rem 1.2rem; font-weight: 600; cursor: pointer;
+            border-radius: 3px; font-size: 0.9rem;
+        }
+        .btn:hover { opacity: 0.9; }
+        .summary {
+            display: flex; gap: 1.5rem; margin-bottom: 1.5rem; font-weight: 600; flex-wrap: wrap;
+        }
+        .summary .stat {
+            background: var(--light-gray); border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem; border-radius: 4px;
+        }
+        .summary .stat.pass { border-left: 4px solid var(--ok); }
+        .summary .stat.fail { border-left: 4px solid var(--err); }
+        .level-card {
+            border: 1px solid var(--border); border-radius: 4px; margin-bottom: 1rem; overflow: hidden;
+        }
+        .level-card.pass { border-left: 4px solid var(--ok); }
+        .level-card.fail { border-left: 4px solid var(--err); }
+        .level-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem 1rem; background: var(--light-gray);
+            border-bottom: 1px solid var(--border); font-weight: 600;
+        }
+        .badge {
+            font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 3px; font-weight: 700;
+        }
+        .badge.pass { background: #dcfce7; color: var(--ok); }
+        .badge.fail { background: #fce4ec; color: var(--err); }
+        .level-body { padding: 1rem; }
+        .error-list { list-style: none; padding-left: 0; }
+        .error-list li {
+            background: #fff5f5; border: 1px solid #fecaca;
+            padding: 0.5rem 0.75rem; margin-bottom: 0.4rem; border-radius: 3px;
+            font-size: 0.9rem; white-space: pre-wrap; font-family: monospace;
+        }
+        .word-table {
+            width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.82rem;
+        }
+        .word-table th, .word-table td {
+            border: 1px solid var(--border); padding: 0.35rem 0.5rem;
+            text-align: left; vertical-align: top;
+        }
+        .word-table th { background: var(--light-gray); font-weight: 600; }
+        .info-row {
+            font-size: 0.85rem; color: var(--gray); margin-top: 0.5rem; font-family: monospace;
+        }
+        .warn-banner {
+            background: #fffbeb; border: 1px solid #fcd34d;
+            padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 4px;
+            font-size: 0.9rem; color: var(--warn);
+        }
+        .fix-suggest { color: var(--accent); font-weight: bold; }
+        .old-obv { text-decoration: line-through; color: var(--err); margin-right: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Jumble OBV Checker v8 (Smart Same‑Word Replacement)</h1>
+    <div id="drop-zone" class="drop-zone">
+        <div class="icon">📁</div>
+        <p>Перетащите JSON-файл сюда или нажмите для выбора</p>
+        <input type="file" id="file-input" accept=".json">
+    </div>
+    <div id="results"></div>
+
+    <script>
+        (function() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const resultsDiv = document.getElementById('results');
+
+            let lastResults = null;
+            let lastOriginalData = null;
+            let lastSourceText = null;
+            let lastFilename = 'levels_fixed.json';
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+            fileInput.addEventListener('change', e => {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+            });
+
+            function autoFixJsonQuotes(rawText) {
+                let warnings = [];
+                let cleaned = rawText.replace(/\\"/g, '__ESC__');
+                let result = '', i = 0, inStr = false, fixed = 0;
+                while (i < cleaned.length) {
+                    if (!inStr) {
+                        let m = cleaned.slice(i).match(/^"\s*:\s*"/);
+                        if (m) {
+                            let start = i + m[0].length;
+                            result += cleaned.slice(i, start);
+                            i = start; inStr = true; continue;
+                        }
+                    }
+                    if (inStr && cleaned[i] === '"') {
+                        let after = cleaned.slice(i+1).trimStart();
+                        if (!after || after[0] === ',' || after[0] === '}' || after[0] === ']' || after[0] === '\n' || after[0] === '\r' || after[0] === '"') {
+                            result += '"'; inStr = false;
+                        } else {
+                            result += "'"; fixed++;
+                        }
+                        i++; continue;
+                    }
+                    result += cleaned[i] || ''; i++;
+                }
+                result = result.replace(/__ESC__/g, '\\"');
+                if (fixed) warnings.push(`Автоисправлено ${fixed} неэкранированных кавычек.`);
+                return { text: result, warnings };
+            }
+
+            function handleFile(file) {
+                if (!file.name.endsWith('.json')) { alert('Нужен .json файл'); return; }
+                const reader = new FileReader();
+                reader.onload = e => {
+                    let raw = e.target.result, warns = [];
+                    let data;
+                    let workingText = raw;
+                    try {
+                        data = JSON.parse(raw);
+                    } catch (err1) {
+                        let fixed = autoFixJsonQuotes(raw);
+                        warns = fixed.warnings;
+                        workingText = fixed.text;
+                        try {
+                            data = JSON.parse(fixed.text);
+                        } catch (err2) {
+                            showParseError(raw, err1);
+                            return;
+                        }
+                    }
+                    lastSourceText = workingText;
+                    lastFilename = file.name.replace('.json', '_fixed.json');
+                    processData(data, file.name, warns);
+                };
+                reader.readAsText(file);
+            }
+
+            function showParseError(raw, err) {
+                let pos = (err.message.match(/position (\d+)/) || [0,27])[1]*1;
+                let ctx = raw.slice(Math.max(0,pos-20), pos+20);
+                let pointer = ' '.repeat(Math.min(20, pos)) + '^';
+                let line = raw.slice(0, pos+1).split('\n').length;
+                resultsDiv.innerHTML = `<div style="border:1px solid var(--err);padding:1rem;border-radius:4px;">
+                    <h3 style="color:var(--err)">Ошибка парсинга JSON</h3>
+                    <p>Строка ${line}, позиция ${pos}</p>
+                    <pre style="background:#fafafa;padding:0.5rem;">${ctx}\n${pointer}</pre>
+                </div>`;
+            }
+
+            const extractLettersSafe = (word, obv) => {
+                let r = [];
+                for (let idx of obv) {
+                    if (idx<1 || idx>word.length) return null;
+                    r.push(word[idx-1]);
+                }
+                return r.join('');
+            };
+
+            const extractLetters = (word, obv) => {
+                const res = extractLettersSafe(word, obv);
+                if (res === null) throw new Error(`Индекс вне границ слова '${word}'`);
+                return res;
+            };
+
+            const countStars = s => (s.match(/\*/g)||[]).length;
+
+            const letterFreq = s => {
+                const f = {};
+                for (let ch of s) if (/[A-Za-z]/.test(ch)) { ch=ch.toUpperCase(); f[ch]=(f[ch]||0)+1; }
+                return f;
+            };
+
+            const subtractFreq = (f1, f2) => {
+                const res = {};
+                for (let k in f1) res[k] = f1[k];
+                for (let k in f2) {
+                    res[k] = (res[k]||0) - f2[k];
+                    if (res[k] < 0) return null;
+                    if (res[k] === 0) delete res[k];
+                }
+                return res;
+            };
+
+            const freqToString = f => Object.keys(f).sort().map(k => k.repeat(f[k])).join('');
+
+            const diffFreqs = (extractedFreq, neededFreq) => {
+                const extra = {}, missing = {};
+                for (let k in extractedFreq) {
+                    const delta = extractedFreq[k] - (neededFreq[k]||0);
+                    if (delta > 0) extra[k] = delta;
+                }
+                for (let k in neededFreq) {
+                    const delta = neededFreq[k] - (extractedFreq[k]||0);
+                    if (delta > 0) missing[k] = delta;
+                }
+                return { extra, missing };
+            };
+
+            const findLetterPositions = (word, letter, currentObv) => {
+                const positions = [];
+                const upperWord = word.toUpperCase();
+                const upperLetter = letter.toUpperCase();
+                for (let i=0; i<upperWord.length; i++) {
+                    if (upperWord[i] === upperLetter && !currentObv.includes(i+1)) {
+                        positions.push(i+1);
+                    }
+                }
+                return positions;
+            };
+
+            function validateLevel(ld) {
+                const errors = [];
+                const lvl = ld.level ?? '?';
+                const prefilled = ld.prefilled || '';
+                const final = ld.final || '';
+                const words = ld.words || [];
+
+                const starCount = countStars(prefilled);
+                const totalObv = words.reduce((s,w) => s + (w.obv||[]).length, 0);
+                if (starCount !== totalObv) {
+                    const diff = starCount - totalObv;
+                    if (diff > 0) {
+                        errors.push(`Шаг 1: '*'=${starCount}, obv=${totalObv}. Звёздочек больше — удалите лишние * из prefilled или добавьте индексов в obv.`);
+                    } else {
+                        errors.push(`Шаг 1: '*'=${starCount}, obv=${totalObv}. obv больше — добавьте * в prefilled или уберите лишние индексы.`);
+                    }
+                }
+
+                const wordDetails = [];
+                const extractedParts = [];
+                for (let i=0; i<words.length; i++) {
+                    const w = words[i];
+                    const word = w.word || '';
+                    const obv = w.obv || [];
+                    let part = '', extractErr = null;
+                    try { part = extractLetters(word, obv); } catch(e) { extractErr = e.message; errors.push(`Слово ${i} ('${word}'): ${e.message}`); }
+                    extractedParts.push(part);
+                    wordDetails.push({
+                        word, obv: [...obv], extracted: part, extractErr,
+                        suggestedObv: [...obv],
+                        extraIndices: [], missingToAdd: []
+                    });
+                }
+                const extracted = extractedParts.join('');
+
+                const preExistingLetters = prefilled.replace(/\*/g, '');
+                const preFreq = letterFreq(preExistingLetters);
+                const finalFreq = letterFreq(final);
+                const neededFreq = subtractFreq(finalFreq, preFreq);
+                let diff = null;
+
+                if (neededFreq === null) {
+                    errors.push(`Шаг 2a: В prefilled есть буквы, которых нет в final.`);
+                } else {
+                    const extractedFreq = letterFreq(extracted);
+                    if (freqToString(neededFreq) !== freqToString(extractedFreq)) {
+                        diff = diffFreqs(extractedFreq, neededFreq);
+                        errors.push(`Шаг 2b (анаграмма): несовпадение.`);
+                        errors.push(`  Ожидаемые: "${freqToString(neededFreq)}"`);
+                        errors.push(`  Извлечённые: "${freqToString(extractedFreq)}"`);
+                        if (diff) {
+                            errors.push(`  Лишние: ${freqToString(diff.extra) || 'нет'}`);
+                            errors.push(`  Не хватает: ${freqToString(diff.missing) || 'нет'}`);
+                        }
+                    }
+                }
+
+                if (diff) {
+                    // Новый подход: сначала пробуем замены внутри одного слова
+                    const remainingExtra = { ...diff.extra };
+                    const remainingMissing = { ...diff.missing };
+
+                    // Сначала для каждого слова ищем возможность замены: extra буква -> missing буква в том же слове
+                    for (let wd of wordDetails) {
+                        if (!wd.extracted) continue;
+                        const wUpper = wd.word.toUpperCase();
+                        for (let j=0; j<wd.extracted.length; j++) {
+                            const ch = wd.extracted[j].toUpperCase();
+                            if (!remainingExtra[ch] || remainingExtra[ch] <= 0) continue;
+                            // Есть ли среди missing буква, которая есть в этом слове на другой позиции?
+                            for (let mk in remainingMissing) {
+                                if (remainingMissing[mk] <= 0) continue;
+                                const pos = findLetterPositions(wd.word, mk, wd.obv);
+                                if (pos.length > 0) {
+                                    // Замена: убираем obv[j], добавляем pos[0]
+                                    wd.extraIndices.push({ index: wd.obv[j], letter: ch, replacedBy: { letter: mk, index: pos[0] } });
+                                    remainingExtra[ch]--;
+                                    remainingMissing[mk]--;
+                                    break; // одна замена за раз
+                                }
+                            }
+                        }
+                    }
+
+                    // Оставшиеся лишние — просто помечаем на удаление
+                    for (let wd of wordDetails) {
+                        for (let j=0; j<wd.extracted.length; j++) {
+                            const ch = wd.extracted[j].toUpperCase();
+                            if (remainingExtra[ch] && remainingExtra[ch] > 0 && !wd.extraIndices.some(e => e.index === wd.obv[j])) {
+                                wd.extraIndices.push({ index: wd.obv[j], letter: ch });
+                                remainingExtra[ch]--;
+                            }
+                        }
+                    }
+
+                    // Оставшиеся недостающие — ищем в любых словах
+                    const missingLettersList = [];
+                    for (let k in remainingMissing) {
+                        for (let c=0; c<remainingMissing[k]; c++) missingLettersList.push(k);
+                    }
+
+                    const assigned = new Set();
+                    for (const ml of missingLettersList) {
+                        let bestWord = null, bestPos = null;
+                        for (let wi=0; wi<wordDetails.length; wi++) {
+                            const wd = wordDetails[wi];
+                            const positions = findLetterPositions(wd.word, ml, wd.obv);
+                            for (const pos of positions) {
+                                const key = `${wi}:${pos}`;
+                                if (!assigned.has(key)) {
+                                    bestWord = wi; bestPos = pos;
+                                    assigned.add(key);
+                                    break;
+                                }
+                            }
+                            if (bestWord !== null) break;
+                        }
+                        if (bestWord !== null) {
+                            wordDetails[bestWord].missingToAdd.push({ letter: ml, index: bestPos });
+                        }
+                    }
+
+                    // Строим suggestedObv
+                    for (let wd of wordDetails) {
+                        const removeSet = new Set(wd.extraIndices.map(e => e.index));
+                        wd.suggestedObv = wd.obv.filter(idx => !removeSet.has(idx));
+                        for (const add of wd.missingToAdd) {
+                            wd.suggestedObv.push(add.index);
+                        }
+                        // Добавляем замены
+                        for (const extra of wd.extraIndices) {
+                            if (extra.replacedBy) {
+                                wd.suggestedObv.push(extra.replacedBy.index);
+                            }
+                        }
+                        wd.suggestedObv.sort((a,b)=>a-b);
+                    }
+
+                    let suggestedExtracted = '';
+                    for (let wd of wordDetails) {
+                        const part = extractLettersSafe(wd.word, wd.suggestedObv);
+                        if (part === null) { suggestedExtracted += '?'.repeat(wd.suggestedObv.length); }
+                        else { suggestedExtracted += part; }
+                    }
+                    const suggestionValid = (freqToString(letterFreq(suggestedExtracted)) === freqToString(neededFreq));
+                    if (!suggestionValid) {
+                        errors.push(`⚠️ Авто‑подсказка не дала полного совпадения.`);
+                    } else {
+                        errors.push(`💡 Предложены исправленные obv.`);
+                    }
+                }
+
+                return {
+                    level: lvl, passed: errors.length === 0, errors,
+                    prefilled, final, extracted, starCount, totalObv, wordDetails
+                };
+            }
+
+            function buildFixedText(sourceText, data, results) {
+                let text = sourceText;
+                for (let li=0; li<data.length; li++) {
+                    const lvl = data[li].level;
+                    const r = results[li];
+                    if (!r || r.passed) continue;
+                    const wordsArr = data[li].words;
+                    const levelStr = `"level": ${lvl}`;
+                    const levelIdx = text.indexOf(levelStr);
+                    if (levelIdx === -1) continue;
+                    const nextLevelMatch = text.slice(levelIdx + levelStr.length).match(/"level"\s*:\s*\d+/);
+                    const levelEndIdx = nextLevelMatch
+                        ? levelIdx + levelStr.length + nextLevelMatch.index
+                        : text.length;
+
+                    // Найти все word в пределах этого уровня (с учётом предыдущих замен)
+                    const currentWordPositions = [];
+                    const regex = /"word"\s*:\s*"([^"]+)"/g;
+                    let m;
+                    while ((m = regex.exec(text)) !== null) {
+                        if (m.index > levelIdx && m.index < levelEndIdx) {
+                            currentWordPositions.push({ index: m.index, word: m[1] });
+                        }
+                    }
+
+                    for (let wi=0; wi<wordsArr.length; wi++) {
+                        const wData = wordsArr[wi];
+                        const wd = r.wordDetails[wi];
+                        if (!wd || JSON.stringify(wData.obv) === JSON.stringify(wd.suggestedObv)) continue;
+                        const wp = currentWordPositions.find(p => p.word === wData.word);
+                        if (!wp) continue;
+
+                        const oldObvStr = JSON.stringify(wData.obv);
+                        const newObvStr = JSON.stringify(wd.suggestedObv);
+                        const startIdx = wp.index;
+                        const lineStart = text.lastIndexOf('\n', startIdx) + 1;
+                        const lineEnd = text.indexOf('\n', startIdx);
+                        const lineEndIdx = lineEnd === -1 ? text.length : lineEnd;
+                        const line = text.slice(lineStart, lineEndIdx);
+                        let newLine = line;
+                        newLine = newLine.replace(oldObvStr, newObvStr);
+                        if (wData.letters !== undefined) {
+                            const newLetters = extractLettersSafe(wData.word, wd.suggestedObv);
+                            if (newLetters !== null) {
+                                const lettersMatch = newLine.match(/"letters"\s*:\s*"([^"]*)"/);
+                                if (lettersMatch) {
+                                    newLine = newLine.replace(
+                                        `"letters": "${lettersMatch[1]}"`,
+                                        `"letters": "${newLetters}"`
+                                    );
+                                }
+                            }
+                        }
+                        text = text.slice(0, lineStart) + newLine + text.slice(lineEndIdx);
+                    }
+                }
+                return text;
+            }
+
+            function downloadText(text, filename) {
+                const blob = new Blob([text], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            function processData(data, filename, warnings) {
+                let levels = [];
+                if (Array.isArray(data)) levels = data;
+                else if (data?.levels) levels = data.levels;
+                else if (typeof data === 'object') levels = [data];
+                else { resultsDiv.innerHTML = '<p style="color:var(--err)">Неизвестный формат.</p>'; return; }
+                if (!levels.length) { resultsDiv.innerHTML = '<p>Нет уровней.</p>'; return; }
+
+                lastOriginalData = levels;
+                const results = levels.map(validateLevel);
+                lastResults = results;
+
+                const total = results.length;
+                const passed = results.filter(r=>r.passed).length;
+                const failed = total - passed;
+
+                let html = '';
+                if (warnings.length) warnings.forEach(w => html += `<div class="warn-banner">⚠️ ${w}</div>`);
+
+                html += `<div class="toolbar">
+                    <div class="summary" style="margin-bottom:0;">
+                        <div class="stat">📄 ${filename}</div>
+                        <div class="stat">Уровней: ${total}</div>
+                        <div class="stat pass">✓ Пройдено: ${passed}</div>
+                        <div class="stat fail">✗ Ошибок: ${failed}</div>
+                    </div>`;
+                if (failed > 0) {
+                    html += `<button class="btn" onclick="downloadFixedJson()">📥 Скачать исправленный JSON</button>`;
+                }
+                html += `</div>`;
+
+                for (const r of results) {
+                    const cls = r.passed ? 'pass' : 'fail';
+                    html += `<div class="level-card ${cls}">
+                        <div class="level-header"><span>Уровень ${r.level}</span><span class="badge ${cls}">${r.passed?'OK':'ОШИБКИ'}</span></div>`;
+                    if (!r.passed) {
+                        html += `<div class="level-body">`;
+                        html += `<div class="info-row">prefilled: "${r.prefilled}" | extracted: "${r.extracted}" | final: "${r.final}"</div>`;
+                        html += `<ul class="error-list">`;
+                        r.errors.forEach(e => html += `<li>${e.replace(/\n/g,'<br>')}</li>`);
+                        html += `</ul>`;
+                        html += `<table class="word-table"><tr><th>#</th><th>Слово</th><th>Текущий obv</th><th>Извлечено</th><th>Убрать</th><th>Добавить</th><th>→ Предлагаемый obv</th></tr>`;
+                        r.wordDetails.forEach((wd,idx) => {
+                            const removedParts = wd.extraIndices.map(e => e.replacedBy ? `${e.letter}@${e.index}→${e.replacedBy.letter}` : `${e.letter}@${e.index}`);
+                            const removed = removedParts.join(', ') || '—';
+                            const added = wd.missingToAdd.map(a => `${a.letter}@${a.index}`).join(', ') || '—';
+                            const sameObv = JSON.stringify(wd.obv) === JSON.stringify(wd.suggestedObv);
+                            const obvDisplay = sameObv
+                                ? `[${wd.obv.join(', ')}]`
+                                : `<span class="old-obv">[${wd.obv.join(', ')}]</span> <span class="fix-suggest">[${wd.suggestedObv.join(', ')}]</span>`;
+                            html += `<tr>
+                                <td>${idx+1}</td>
+                                <td>${wd.word}</td>
+                                <td>${obvDisplay}</td>
+                                <td>${wd.extracted}</td>
+                                <td>${removed}</td>
+                                <td>${added}</td>
+                                <td>${obvDisplay}</td>
+                            </tr>`;
+                        });
+                        html += `</table></div>`;
+                    }
+                    html += `</div>`;
+                }
+                resultsDiv.innerHTML = html;
+                window.downloadFixedJson = function() {
+                    if (!lastSourceText || !lastResults || !lastOriginalData) {
+                        alert('Нет данных для экспорта. Загрузите файл заново.');
+                        return;
+                    }
+                    try {
+                        const fixedText = buildFixedText(lastSourceText, lastOriginalData, lastResults);
+                        downloadText(fixedText, lastFilename);
+                    } catch (e) {
+                        alert('Ошибка при построении файла: ' + e.message);
+                        console.error(e);
+                    }
+                };
+            }
+        })();
+    </script>
+</body>
+</html>

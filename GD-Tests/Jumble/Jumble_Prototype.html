@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Jumble Mobile v2.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#F5F5F5;color:#333;overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column;align-items:center;max-width:480px;margin:0 auto}
+.menu-overlay{position:fixed;inset:0;background:#F5F5F5;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:150}
+.menu-overlay.hid{display:none!important}
+.lang-badge{position:absolute;top:12px;left:14px;font-size:12px;font-weight:700;color:#999}
+.menu-title{font-size:34px;font-weight:800;margin-bottom:6px;color:#333}
+.menu-sub{font-size:14px;color:#777;margin-bottom:12px;text-align:center;line-height:1.4;padding:0 20px}
+.menu-progress{font-size:16px;font-weight:700;color:#2196F3;margin-bottom:28px}
+.menu-btn{padding:14px 40px;font-size:18px;font-weight:700;border:none;border-radius:10px;cursor:pointer;margin:6px 0;min-width:260px;transition:.15s}
+.menu-btn:active{transform:scale(.97)}
+.btn-play{background:#4CAF50;color:#fff}
+.btn-lang{background:#2196F3;color:#fff}
+.btn-reset{background:#F44336;color:#fff;font-size:14px;padding:10px 30px;min-width:220px;margin-top:16px}
+.hdr{width:100%;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:0;z-index:10}
+.hdr .li{font-weight:700;font-size:17px}
+.hdr button{background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.hdr button:active{background:#eee}
+.cd{font-size:13px;color:#FF9800;font-weight:700}
+.cart{width:100%;padding:12px;text-align:center}
+.cart-ph{width:100%;min-height:130px;background:#E8F5E9;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;margin-bottom:6px}
+.cart-emoji{font-size:52px;margin-bottom:8px}
+.cart-desc{font-size:13px;color:#444;line-height:1.4;font-style:italic;max-width:95%}
+.clue{font-style:italic;color:#555;font-size:14px;line-height:1.4;padding:0 4px;margin-top:4px}
+.fa{width:100%;padding:6px 12px;text-align:center}
+.fs{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;min-height:40px;padding:6px;background:#FFF3E0;border-radius:8px;margin-bottom:6px}
+.fsl{width:32px;height:36px;border:2px dashed #FF9800;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#E65100;background:#fff;cursor:pointer;transition:.2s}
+.fsl.fi{border-style:solid;background:#FFE0B2}
+.confirm-bar{width:100%;padding:4px 12px;text-align:center;display:none}
+.confirm-bar.vis{display:block}
+.confirm-btn{padding:10px 30px;background:#4CAF50;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;animation:pop .3s}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.bk{width:100%;padding:2px 12px 6px;text-align:center}
+.bkl{font-size:11px;color:#888;margin-bottom:3px}
+.bkc{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;min-height:40px;padding:6px;background:#E3F2FD;border-radius:8px}
+.blt{width:32px;height:36px;background:#2196F3;color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;transition:.15s;user-select:none}
+.blt:active{transform:scale(.9)}
+.wa{width:100%;flex:1;padding:6px 12px 12px}
+.wt{display:flex;gap:4px;margin-bottom:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+.wt::-webkit-scrollbar{display:none}
+.wtb{flex:0 0 auto;min-width:48px;max-width:80px;padding:8px 6px;border:2px solid #ddd;border-radius:7px;text-align:center;font-size:11px;font-weight:700;cursor:pointer;background:#fff;transition:.2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.wtb.ac{border-color:#2196F3;background:#E3F2FD;color:#1565C0}
+.wtb.sv{border-color:#4CAF50;background:#C8E6C9;color:#2E7D32;font-size:12px}
+.wtb.unsolved{color:#999;font-size:10px}
+.sa{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-bottom:10px;min-height:40px;padding:6px}
+.sl{width:36px;height:40px;background:#fff;border:2px solid #bbb;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;cursor:pointer;transition:.15s;user-select:none}
+.sl:active{transform:scale(.9)}
+.sl.us{opacity:.3;pointer-events:none}
+.ac{display:flex;justify-content:center;gap:3px;min-height:44px}
+.acl{width:36px;height:44px;border:2px solid #ccc;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;background:#fff;cursor:pointer;transition:.2s;position:relative}
+.acl.ci{border-color:#2196F3}
+.acl.ci::after{content:'';position:absolute;inset:-3px;border:2px solid #2196F3;border-radius:50%;opacity:.4}
+.acl.fl{background:#E3F2FD;border-color:#2196F3}
+.acl.co{background:#C8E6C9;border-color:#4CAF50;color:#2E7D32}
+.acl.wr{background:#FFCDD2;border-color:#F44336;animation:shk .3s}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.vo{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column}
+.vo.sh{display:flex}
+.vc{background:#fff;border-radius:14px;padding:28px;text-align:center;max-width:300px;animation:pop .3s}
+.vc h2{font-size:26px;margin-bottom:6px}
+.vc .ar{font-size:20px;color:#E65100;font-weight:700;margin:10px 0}
+.vc button{margin-top:14px;padding:10px 28px;background:#4CAF50;color:#fff;border:none;border-radius:7px;font-size:16px;cursor:pointer}
+.dp{position:fixed;top:48px;right:6px;background:rgba(0,0,0,.92);color:#0f0;padding:10px;border-radius:7px;font-size:11px;display:none;z-index:200;max-width:200px}
+.dp.sh{display:block}
+.dp button{display:block;width:100%;margin:3px 0;padding:5px;background:#333;color:#0f0;border:1px solid #0f0;border-radius:3px;cursor:pointer;font-size:10px}
+.hm{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50}
+.hm.sh{display:flex}
+.hmc{background:#fff;border-radius:10px;padding:20px;max-width:280px;width:90%}
+.hmc h3{margin-bottom:14px;text-align:center}
+.hb{display:block;width:100%;padding:10px;margin:6px 0;border:2px solid #FF9800;border-radius:7px;background:#FFF3E0;font-size:13px;cursor:pointer;text-align:left}
+.hb span{float:right;font-weight:700;color:#E65100}
+.hcl{display:block;width:100%;padding:8px;margin-top:10px;background:#eee;border:none;border-radius:7px;cursor:pointer;font-size:13px}
+.err{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#F44336;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;display:none;z-index:300;text-align:center;max-width:90%}
+.err.sh{display:block}
+.error-screen{position:fixed;inset:0;background:#333;color:#F44336;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:20px;text-align:center}
+.error-screen.sh{display:flex}
+.error-screen h2{font-size:24px;margin-bottom:12px}
+.error-screen p{color:#fff;font-size:14px;margin-bottom:20px;max-width:90%;word-break:break-word}
+.error-screen button{padding:12px 30px;background:#F44336;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+#gameContainer{display:none}
+#gameContainer.vis{display:contents}
+</style>
+</head>
+<body>
+
+<div class="error-screen" id="errorScreen">
+  <h2>⚠️ Ошибка</h2>
+  <p id="errorMsg">Неизвестная ошибка</p>
+  <button onclick="location.reload()">Перезагрузить</button>
+</div>
+
+<div class="menu-overlay" id="mainMenu">
+  <div class="lang-badge" id="menuLangBadge">🇷🇺 РУС</div>
+  <div class="menu-title">JUMBLE</div>
+  <div class="menu-sub" id="menuSub">Мобильная словесная головоломка</div>
+  <div class="menu-progress" id="menuProgress">Уровень 1 / 10</div>
+  <button class="menu-btn btn-play" id="btnPlay" onclick="safeStartGame()">▶ ИГРАТЬ</button>
+  <button class="menu-btn btn-lang" id="btnLang" onclick="toggleLanguage()">🌐 English</button>
+  <button class="menu-btn btn-reset" id="btnReset" onclick="fullGlobalReset()">🗑 Сброс прогресса</button>
+</div>
+
+<div id="gameContainer">
+  <div class="hdr" id="gameHdr">
+    <button onclick="backToMenu()" id="btnBack">←</button>
+    <span class="li" id="lvlInfo">Уровень 1</span>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="cd" id="coinDisp">💰 100</span>
+      <button onclick="showHints()" id="btnHint">💡</button>
+      <button onclick="toggleDebug()" id="btnDebug" title="Отладка">🔧</button>
+    </div>
+  </div>
+  <div class="cart" id="gameCart">
+    <div class="cart-ph">
+      <div class="cart-emoji" id="cartEmoji"></div>
+      <div class="cart-desc" id="cartDesc"></div>
+    </div>
+    <div class="clue" id="clueTxt"></div>
+  </div>
+  <div class="fa" id="gameFa"><div class="fs" id="finSlots"></div></div>
+  <div class="confirm-bar" id="confirmBar">
+    <button class="confirm-btn" onclick="confirmCheatAnswer()" id="btnConfirm">✓ Подтвердить ответ</button>
+  </div>
+  <div class="bk" id="gameBk"><div class="bkl" id="basketLabel">🧺 Собранные буквы</div><div class="bkc" id="basket"></div></div>
+  <div class="wa" id="gameWa">
+    <div class="wt" id="wTabs"></div>
+    <div class="sa" id="scrArea"></div>
+    <div class="ac" id="ansCells"></div>
+  </div>
+</div>
+
+<div class="vo" id="vicOv">
+  <div class="vc">
+    <h2 id="vicTitle">🎉 Решено!</h2>
+    <div class="ar" id="vicAns"></div>
+    <div id="vicSt"></div>
+    <button onclick="nextLevel()" id="btnNext">Следующий ▶</button>
+  </div>
+</div>
+
+<div class="hm" id="hintMod">
+  <div class="hmc">
+    <h3 id="hintTitle">💡 Подсказки</h3>
+    <button class="hb" onclick="useHint('letter')" id="hLetter">Показать букву <span>50 💰</span></button>
+    <button class="hb" onclick="useHint('showWord')" id="hShowWord">Показать ответ слова <span>100 💰</span></button>
+    <button class="hb" onclick="useHint('word')" id="hWord">Решить слово (−1) <span>150 💰</span></button>
+    <button class="hb" onclick="useHint('final')" id="hFinal">Буква финала <span>100 💰</span></button>
+    <button class="hcl" onclick="closeHints()" id="hClose">Закрыть</button>
+  </div>
+</div>
+
+<div class="dp" id="dbgPan">
+  <strong id="dbgTitle">🔧 ОТЛАДКА / ЧИТЫ</strong>
+  <button onclick="cheatShowWordAnswer()" id="chShowWord">Показать ответ слова</button>
+  <button onclick="cheatSolveWordN1()" id="chSolveN1">Решить слово (−1 буква)</button>
+  <button onclick="cheatRevealLetter()" id="chRevLet">Буква финала</button>
+  <button onclick="cheatSkipLevel()" id="chSkip">Пропустить уровень</button>
+  <button onclick="cheatJumpToLevel()" id="chJump">Перейти к уровню...</button>
+  <button onclick="cheatShowAnswer()" id="chShowAns">Показать весь ответ</button>
+  <button onclick="cheatAddCoins()" id="chCoins">+500 монет</button>
+  <button onclick="cheatResetCurrentLevel()" id="chResetLvl">Сброс уровня</button>
+</div>
+
+<div class="err" id="errToast"></div>
+
+<script>
+// ============================================================
+// JUMBLE MOBILE v2.0 — CHEAT FIX + WORD TABS DISPLAY
+// ============================================================
+
+window.onerror=function(m,u,l,c,e){showFatalError('JS: '+m+' (line '+l+')');return true;};
+window.onunhandledrejection=function(e){showFatalError('Promise: '+(e.reason||e));};
+function showFatalError(m){document.getElementById('mainMenu').classList.add('hid');document.getElementById('gameContainer').classList.remove('vis');document.getElementById('errorMsg').textContent=m;document.getElementById('errorScreen').classList.add('sh');}
+
+let LANG='ru';
+const L10N={
+  ru:{title:'JUMBLE',subtitle:'Мобильная словесная головоломка',play:'▶ ИГРАТЬ',langBtn:'🌐 English',resetBtn:'🗑 Сброс прогресса',progress:'Уровень',progressOf:'/',totalLevels:'10',level:'Уровень',coins:'💰',basketLabel:'🧺 Собранные буквы',vicTitle:'🎉 Решено!',nextBtn:'Следующий ▶',hintTitle:'💡 Подсказки',hLetter:'Показать букву',hShowWord:'Показать ответ слова',hWord:'Решить слово (−1)',hFinal:'Буква финала',hClose:'Закрыть',chShowWord:'Показать ответ слова',chSolveN1:'Решить слово (−1 буква)',chRevLet:'Буква финала',chSkip:'Пропустить уровень',chJump:'Перейти к уровню...',chShowAns:'Показать весь ответ',chCoins:'+500 монет',chResetLvl:'Сброс уровня',dbgTitle:'🔧 ОТЛАДКА / ЧИТЫ',noCoins:'Недостаточно монет!',allDone:'🎉 Все уровни пройдены!',time:'Время',hintsUsed:'Подсказок',resetConfirm:'Сбросить весь прогресс?',jumpPrompt:'Введите номер уровня (1-10):',wordTab:'Слово',lvlReset:'Уровень сброшен',confirmBtn:'✓ Подтвердить ответ'},
+  en:{title:'JUMBLE',subtitle:'Mobile Word Puzzle Game',play:'▶ PLAY',langBtn:'🌐 Русский',resetBtn:'🗑 Reset Progress',progress:'Level',progressOf:'/',totalLevels:'10',level:'Level',coins:'💰',basketLabel:'🧺 Collected Letters',vicTitle:'🎉 Solved!',nextBtn:'Next Level ▶',hintTitle:'💡 Hints',hLetter:'Reveal Letter',hShowWord:'Show Word Answer',hWord:'Solve Word (−1)',hFinal:'Final Letter',hClose:'Close',chShowWord:'Show Word Answer',chSolveN1:'Solve Word (−1 letter)',chRevLet:'Reveal Final Letter',chSkip:'Skip Level',chJump:'Jump to Level...',chShowAns:'Show Full Answer',chCoins:'+500 Coins',chResetLvl:'Reset Level',dbgTitle:'🔧 DEBUG / CHEATS',noCoins:'Not enough coins!',allDone:'🎉 All levels completed!',time:'Time',hintsUsed:'Hints',resetConfirm:'Reset all progress?',jumpPrompt:'Enter level number (1-10):',wordTab:'Word',lvlReset:'Level reset',confirmBtn:'✓ Confirm Answer'}
+};
+function t(k){return L10N[LANG][k]||k;}
+function applyLang(){const l=L10N[LANG];document.getElementById('menuLangBadge').textContent=LANG==='ru'?'🇷🇺 РУС':'🇬🇧 EN';document.getElementById('menuSub').textContent=l.subtitle;document.getElementById('btnPlay').textContent=l.play;document.getElementById('btnLang').textContent=l.langBtn;document.getElementById('btnReset').textContent=l.resetBtn;document.getElementById('basketLabel').textContent=l.basketLabel;document.getElementById('vicTitle').textContent=l.vicTitle;document.getElementById('btnNext').textContent=l.nextBtn;document.getElementById('hintTitle').textContent=l.hintTitle;document.getElementById('hLetter').innerHTML=`${l.hLetter} <span>50 💰</span>`;document.getElementById('hShowWord').innerHTML=`${l.hShowWord} <span>100 💰</span>`;document.getElementById('hWord').innerHTML=`${l.hWord} <span>150 💰</span>`;document.getElementById('hFinal').innerHTML=`${l.hFinal} <span>100 💰</span>`;document.getElementById('hClose').textContent=l.hClose;document.getElementById('chShowWord').textContent=l.chShowWord;document.getElementById('chSolveN1').textContent=l.chSolveN1;document.getElementById('chRevLet').textContent=l.chRevLet;document.getElementById('chSkip').textContent=l.chSkip;document.getElementById('chJump').textContent=l.chJump;document.getElementById('chShowAns').textContent=l.chShowAns;document.getElementById('chCoins').textContent=l.chCoins;document.getElementById('chResetLvl').textContent=l.chResetLvl;document.getElementById('btnConfirm').textContent=l.confirmBtn;document.querySelector('#dbgPan strong').textContent=l.dbgTitle;updateMenuProgress();if(S.inGame)renderLvl();}
+function toggleLanguage(){LANG=LANG==='ru'?'en':'ru';localStorage.setItem('jumble_lang',LANG);applyLang();}
+
+const DICT_RU=["КОТ","ДОМ","ЛЕС","РОТ","НОС","ДАМ","ЛАК","ТИП","КУМ","ЗОВ","АРБА","БИНТ","ВОЛК","ГРИВ","ДИВА","ЕЛОК","ЖАБА","ЗИМА","ИГЛА","ЙОД","КРАН","ЛИСА","МОРЕ","НЕБО","ОСА","ПАРК","РОЗА","СОЛЬ","ТОРТ","УХО","ФЕН","ХЛЕБ","ЦВЕТ","ЧАША","ШАР","ЩУКА","ЭКРАН","ЮБКА","ЯГОД","КНИГА","ЛАМПА","МЕСТО","НАРОД","ОГОНЬ","ПОЕЗД","РЕКА","СНЕГ","ТРАВА","УЛИЦА","ФЛАГ","ХОЛМ","ЦЕНТР","ШКОЛА","ЩЕПКА","ЭПОХА","ЮНОША","ЯРМАР","АКТЕР","БАШНЯ","ВЕТЕР","ГОРОД","ДВЕРЬ","ЕГЕРЬ","ЖАЖДА","ЗАКОН","ИСКРА","КЛАСС","ЛЕТО","МИНУС","НОМЕР","ОТВЕТ","ПЕСНЯ","РОДИНА","СЛОВО","ТЕАТР","УСПЕХ","ФИЛИН","ХРАМ","ЦЕПОЧ","ЧАСТО","ШТУРМ","ЩЕДРЫ","ЭКИПА","ЮБИЛЕ","ЯНВАР","ИВА","ИНЬ","ИОД","ИСК","ИЛ","ИСС","ИНЖ","ИМИ","ИКС","ЗАЯЦ","ЛЁД"];
+const DICT_EN=["CAST","FACE","FIND","SAFE","ITEM","SEEN","NAME","MILE","SITE","TONE","RISE","TALE","WAVE","DARK","FIRE","GOLD","HOLD","IRON","JUMP","KEEP","LAMP","MADE","NEAR","OPEN","PALE","QUIT","RAIN","SAND","TALL","UNIT","VAST","WARM","YEAR","ZERO","BAKE","CAGE","DICE","ECHO","FROG","GLAD","HARP","INKY","KITE","LIME","MINT","NOSE","PEAR","QUIZ","ROPE","SILK","TUSK","URGE","VINE","WOKE","YAWN","ZINC","BOAT","COAT","DOVE","EASE","FOAM","GRAPE","HAZE","IDLE","JOKE","KEEN","LAKE","MOOD","NAIL","OATH","PINE","RUST","SOIL","TIDE","USED","VOID","WOLF","APPLE","BEACH","BRAIN","CHAIR","DANCE","EAGLE","FLAME","GRAIN","HEART","IMAGE","JUICE","KNIFE","LEMON","MARCH","NERVE","OCEAN","PIANO","QUEEN","RIVER","STONE","TIGER","ULTRA","VOICE","WATER","YOUTH","ZEBRA","ALERT","BLEND","CRANE","DRIFT","ELBOW","FROST","GLEAM","HASTE","IVORY","JEWEL","KNEEL","LANCE","MAPLE","NOBLE","ORBIT","PRISM","QUILT","REIGN","SCALE","THORN","UNIFY","VALVE","WRIST","AXIOM","BLAZE","CLASP","DWELL","EXILE","FORGE","GRASP","HOVER","INDEX","JOKER","KNACK","LURCH","MERGE","NICHE","OUTER","PLUMB","QUOTA","RELAY","SWIRL","TRUCE","USURP","VIGOR","WIELD","ANCHOR","BASKET","CANDLE","DAMSEL","ENERGY","FABRIC","GARDEN","HAMLET","ICICLE","JINGLE","KITTEN","LANTERN","MARBLE","NAPKIN","ORANGE","PALACE","QUARRY","RIBBON","SADDLE","TEMPLE","WALNUT","ZENITH","BRONZE","CARPET","DESIGN","EMBLEM","FROZEN","GINGER","HARBOR","INSECT","JUNGLE","KERNEL","LAGOON","MUFFIN","NOTICE","OUTLAW","PEBBLE","RESCUE","SILVER","THRONE","UNFOLD","VELVET","WICKED","YOGURT","CAT","DOG","FOX","AND","ICE","SUN","MOON","SHINE","BREAD","BUTTER","LOCK","KEY","TIME","TIDE","PEN","INK","STAR","SKY","WIND"];
+
+const FINALS_RU=[
+  {phrase:"КОТ ДОМ ЛЕС",clue:"Три простых слова — собери их все!",emoji:"🏠",desc:"Уютный домик в лесу с котом на крыльце"},
+  {phrase:"ВОЛК И ЗАЯЦ",clue:"Кто кого догонит в зимнем лесу?",emoji:"🐺",desc:"Волк гонится за зайцем по заснеженной поляне"},
+  {phrase:"МОРЕ И НЕБО",clue:"Где горизонт соединяет стихии?",emoji:"🌊",desc:"Бескрайнее море сливается с небом на закате"},
+  {phrase:"ОГОНЬ И ВОДА",clue:"Две стихии, которые не дружат",emoji:"🔥",desc:"Пламя и водяные брызги сталкиваются"},
+  {phrase:"СНЕГ И ЛЁД",clue:"Что покрывает землю зимой?",emoji:"❄️",desc:"Заснеженный пейзаж с ледяными узорами на окнах"},
+  {phrase:"ХЛЕБ И СОЛЬ",clue:"Традиционное русское приветствие",emoji:"🍞",desc:"Каравай хлеба с солонкой на рушнике"},
+  {phrase:"ГОРОД И САД",clue:"Урбанизация встречает природу",emoji:"🏙️",desc:"Зелёный парк среди городских зданий"},
+  {phrase:"КНИГА И ПЕРО",clue:"Инструменты писателя",emoji:"📖",desc:"Старинная книга с гусиным пером и чернильницей"},
+  {phrase:"ЗВЕЗДА И ЛУНА",clue:"Ночное небо над головой",emoji:"🌙",desc:"Яркая звезда рядом с полумесяцем в ночном небе"},
+  {phrase:"ВЕТЕР И ДОЖДЬ",clue:"Осенняя непогода за окном",emoji:"🌧️",desc:"Косой дождь и гнущиеся от ветра деревья"}
+];
+const FINALS_EN=[
+  {phrase:"CAT DOG FOX",clue:"Three animals in a row!",emoji:"🐱",desc:"Cat, dog and fox sitting together on a fence"},
+  {phrase:"FIRE AND ICE",clue:"Two opposing elements",emoji:"🔥",desc:"Flames meeting ice crystals in dramatic clash"},
+  {phrase:"SUN AND MOON",clue:"Day meets night",emoji:"☀️",desc:"Sun and moon sharing the sky at twilight"},
+  {phrase:"RAIN OR SHINE",clue:"No matter the weather",emoji:"🌤️",desc:"Person walking happily through rain with umbrella"},
+  {phrase:"BREAD AND BUTTER",clue:"Basic necessities of life",emoji:"🍞",desc:"Fresh bread loaf with butter on wooden table"},
+  {phrase:"LOCK AND KEY",clue:"Security essentials",emoji:"🔑",desc:"Ornate padlock with brass key"},
+  {phrase:"TIME AND TIDE",clue:"What waits for no one?",emoji:"⏰",desc:"Clock tower overlooking ocean waves"},
+  {phrase:"PEN AND INK",clue:"Writer's tools",emoji:"✒️",desc:"Fountain pen with ink bottle on parchment"},
+  {phrase:"STAR AND SKY",clue:"Look up at night",emoji:"⭐",desc:"Bright star shining in deep blue night sky"},
+  {phrase:"WIND AND RAIN",clue:"Stormy weather outside",emoji:"🌧️",desc:"Trees bending in wind with heavy rain falling"}
+];
+
+function getDict(){return LANG==='ru'?DICT_RU:DICT_EN;}
+function getFinals(){return LANG==='ru'?FINALS_RU:FINALS_EN;}
+
+function validateFallbacks(fallbacks,dict){const ds=new Set(dict);const errs=[];for(const lvl of fallbacks){for(const w of lvl.words){if(!ds.has(w.a))errs.push(`L${lvl.id}: "${w.a}" NOT in dict!`);}const col=[];for(const w of lvl.words)for(const p of w.c)col.push(w.a[p]);const need=lvl.final.replace(/ /g,'').split('').sort();col.sort();if(JSON.stringify(col)!==JSON.stringify(need))errs.push(`L${lvl.id}: circled mismatch!`);}if(errs.length>0){console.error('Fallback errors:',errs);showErr('⚠️ Content errors. Check console.');}return errs.length===0;}
+
+function generateLevels(){
+  const dict=getDict(),finals=getFinals(),levels=[];
+  for(let li=0;li<10;li++){
+    const fin=finals[li],needed=fin.phrase.replace(/ /g,'').split('').sort();
+    let best=null,att=0;
+    while(att<800&&!best){
+      att++;const words=[],used=new Set();let ok=true;
+      for(let w=0;w<5;w++){let word=null,tries=0;while(!word&&tries<150){tries++;const c=dict[Math.floor(Math.random()*dict.length)];if(!used.has(c)&&c.length>=3&&c.length<=6){word=c;used.add(word);}}if(!word){ok=false;break;}words.push(word);}
+      if(!ok)continue;
+      const rem=[...needed],circled=[[],[],[],[],[]];let cov=true;
+      for(const ch of rem){let found=false;const order=[0,1,2,3,4].sort(()=>Math.random()-.5);for(const wi of order){const pos=[];for(let p=0;p<words[wi].length;p++){if(words[wi][p]===ch&&!circled[wi].includes(p))pos.push(p);}if(pos.length>0){circled[wi].push(pos[Math.floor(Math.random()*pos.length)]);found=true;break;}}if(!found){cov=false;break;}}
+      if(!cov)continue;
+      const col=[];for(let wi=0;wi<5;wi++)for(const p of circled[wi])col.push(words[wi][p]);col.sort();
+      if(JSON.stringify(col)===JSON.stringify(needed)){
+        const scr=words.map(w=>{let s=w.split('');for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];}const sc=s.join('');return sc===w?w.split('').reverse().join(''):sc;});
+        const indexed=words.map((w,i)=>({w,scr:scr[i],c:circled[i],len:w.length}));
+        indexed.sort((a,b)=>a.len-b.len);
+        best={id:li+1,words:indexed.map(x=>({s:x.scr,a:x.w,c:x.c})),final:fin.phrase,clue:fin.clue,emoji:fin.emoji,desc:fin.desc};
+      }
+    }
+    if(!best)best=getFallback(li);
+    levels.push(best);
+  }
+  return levels;
+}
+
+function getFallback(idx){
+  const fb_ru=[
+    {id:1,words:[{s:"ОКТ",a:"КОТ",c:[0,1,2]},{s:"ОМД",a:"ДОМ",c:[0,1,2]},{s:"ЕСЛ",a:"ЛЕС",c:[0,1,2]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"КОТ ДОМ ЛЕС",clue:"Три простых слова — собери их все!",emoji:"🏠",desc:"Уютный домик в лесу с котом на крыльце"},
+    {id:2,words:[{s:"АВИ",a:"ИВА",c:[0]},{s:"КЛОВ",a:"ВОЛК",c:[0,1,2,3]},{s:"ЦАЯЗ",a:"ЗАЯЦ",c:[0,1,2,3]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"ВОЛК И ЗАЯЦ",clue:"Кто кого догонит в зимнем лесу?",emoji:"🐺",desc:"Волк гонится за зайцем по заснеженной поляне"},
+    {id:3,words:[{s:"ЬНИ",a:"ИНЬ",c:[0]},{s:"ЕРОМ",a:"МОРЕ",c:[0,1,2,3]},{s:"ОНЕН",a:"НЕБО",c:[0,1,2,3]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"МОРЕ И НЕБО",clue:"Где горизонт соединяет стихии?",emoji:"🌊",desc:"Бескрайнее море сливается с небом на закате"},
+    {id:4,words:[{s:"ДОИ",a:"ИОД",c:[0]},{s:"АДОВ",a:"ВОДА",c:[0,1,2,3]},{s:"ЬНОГО",a:"ОГОНЬ",c:[0,1,2,3,4]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"ОГОНЬ И ВОДА",clue:"Две стихии, которые не дружат",emoji:"🔥",desc:"Пламя и водяные брызги сталкиваются"},
+    {id:5,words:[{s:"КСИ",a:"ИСК",c:[0]},{s:"ДЁЛ",a:"ЛЁД",c:[0,1,2]},{s:"ГСНЕ",a:"СНЕГ",c:[0,1,2,3]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"СНЕГ И ЛЁД",clue:"Что покрывает землю зимой?",emoji:"❄️",desc:"Заснеженный пейзаж с ледяными узорами на окнах"},
+    {id:6,words:[{s:"ЛИ",a:"ИЛ",c:[0]},{s:"БЕЛХ",a:"ХЛЕБ",c:[0,1,2,3]},{s:"ЬЛОС",a:"СОЛЬ",c:[0,1,2,3]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"ХЛЕБ И СОЛЬ",clue:"Традиционное русское приветствие",emoji:"🍞",desc:"Каравай хлеба с солонкой на рушнике"},
+    {id:7,words:[{s:"ССИ",a:"ИСС",c:[0]},{s:"АСД",a:"САД",c:[0,1,2]},{s:"ОРОГД",a:"ГОРОД",c:[0,1,2,3,4]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"ГОРОД И САД",clue:"Урбанизация встречает природу",emoji:"🏙️",desc:"Зелёный парк среди городских зданий"},
+    {id:8,words:[{s:"ЖАТЬДЕР",a:"ДЕРЖАТЬ",c:[0,1,2,3,4,5,6]},{s:"КЫЗЯ",a:"ЯЗЫК",c:[0,1,2,3]},{s:"АЗ",a:"ЗА",c:[0,1]},{s:"ИМАБУЗ",a:"ЗУБАМИ",c:[0,1,2,3,4,5]}],final:"ДЕРЖАТЬ ЯЗЫК ЗА ЗУБАМИ",clue:"Что делают те, кто хранит секрет?",emoji:"🤐",desc:"Человек держит язык за зубами молча"},
+    {id:9,words:[{s:"ТРТО",a:"ТОРТ",c:[0,1,2]},{s:"НИЧ",a:"ЧИН",c:[0,1]},{s:"БУЗ",a:"ЗУБ",c:[0,1,2]},{s:"ЬЛЫ",a:"ЫЛЬ",c:[0]}],final:"ТОЧИТЬ ЗУБЫ",clue:"Что делает тот, кто вынашивает обиду?",emoji:"😬",desc:"Человек точит зубы как нож на врага"},
+    {id:10,words:[{s:"СКИ",a:"ИКС",c:[0]},{s:"РЕТЕВ",a:"ВЕТЕР",c:[0,1,2,3,4]},{s:"ЬЖДОД",a:"ДОЖДЬ",c:[0,1,2,3,4]},{s:"ОСН",a:"НОС",c:[]},{s:"АКЛ",a:"ЛАК",c:[]}],final:"ВЕТЕР И ДОЖДЬ",clue:"Осенняя непогода за окном",emoji:"🌧️",desc:"Косой дождь и гнущиеся от ветра деревья"}
+  ];
+  const fb_en=[
+    {id:1,words:[{s:"TAC",a:"CAT",c:[0,1,2]},{s:"ODG",a:"DOG",c:[0,1,2]},{s:"XOF",a:"FOX",c:[0,1,2]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"CAT DOG FOX",clue:"Three animals in a row!",emoji:"🐱",desc:"Cat, dog and fox sitting together on a fence"},
+    {id:2,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"ECI",a:"ICE",c:[0,1,2]},{s:"ERIF",a:"FIRE",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"FIRE AND ICE",clue:"Two opposing elements",emoji:"🔥",desc:"Flames meeting ice crystals in dramatic clash"},
+    {id:3,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"NUS",a:"SUN",c:[0,1,2]},{s:"OOMN",a:"MOON",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"SUN AND MOON",clue:"Day meets night",emoji:"☀️",desc:"Sun and moon sharing the sky at twilight"},
+    {id:4,words:[{s:"RO",a:"OR",c:[0,1]},{s:"NIAR",a:"RAIN",c:[0,1,2,3]},{s:"ENIS",a:"SHINE",c:[0,1,2,3,4]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"RAIN OR SHINE",clue:"No matter the weather",emoji:"🌤️",desc:"Person walking happily through rain with umbrella"},
+    {id:5,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"DAERB",a:"BREAD",c:[0,1,2,3,4]},{s:"TREBTU",a:"BUTTER",c:[0,1,2,3,4,5]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"BREAD AND BUTTER",clue:"Basic necessities of life",emoji:"🍞",desc:"Fresh bread loaf with butter on wooden table"},
+    {id:6,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"YEK",a:"KEY",c:[0,1,2]},{s:"KCOL",a:"LOCK",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"LOCK AND KEY",clue:"Security essentials",emoji:"🔑",desc:"Ornate padlock with brass key"},
+    {id:7,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"EMIT",a:"TIME",c:[0,1,2,3]},{s:"EDIT",a:"TIDE",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"TIME AND TIDE",clue:"What waits for no one?",emoji:"⏰",desc:"Clock tower overlooking ocean waves"},
+    {id:8,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"NIK",a:"INK",c:[0,1,2]},{s:"NEP",a:"PEN",c:[0,1,2]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"PEN AND INK",clue:"Writer's tools",emoji:"✒️",desc:"Fountain pen with ink bottle on parchment"},
+    {id:9,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"YKS",a:"SKY",c:[0,1,2]},{s:"RATS",a:"STAR",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"STAR AND SKY",clue:"Look up at night",emoji:"⭐",desc:"Bright star shining in deep blue night sky"},
+    {id:10,words:[{s:"DNA",a:"AND",c:[0,1,2]},{s:"NIAR",a:"RAIN",c:[0,1,2,3]},{s:"DNIW",a:"WIND",c:[0,1,2,3]},{s:"NEES",a:"SEEN",c:[]},{s:"AFES",a:"SAFE",c:[]}],final:"WIND AND RAIN",clue:"Stormy weather outside",emoji:"🌧️",desc:"Trees bending in wind with heavy rain falling"}
+  ];
+  const fb=LANG==='ru'?fb_ru:fb_en;return fb[idx]||fb[0];
+}
+
+let LEVELS=[];
+let S={level:0,cw:0,coins:100,streak:0,solved:[],basket:[],finAns:[],ansSt:[],hints:0,t0:0,inGame:false,cheatRevealed:false};
+function loadState(){try{const sv=JSON.parse(localStorage.getItem('jumble_v17'));if(sv){S.level=sv.l||0;S.coins=sv.c||100;S.streak=sv.s||0;}}catch(e){}try{const lg=localStorage.getItem('jumble_lang');if(lg)LANG=lg;}catch(e){}}
+function saveState(){try{localStorage.setItem('jumble_v17',JSON.stringify({l:S.level,c:S.coins,s:S.streak}));}catch(e){}}
+
+function safeStartGame(){try{startGame();}catch(e){showFatalError('startGame: '+e.message);}}
+function startGame(){
+  try{LEVELS=generateLevels();}catch(e){LEVELS=Array.from({length:10},(_,i)=>getFallback(i));}
+  const allFb=Array.from({length:10},(_,i)=>getFallback(i));validateFallbacks(allFb,getDict());
+  for(const lvl of LEVELS){try{const col=[];for(const w of lvl.words)for(const p of w.c)col.push(w.a[p]);const need=lvl.final.replace(/ /g,'').split('').sort();col.sort();if(JSON.stringify(col)!==JSON.stringify(need)){const fb=getFallback(lvl.id-1);Object.assign(lvl,fb);}}catch(e){const fb=getFallback(lvl.id-1);Object.assign(lvl,fb);}}
+  S.inGame=true;S.cheatRevealed=false;
+  document.getElementById('mainMenu').classList.add('hid');
+  document.getElementById('gameContainer').classList.add('vis');
+  transitionToLevel(S.level);
+}
+
+function transitionToLevel(n){
+  document.getElementById('gameContainer').classList.add('vis');
+  S.level=n;S.cw=0;S.hints=0;S.t0=Date.now();S.cheatRevealed=false;
+  const L=LEVELS[n];
+  S.solved=new Array(L.words.length).fill(false);
+  S.basket=[];S.finAns=new Array(L.final.length).fill(null);
+  S.ansSt=L.words.map(()=>[]);
+  document.getElementById('finSlots').innerHTML='';
+  document.getElementById('basket').innerHTML='';
+  document.getElementById('wTabs').innerHTML='';
+  document.getElementById('scrArea').innerHTML='';
+  document.getElementById('ansCells').innerHTML='';
+  document.getElementById('confirmBar').classList.remove('vis');
+  renderFin();renderBsk();renderTabs();renderWord();
+  document.getElementById('lvlInfo').textContent=`${t('level')} ${L.id}`;
+  document.getElementById('coinDisp').textContent=`${t('coins')} ${S.coins}`;
+  document.getElementById('cartEmoji').textContent=L.emoji;
+  document.getElementById('cartDesc').textContent=L.desc||'';
+  document.getElementById('clueTxt').textContent=L.clue;
+}
+
+function fullGlobalReset(){if(!confirm(t('resetConfirm')))return;S.level=0;S.coins=100;S.streak=0;S.inGame=false;saveState();document.getElementById('gameContainer').classList.remove('vis');document.getElementById('mainMenu').classList.remove('hid');document.getElementById('dbgPan').classList.remove('sh');document.getElementById('vicOv').classList.remove('sh');updateMenuProgress();showErr(LANG==='ru'?'Прогресс сброшен!':'Progress reset!');}
+function cheatResetCurrentLevel(){const L=LEVELS[S.level];S.solved=new Array(L.words.length).fill(false);S.basket=[];S.finAns=new Array(L.final.length).fill(null);S.ansSt=L.words.map(()=>[]);S.cw=0;S.hints=0;S.t0=Date.now();S.cheatRevealed=false;document.getElementById('confirmBar').classList.remove('vis');renderFin();renderBsk();renderTabs();renderWord();showErr(t('lvlReset'));}
+function backToMenu(){try{saveState();document.getElementById('gameContainer').classList.remove('vis');document.getElementById('dbgPan').classList.remove('sh');document.getElementById('vicOv').classList.remove('sh');document.getElementById('hintMod').classList.remove('sh');document.getElementById('mainMenu').classList.remove('hid');updateMenuProgress();}catch(e){document.getElementById('gameContainer').classList.remove('vis');document.getElementById('mainMenu').classList.remove('hid');}}
+function updateMenuProgress(){document.getElementById('menuProgress').textContent=`${t('progress')} ${S.level+1} ${t('progressOf')} ${t('totalLevels')}`;}
+
+function renderLvl(){if(!S.inGame||!LEVELS.length)return;const L=LEVELS[S.level];document.getElementById('lvlInfo').textContent=`${t('level')} ${L.id}`;document.getElementById('coinDisp').textContent=`${t('coins')} ${S.coins}`;document.getElementById('cartEmoji').textContent=L.emoji;document.getElementById('cartDesc').textContent=L.desc||'';document.getElementById('clueTxt').textContent=L.clue;renderFin();renderBsk();renderTabs();renderWord();}
+function renderFin(){const L=LEVELS[S.level],c=document.getElementById('finSlots');c.innerHTML='';for(let i=0;i<L.final.length;i++){const ch=L.final[i],sl=document.createElement('div');sl.className='fsl';if(ch===' '){sl.style.border='none';sl.style.width='14px';}else if(S.finAns[i]){sl.textContent=S.finAns[i];sl.className+=' fi';sl.onclick=()=>{if(!S.cheatRevealed)rmFin(i);};}c.appendChild(sl);}if(!S.cheatRevealed)chkWin();}
+function renderBsk(){const c=document.getElementById('basket');c.innerHTML='';S.basket.forEach((lt,idx)=>{if(!lt)return;const el=document.createElement('div');el.className='blt';el.textContent=lt;el.onclick=()=>addFin(lt,idx);c.appendChild(el);});}
+
+function renderTabs(){
+  const L=LEVELS[S.level],c=document.getElementById('wTabs');c.innerHTML='';
+  for(let i=0;i<L.words.length;i++){
+    const tb=document.createElement('div');
+    const w=L.words[i];
+    if(S.solved[i]){
+      tb.className='wtb sv';
+      tb.textContent=w.a;
+    }else if(i===S.cw){
+      tb.className='wtb ac';
+      tb.textContent=w.s;
+    }else{
+      tb.className='wtb unsolved';
+      tb.textContent=w.s;
+    }
+    tb.onclick=()=>{if(!S.solved[i]){S.cw=i;renderTabs();renderWord();}};
+    c.appendChild(tb);
+  }
+}
+
+function renderWord(){const L=LEVELS[S.level],w=L.words[S.cw];const sc=document.getElementById('scrArea'),ac=document.getElementById('ansCells');sc.innerHTML='';ac.innerHTML='';const used=S.ansSt[S.cw].map(x=>x.si);w.s.split('').forEach((ch,idx)=>{const el=document.createElement('div');el.className='sl'+(used.includes(idx)?' us':'');el.textContent=ch;el.onclick=()=>place(S.cw,idx);sc.appendChild(el);});for(let i=0;i<w.a.length;i++){const cl=document.createElement('div');const pl=S.ansSt[S.cw].find(x=>x.p===i);cl.className='acl'+(w.c.includes(i)?' ci':'')+(pl?' fl':'');if(S.solved[S.cw]){cl.textContent=w.a[i];cl.className+=' co';}else if(pl){cl.textContent=w.s[pl.si];cl.onclick=()=>rmLet(S.cw,i);}ac.appendChild(cl);}}
+
+function place(wi,si){if(S.solved[wi]||S.cheatRevealed)return;const st=S.ansSt[wi],w=LEVELS[S.level].words[wi];if(st.length>=w.a.length)return;st.push({p:st.length,si});renderWord();if(st.length===w.a.length)validate(wi);}
+function rmLet(wi,pos){if(S.solved[wi]||S.cheatRevealed)return;S.ansSt[wi]=S.ansSt[wi].filter(x=>x.p!==pos).sort((a,b)=>a.p-b.p).map((x,i)=>({...x,p:i}));renderWord();}
+function validate(wi){const w=LEVELS[S.level].words[wi];const att=S.ansSt[wi].map(x=>w.s[x.si]).join('');if(att===w.a){S.solved[wi]=true;w.c.forEach(p=>S.basket.push(w.a[p]));renderTabs();renderWord();renderBsk();const nx=S.solved.findIndex((s,i)=>!s&&i>wi);if(nx>=0){S.cw=nx;renderTabs();renderWord();}else{const f=S.solved.findIndex(s=>!s);if(f>=0){S.cw=f;renderTabs();renderWord();}}}else{document.querySelectorAll('.acl').forEach(c=>c.classList.add('wr'));if(navigator.vibrate)navigator.vibrate(100);setTimeout(()=>{document.querySelectorAll('.acl').forEach(c=>c.classList.remove('wr'));S.ansSt[wi]=[];renderWord();},350);}}
+function addFin(lt,bi){if(S.cheatRevealed)return;const L=LEVELS[S.level];const ei=S.finAns.findIndex((x,i)=>x===null&&L.final[i]!==' ');if(ei<0)return;S.finAns[ei]=lt;S.basket[bi]=null;renderFin();renderBsk();}
+function rmFin(fi){if(S.cheatRevealed)return;const lt=S.finAns[fi];if(!lt)return;S.finAns[fi]=null;S.basket.push(lt);renderFin();renderBsk();}
+
+function chkWin(){
+  if(S.cheatRevealed)return;
+  const L=LEVELS[S.level];const att=S.finAns.map((x,i)=>x||(L.final[i]===' '?' ':'')).join('');
+  if(att===L.final){
+    const el=Math.round((Date.now()-S.t0)/1000);S.coins+=25;S.streak++;saveState();
+    document.getElementById('vicAns').textContent=L.final;
+    document.getElementById('vicSt').innerHTML=`${t('time')}: ${Math.floor(el/60)}:${(el%60).toString().padStart(2,'0')}<br>${t('hintsUsed')}: ${S.hints}<br>+25 💰`;
+    document.getElementById('vicOv').classList.add('sh');
+  }
+}
+
+function confirmCheatAnswer(){
+  S.cheatRevealed=false;
+  document.getElementById('confirmBar').classList.remove('vis');
+  const L=LEVELS[S.level];
+  const el=Math.round((Date.now()-S.t0)/1000);S.coins+=25;S.streak++;saveState();
+  document.getElementById('vicAns').textContent=L.final;
+  document.getElementById('vicSt').innerHTML=`${t('time')}: ${Math.floor(el/60)}:${(el%60).toString().padStart(2,'0')}<br>${t('hintsUsed')}: ${S.hints}<br>+25 💰`;
+  document.getElementById('vicOv').classList.add('sh');
+}
+
+function nextLevel(){if(S.level<LEVELS.length-1){S.level++;saveState();document.getElementById('vicOv').classList.remove('sh');transitionToLevel(S.level);}else{showErr(t('allDone'));backToMenu();}}
+
+function showHints(){document.getElementById('hintMod').classList.add('sh');}
+function closeHints(){document.getElementById('hintMod').classList.remove('sh');}
+function useHint(type){
+  const costs={letter:50,showWord:100,word:150,final:100};
+  if(S.coins<costs[type]){showErr(t('noCoins'));return;}
+  S.coins-=costs[type];S.hints++;const L=LEVELS[S.level];
+  if(type==='letter'){const w=L.words[S.cw];if(!S.solved[S.cw]){const np=S.ansSt[S.cw].length;if(np<w.a.length){const cl=w.a[np];const used=S.ansSt[S.cw].map(x=>x.si);for(let i=0;i<w.s.length;i++){if(w.s[i]===cl&&!used.includes(i)){S.ansSt[S.cw].push({p:np,si:i});renderWord();if(S.ansSt[S.cw].length===w.a.length)validate(S.cw);break;}}}}}
+  else if(type==='showWord'){const w=L.words[S.cw];showErr(`${t('wordTab')} ${S.cw+1}: ${w.a}`);}
+  else if(type==='word'){const w=L.words[S.cw];if(!S.solved[S.cw]){const used=new Set();S.ansSt[S.cw]=[];for(let i=0;i<w.a.length-1;i++){for(let j=0;j<w.s.length;j++){if(w.s[j]===w.a[i]&&!used.has(j)){used.add(j);S.ansSt[S.cw].push({p:i,si:j});break;}}}renderWord();}}
+  else if(type==='final'){const ei=S.finAns.findIndex((x,i)=>x===null&&L.final[i]!==' ');if(ei>=0){S.finAns[ei]=L.final[ei];renderFin();}}
+  document.getElementById('coinDisp').textContent=`${t('coins')} ${S.coins}`;saveState();closeHints();
+}
+
+function toggleDebug(){document.getElementById('dbgPan').classList.toggle('sh');}
+function cheatShowWordAnswer(){const w=LEVELS[S.level].words[S.cw];showErr(`${t('wordTab')} ${S.cw+1}: ${w.a}`);}
+function cheatSolveWordN1(){const L=LEVELS[S.level],w=L.words[S.cw];if(S.solved[S.cw])return;const used=new Set();S.ansSt[S.cw]=[];for(let i=0;i<w.a.length-1;i++){for(let j=0;j<w.s.length;j++){if(w.s[j]===w.a[i]&&!used.has(j)){used.add(j);S.ansSt[S.cw].push({p:i,si:j});break;}}}renderWord();}
+function cheatRevealLetter(){const L=LEVELS[S.level];const ei=S.finAns.findIndex((x,i)=>x===null&&L.final[i]!==' ');if(ei>=0){S.finAns[ei]=L.final[ei];renderFin();}}
+
+function cheatShowAnswer(){
+  const L=LEVELS[S.level];
+  for(let i=0;i<L.final.length;i++){if(L.final[i]!==' ')S.finAns[i]=L.final[i];}
+  S.cheatRevealed=true;
+  renderFin();
+  document.getElementById('confirmBar').classList.add('vis');
+}
+
+function cheatSkipLevel(){if(S.level<LEVELS.length-1){S.level++;saveState();transitionToLevel(S.level);}else showErr(t('allDone'));}
+function cheatJumpToLevel(){const input=prompt(t('jumpPrompt'),'1');if(!input)return;const n=parseInt(input);if(n>=1&&n<=LEVELS.length){S.level=n-1;saveState();transitionToLevel(n-1);}else showErr('1-'+LEVELS.length+'!');}
+function cheatAddCoins(){S.coins+=500;saveState();document.getElementById('coinDisp').textContent=`${t('coins')} ${S.coins}`;showErr('+500 💰');}
+function showErr(msg){const e=document.getElementById('errToast');e.textContent=msg;e.classList.add('sh');setTimeout(()=>e.classList.remove('sh'),2500);}
+
+loadState();applyLang();updateMenuProgress();
+console.log('[Jumble v2.0] Init complete.');
+</script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jumble Validator v22</title>
+<style>
+:root{--bg:#fff;--text:#000;--accent:#1e3a8a;--border:#000;--ok:#166534;--err:#991b1b;--warn:#92400e;--light:#f3f4f6;--gray:#6b7280}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:2rem;max-width:1400px;margin:0 auto}
+h1{font-size:1.75rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;margin-bottom:1.5rem}
+.zone{border:2px dashed var(--border);border-radius:4px;padding:3rem;text-align:center;cursor:pointer;margin-bottom:1.5rem;background:var(--light)}
+.zone.dragover{background:#e0e0e0}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:none;padding:.6rem 1.2rem;font-weight:600;cursor:pointer;border-radius:3px;margin-right:.5rem;margin-bottom:.5rem}
+.summary{display:flex;gap:1.5rem;margin:1rem 0;font-weight:600;flex-wrap:wrap}
+.stat{padding:.75rem 1.5rem;border:1px solid var(--border);border-radius:4px;background:var(--light)}
+.stat.pass{border-left:4px solid var(--ok)}.stat.fail{border-left:4px solid var(--err)}
+.card{border:1px solid var(--border);margin-bottom:1rem;border-radius:4px;overflow:hidden}
+.card.pass{border-left:4px solid var(--ok)}.card.fail{border-left:4px solid var(--err)}
+.cardhead{padding:.5rem 1rem;background:var(--light);font-weight:600;display:flex;justify-content:space-between}
+.badge{font-size:.8rem;padding:.2rem .6rem;border-radius:3px}.badge.pass{background:#dcfce7;color:var(--ok)}.badge.fail{background:#fce4ec;color:var(--err)}
+.cardbody{padding:1rem}
+ul.errs{list-style:none;padding:0}ul.errs li{background:#fff5f5;border:1px solid #fecaca;padding:.5rem;margin-bottom:.25rem;font-family:monospace;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;margin:.5rem 0;font-size:.85rem}
+th,td{border:1px solid var(--border);padding:.3rem .5rem;text-align:left;vertical-align:top}th{background:var(--light)}
+.old-obv{text-decoration:line-through;color:var(--err);margin-right:.5rem}
+.fix-suggest{color:var(--accent);font-weight:bold}
+.old-prefilled{text-decoration:line-through;color:var(--err)}
+.new-prefilled{color:var(--accent);font-weight:bold}
+.info-row{font-size:.85rem;color:var(--gray);margin-top:.5rem;font-family:monospace}
+.warn-banner{background:#fffbeb;border:1px solid #fcd34d;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;font-size:.9rem;color:var(--warn)}
+</style>
+</head>
+<body>
+<h1>🧩 Jumble Validator v22</h1>
+<div id="dropZone" class="zone">
+  <div>📁 Перетащите JSON-файл сюда или кликните для выбора</div>
+  <input type="file" id="fileInput" accept=".json" hidden>
+</div>
+<div id="results"></div>
+<script>
+(function(){
+const dz=document.getElementById('dropZone');
+const fi=document.getElementById('fileInput');
+const res=document.getElementById('results');
+let lastResults=null,lastFixedData=null,lastFname='levels';
+
+dz.addEventListener('click',()=>fi.click());
+fi.addEventListener('change',function(){
+  if(this.files.length) loadFile(this.files[0]);
+});
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',function(){dz.classList.remove('dragover')});
+dz.addEventListener('drop',function(e){
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if(files.length) loadFile(files[0]);
+});
+
+function loadFile(file){
+  if(!file.name.toLowerCase().endsWith('.json')){
+    res.innerHTML='<p style="color:var(--err)">Нужен .json файл</p>';
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let raw=e.target.result;
+    let warns=[];
+    let data;
+    try{
+      data=JSON.parse(raw);
+    }catch(err1){
+      raw=raw.replace(/(?<!\\)"(?=(?:[^"]*"[^"]*")*[^"]*$)/g,"'");
+      try{
+        data=JSON.parse(raw);
+        warns.push('⚠️ Автоисправлены кавычки.');
+      }catch(err2){
+        res.innerHTML='<p style="color:var(--err)">Ошибка парсинга JSON.</p>';
+        return;
+      }
+    }
+    lastFname=file.name.replace(/\.json$/i,'');
+    process(data,file.name,warns);
+  };
+  reader.readAsText(file);
+}
+
+// ==================== ЯДРО ====================
+const safeExtract=(w,obv)=>{if(!obv||!obv.length)return'';let r=[];for(let i of obv){if(i<1||i>w.length)return null;r.push(w[i-1])}return r.join('')};
+const cntStar=s=>(s.match(/\*/g)||[]).length;
+const lf=s=>{let f={};for(let c of s)if(/[A-Za-z]/.test(c)){c=c.toUpperCase();f[c]=(f[c]||0)+1}return f};
+const subF=(a,b)=>{let r={};for(let k in a)r[k]=a[k];for(let k in b){r[k]=(r[k]||0)-b[k];if(r[k]<0)return null;if(r[k]===0)delete r[k]}return r};
+const f2s=f=>{if(!f)return'';return Object.keys(f).sort().map(k=>k.repeat(f[k])).join('')};
+const MIN_OBV=2,MAX_OBV=3;
+
+function fixPf(pf,fn){let r='',pi=0,fi=0;while(pi<pf.length||fi<fn.length){while(fi<fn.length&&!/[A-Za-z]/.test(fn[fi])){if(pi<pf.length&&pf[pi]===fn[fi]){r+=pf[pi];pi++}fi++}if(pi>=pf.length&&fi>=fn.length)break;if(pi<pf.length&&pf[pi]!=='*'){r+=pf[pi];pi++;continue}let sl=0;while(pi<pf.length&&pf[pi]==='*'){sl++;pi++}let ll=0;while(fi<fn.length&&/[A-Za-z]/.test(fn[fi])){ll++;fi++}r+='*'.repeat(ll)}return r}
+
+// Генерация всех допустимых комбинаций obv для слова
+function generateCombinations(word){
+  const combos=[];
+  const n=word.length;
+  // Генерируем все подмножества индексов размером MIN_OBV..MAX_OBV
+  function* subsets(arr,size,start,current){
+    if(current.length===size){
+      yield [...current];
+      return;
+    }
+    for(let i=start;i<arr.length;i++){
+      current.push(arr[i]);
+      yield* subsets(arr,size,i+1,current);
+      current.pop();
+    }
+  }
+  const indices=Array.from({length:n},(_,i)=>i+1);
+  for(let size=MIN_OBV;size<=Math.min(MAX_OBV,n);size++){
+    for(const combo of subsets(indices,size,0,[])){
+      const letters=safeExtract(word,combo);
+      if(letters){
+        const sortedLetters=letters.split('').sort().join('');
+        combos.push({obv:combo,letters,sortedLetters,freq:lf(letters)});
+      }
+    }
+  }
+  return combos;
+}
+
+// Фильтрация комбинаций: оставляем только те, что могут быть полезны
+function filterCombinations(combos,neededFreq){
+  return combos.filter(c=>{
+    for(const [ch,cnt] of Object.entries(c.freq)){
+      if(!(ch in neededFreq)) return false;
+      if(cnt>(neededFreq[ch]||0)) return false;
+    }
+    return true;
+  });
+}
+
+// Проверка, можно ли из оставшихся слов набрать оставшиеся буквы
+function canSupplyRemaining(wordCombos,remainingNeeded){
+  const totalSupply={};
+  for(const combos of wordCombos){
+    for(const c of combos){
+      for(const [ch,cnt] of Object.entries(c.freq)){
+        totalSupply[ch]=(totalSupply[ch]||0)+cnt;
+      }
+    }
+  }
+  for(const [ch,cnt] of Object.entries(remainingNeeded)){
+    if((totalSupply[ch]||0)<cnt) return false;
+  }
+  return true;
+}
+
+// DFS с возвратом для поиска точного решения
+function dfsSearch(wordCombos,neededFreq,depth,currentAssignment,remainingNeeded){
+  if(depth===wordCombos.length){
+    // Проверяем, все ли буквы набраны
+    if(Object.keys(remainingNeeded).length===0) return currentAssignment.slice();
+    return null;
+  }
+  // Быстрое отсечение: хватит ли оставшихся слов
+  if(!canSupplyRemaining(wordCombos.slice(depth),remainingNeeded)) return null;
+  
+  const combos=wordCombos[depth];
+  // Сортируем комбинации по убыванию полезности (сколько нужных букв дают)
+  const sortedCombos=combos.slice().sort((a,b)=>{
+    let scoreA=0,scoreB=0;
+    for(const [ch,cnt] of Object.entries(a.freq)){
+      if(ch in remainingNeeded) scoreA+=Math.min(cnt,remainingNeeded[ch]);
+    }
+    for(const [ch,cnt] of Object.entries(b.freq)){
+      if(ch in remainingNeeded) scoreB+=Math.min(cnt,remainingNeeded[ch]);
+    }
+    return scoreB-scoreA;
+  });
+  
+  for(const combo of sortedCombos){
+    // Проверяем, не превышает ли комбинация нужные буквы
+    let valid=true;
+    const newRemaining={...remainingNeeded};
+    for(const [ch,cnt] of Object.entries(combo.freq)){
+      newRemaining[ch]=(newRemaining[ch]||0)-cnt;
+      if(newRemaining[ch]<0){valid=false;break}
+      if(newRemaining[ch]===0) delete newRemaining[ch];
+    }
+    if(!valid) continue;
+    
+    currentAssignment.push(combo.obv);
+    const result=dfsSearch(wordCombos,neededFreq,depth+1,currentAssignment,newRemaining);
+    if(result) return result;
+    currentAssignment.pop();
+  }
+  return null;
+}
+
+function autoFixObvDFS(ws,nf){
+  const neededFreq={...nf};
+  // Генерируем и фильтруем комбинации для каждого слова
+  const allCombos=ws.map(w=>filterCombinations(generateCombinations(w.word),neededFreq));
+  
+  // Проверяем, можно ли вообще набрать нужные буквы
+  if(!canSupplyRemaining(allCombos,neededFreq)){
+    // Анализируем, каких букв не хватает
+    const totalSupply={};
+    for(const combos of allCombos){
+      for(const c of combos){
+        for(const [ch,cnt] of Object.entries(c.freq)){
+          totalSupply[ch]=(totalSupply[ch]||0)+cnt;
+        }
+      }
+    }
+    const impossible={};
+    for(const [ch,cnt] of Object.entries(neededFreq)){
+      if((totalSupply[ch]||0)<cnt){
+        impossible[ch]=cnt-(totalSupply[ch]||0);
+      }
+    }
+    return {success:false,impossible,supply:totalSupply};
+  }
+  
+  // Сортируем слова по числу допустимых комбинаций (сначала самые ограниченные)
+  const indices=ws.map((_,i)=>i);
+  indices.sort((a,b)=>allCombos[a].length-allCombos[b].length);
+  
+  const sortedCombos=indices.map(i=>allCombos[i]);
+  const sortedWords=indices.map(i=>ws[i]);
+  
+  const assignment=[];
+  const result=dfsSearch(sortedCombos,neededFreq,0,assignment,{...neededFreq});
+  
+  if(result){
+    // Восстанавливаем исходный порядок
+    const finalAssignment=new Array(ws.length);
+    for(let i=0;i<indices.length;i++){
+      finalAssignment[indices[i]]=result[i];
+    }
+    return {success:true,assignments:finalAssignment};
+  }
+  
+  return {success:false,impossible:{},supply:{}};
+}
+
+function processLevel(ld){
+try{
+let e=[],lv=ld.level??'?',pf=ld.prefilled||'',fn=ld.final||'';
+let ws=(ld.words||[]).map(w=>({scrambled:w.scrambled||'',word:w.word||'',obv:[...(w.obv||[])],letters:w.letters||''}));
+let fixed=JSON.parse(JSON.stringify(ld));fixed.words=ws.map(w=>({scrambled:w.scrambled,word:w.word,obv:[...w.obv],letters:w.letters}));
+let sc=cntStar(pf),to=ws.reduce((s,w)=>s+w.obv.length,0),fp=pf,sf=false;
+if(sc!==to){if(sc>to){fp=fixPf(pf,fn);let nsc=cntStar(fp);if(nsc===to){sf=true;e.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. prefilled исправлен.`);sc=nsc;fixed.prefilled=fp}else e.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. Не удалось исправить.`)}else e.push(`⚠️ Шаг 1: звёздочек ${sc}, obv ${to}. Лишние индексы.`)}
+
+let wr=ws.map((w,i)=>{let pt=safeExtract(w.word,w.obv);return{word:w.word,origObv:[...w.obv],extracted:pt||'',hasErr:pt===null,sugObv:[...w.obv],lettersOk:true}});
+let extr=wr.map(w=>w.extracted).join(''),preL=fp.replace(/\*/g,''),nf=subF(lf(fn),lf(preL)),anOk=true;
+if(!nf){e.push(`❌ Шаг 2a: prefilled содержит буквы, которых нет в final.`);anOk=false}else{
+let nl=f2s(nf),el=f2s(lf(extr));
+if(nl!==el){anOk=false;let df=((ef,nf)=>{let x={},m={};for(let k in ef){let d=ef[k]-(nf[k]||0);if(d>0)x[k]=d}for(let k in nf){let d=nf[k]-(ef[k]||0);if(d>0)m[k]=d}return{x,m}})(lf(extr),nf);
+e.push(`❌ Шаг 2b (Анаграмма): не совпадает.`);e.push(`   Ожидалось: "${nl}" / Получено: "${el}"`);
+if(f2s(df[0]))e.push(`   Лишние: ${f2s(df[0])}`);if(f2s(df[1]))e.push(`   Не хватает: ${f2s(df[1])}`);
+// Новый DFS-алгоритм
+const dfsResult=autoFixObvDFS(ws,nf);
+if(dfsResult.success){
+  e.push(`💡 DFS нашёл точное решение (лимит 2–3 буквы на слово).`);
+  for(let i=0;i<ws.length;i++){
+    wr[i].sugObv=[...dfsResult.assignments[i]];
+    fixed.words[i].obv=[...dfsResult.assignments[i]];
+    fixed.words[i].letters=safeExtract(ws[i].word,dfsResult.assignments[i])||'';
+  }
+}else{
+  // Анализируем, почему не получилось
+  if(Object.keys(dfsResult.impossible||{}).length>0){
+    const impLetters=Object.entries(dfsResult.impossible).map(([ch,cnt])=>`${ch}×${cnt}`).join(', ');
+    e.push(`⚠️ DFS не нашёл решение. Невозможно набрать: ${impLetters}. Этих букв недостаточно в словах.`);
+    e.push(`   Возможно, prefilled содержит лишние буквы или обв некорректны.`);
+  }else{
+    e.push(`⚠️ DFS не нашёл решение (ограничения 2-3 буквы на слово слишком жёсткие).`);
+  }
+  for(let i=0;i<ws.length;i++)wr[i].sugObv=[...wr[i].origObv];
+}}else{for(let i=0;i<ws.length;i++){if(ws[i].letters!==undefined&&ws[i].letters!==wr[i].extracted){wr[i].lettersOk=false;e.push(`ℹ️ Слово ${i+1} ('${ws[i].word}'): letters обновлено ("${ws[i].letters}"→"${wr[i].extracted}").`);fixed.words[i].letters=wr[i].extracted}else if(ws[i].letters===undefined)fixed.words[i].letters=wr[i].extracted}}}
+
+for(let i=0;i<ws.length;i++){if(wr[i].hasErr){e.push(`❌ Слово ${i+1} ('${ws[i].word}'): индекс вне границ.`);let vo=ws[i].obv.filter(x=>x>=1&&x<=ws[i].word.length);if(vo.length){fixed.words[i].obv=vo;fixed.words[i].letters=safeExtract(ws[i].word,vo)||'';wr[i].sugObv=[...vo]}}}
+for(let i=0;i<fixed.words.length;i++)fixed.words[i].letters=safeExtract(fixed.words[i].word,fixed.words[i].obv)||'';
+let passed=e.length===0||e.every(x=>x.startsWith('ℹ️')||x.startsWith('💡')||x.startsWith('⚠️ Шаг 1'));
+return{level:lv,passed,errors:e,prefilled:pf,fixedPrefilled:fp,final:fn,extracted:extr,starCount:sc,totalObv:to,starFixed:sf,anagramOk:anOk,wordReport:wr,fixed};
+}catch(err){throw new Error(`Ошибка в уровне ${ld.level}: ${err.message}`);}
+}
+
+// ==================== ФОРМАТТЕР ====================
+function fmtObv(obv){return'['+obv.join(', ')+']'}
+function fmtWord(w,i,last){let s='\t      ';s+='{"scrambled": '+JSON.stringify(w.scrambled)+', ';s+='"word": '+JSON.stringify(w.word)+', ';s+='"obv": '+fmtObv(w.obv)+', ';s+='"letters": '+JSON.stringify(w.letters||'')+'}';if(!last)s+=',';s+='\n';return s}
+function fmtLevel(lvl,last){let s='  {\n';s+='    "level": '+lvl.level+',\n';s+='    "final": '+JSON.stringify(lvl.final)+',\n';s+='    "prefilled": '+JSON.stringify(lvl.prefilled)+',\n';s+='    "words": \n\t[\n';for(let i=0;i<lvl.words.length;i++)s+=fmtWord(lvl.words[i],i,i===lvl.words.length-1);s+='    ],\n';s+='    "clue": '+JSON.stringify(lvl.clue||'')+',\n';s+='    "desc": '+JSON.stringify(lvl.desc||'')+'\n';s+='  }';if(!last)s+=',';s+='\n';return s}
+function fmtAll(levels){let s='[\n';for(let i=0;i<levels.length;i++)s+=fmtLevel(levels[i],i===levels.length-1);s+=']';return s}
+
+// ==================== ОТЧЁТ ====================
+function genReport(results,fname){let r=`Отчёт проверки: ${fname}\n${'='.repeat(60)}\n`,total=results.length,pass=results.filter(r=>r.passed).length,fail=total-pass;r+=`Уровней: ${total}\nПройдено: ${pass}\nОшибок: ${fail}\n\n`;
+for(let res of results){if(res.passed&&!res.errors.length)continue;r+=`─── Уровень ${res.level} ${res.passed?'(OK)':'(ОШИБКИ)'} ───\n`;r+=`prefilled: "${res.prefilled}"`;if(res.starFixed)r+=` → "${res.fixedPrefilled}"`;r+=`\nfinal: "${res.final}"\nИзвлечено: "${res.extracted}"\n`;for(let e of res.errors)r+=`  ${e}\n`;if(res.wordReport.some(w=>JSON.stringify(w.origObv)!==JSON.stringify(w.sugObv))){r+=`\n  Изменения obv:\n`;for(let i=0;i<res.wordReport.length;i++){let w=res.wordReport[i];if(JSON.stringify(w.origObv)!==JSON.stringify(w.sugObv))r+=`    Слово ${i+1} (${w.word}): [${w.origObv.join(', ')}] → [${w.sugObv.join(', ')}]\n`}}r+=`\n`}return r}
+
+function dlJSON(data,fn){const b=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+function dlTxt(data,fn){const b=new Blob([data],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+
+function process(data,fname,warns){
+let levels=Array.isArray(data)?data:(data?.levels||[data]);if(!levels.length){res.innerHTML='<p>Нет уровней.</p>';return}
+let results;
+try{results=levels.map(processLevel);}catch(err){res.innerHTML='<p style="color:var(--err)">'+err.message+'</p>';return}
+lastResults=results;lastFixedData=results.map(r=>r.fixed);
+let total=results.length,passed=results.filter(r=>r.passed).length,failed=total-passed;
+let html='';if(warns.length)warns.forEach(w=>html+=`<div class="warn-banner">${w}</div>`);
+html+=`<div class="summary"><div class="stat">📄 ${fname}</div><div class="stat">Уровней: ${total}</div><div class="stat pass">✅ Пройдено: ${passed}</div><div class="stat fail">❌ Ошибок: ${failed}</div></div>`;
+html+=`<div style="margin-bottom:1rem"><button class="btn" onclick="downloadReport()">📄 Скачать отчёт (TXT)</button><button class="btn" onclick="downloadFixedJSON()">📥 Скачать исправленный JSON</button></div>`;
+for(let r of results){let cls=r.passed?'pass':'fail';html+=`<div class="card ${cls}"><div class="cardhead"><span>Уровень ${r.level}</span><span class="badge ${cls}">${r.passed?'OK':'ОШИБКИ'}</span></div>`;if(!r.passed||r.errors.length){html+=`<div class="cardbody">`;let pd=r.starFixed?`<span class="old-prefilled">"${r.prefilled}"</span> → <span class="new-prefilled">"${r.fixedPrefilled}"</span>`:`"${r.prefilled}"`;html+=`<div class="info-row">prefilled: ${pd} | extracted: "${r.extracted}" | final: "${r.final}"</div>`;if(r.errors.length){html+=`<ul class="errs">`;r.errors.forEach(e=>html+=`<li>${e.replace(/\n/g,'<br>')}</li>`);html+=`</ul>`}html+=`<table><tr><th>#</th><th>Слово</th><th>Текущий obv</th><th>Извлечено</th><th>→ Предлагаемый obv</th><th>Новое letters</th></tr>`;r.wordReport.forEach((w,i)=>{let same=JSON.stringify(w.origObv)===JSON.stringify(w.sugObv);let od=same?`[${w.origObv.join(', ')}]`:`<span class="old-obv">[${w.origObv.join(', ')}]</span> <span class="fix-suggest">[${w.sugObv.join(', ')}]</span>`;let nl=safeExtract(w.word,w.sugObv)||'';html+=`<tr><td>${i+1}</td><td>${w.word}</td><td>${od}</td><td>${w.extracted}</td><td>${od}</td><td>${nl}</td></tr>`});html+=`</table></div>`}html+=`</div>`}res.innerHTML=html;
+window.downloadReport=()=>{if(!lastResults)return alert('Нет данных');dlTxt(genReport(lastResults,fname),`${lastFname}_report.txt`)};
+window.downloadFixedJSON=()=>{if(!lastFixedData)return alert('Нет данных');dlJSON(fmtAll(lastFixedData),`${lastFname}_fixed.json`)};
+}
+})();
+</script>
+</body>
+</html>
