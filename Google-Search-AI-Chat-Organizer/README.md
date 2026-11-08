@@ -33,7 +33,7 @@ Google does not provide a stable public DOM contract for its AI Mode history pan
 
 If Google's labels or DOM structure change, discovery may stop. The script leaves unrelated Google navigation alone rather than hiding a guessed container. Inspect the current page DOM and update findRecentSection() / getRowForAnchor() for the new structure.
 
-MutationObserver watches added history links and href changes. Google may lazy-load history only when its original scroll area is scrolled; links rendered in the DOM are imported, and links added later are imported when Google inserts them. This version does not force-scroll Google's sidebar or fetch hidden conversations in the background.
+MutationObserver watches added history links and href changes. If Google places the history list in its own scroll container, the extension briefly scrolls that container to the end before hiding the native rows (with a bounded number of passes), so additional lazy-loaded links can be imported without opening each conversation. The original scroll position is restored. The extension does not fetch hidden conversations in the background.
 
 ### Full-text index and export
 
