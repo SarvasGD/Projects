@@ -1,0 +1,5 @@
+# Standalone projects with their own GitHub repositories.
+# Keep them local to this workspace; manage and sync each repository independently.
+/Hero_Defence/
+/Others/Sarvas-CV/
+/Others/Модуль общения/
