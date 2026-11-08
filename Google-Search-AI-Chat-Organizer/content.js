@@ -43,17 +43,6 @@
     });
   }
 
-  function persist() {
-    const payload = {};
-    payload[FOLDERS_KEY] = state.folders;
-    payload[CHATS_KEY] = state.chats;
-    storageQueue = storageQueue.then(() => storageSet(payload)).catch((error) => {
-      console.warn("[GSACO] Could not save local data:", error);
-      setStatus("Не удалось сохранить данные. Проверьте свободное место в хранилище.");
-    });
-    return storageQueue;
-  }
-
   function makeId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
     return "folder_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
@@ -98,8 +87,9 @@
     if (isLikelyAiUrl(location.href)) return true;
     const title = (document.title || "").toLowerCase();
     if (title.includes("ai mode") || title.includes("режим ии") || title.includes("режим искусственного интеллекта")) return true;
-    const text = document.body ? document.body.innerText.slice(0, 5000).toLowerCase() : "";
-    return text.includes("ai mode") || text.includes("режим ии");
+    const activeMode = document.querySelector('[aria-current="page"],[aria-selected="true"]');
+    const activeLabel = activeMode ? (activeMode.getAttribute("aria-label") || activeMode.innerText || activeMode.textContent || "").toLowerCase() : "";
+    return activeLabel.includes("ai mode") || activeLabel.includes("режим ии");
   }
 
   function titleForUrl(url) {
@@ -198,9 +188,19 @@
     return storageQueue;
   }
 
+  function getFolderDepth(folders, id, depth) {
+    const currentDepth = depth || 1;
+    for (const folder of folders) {
+      if (folder.id === id) return currentDepth;
+      const nested = getFolderDepth(folder.children || [], id, currentDepth + 1);
+      if (nested) return nested;
+    }
+    return 0;
+  }
+
   function addFolder(parentId) {
     const parent = parentId ? findFolder(state.folders, parentId) : null;
-    if (parentId && (!parent || !Array.isArray(parent.children))) return;
+    if (parentId && (!parent || !Array.isArray(parent.children) || getFolderDepth(state.folders, parentId, 1) >= MAX_DEPTH)) return;
     const folder = {
       id: makeId(),
       name: parentId ? "Новая подпапка" : "Новая папка",
@@ -224,14 +224,8 @@
       if (folder.id === id) {
         const parent = parentList || list;
         const promoted = (folder.children || []).slice();
-        const directChats = folder.chat_urls || [];
         parent.splice(index, 1, ...promoted);
-        if (directChats.length && parent.length) {
-          const next = parent[Math.min(index, parent.length - 1)];
-          next.chat_urls = Array.from(new Set((next.chat_urls || []).concat(directChats)));
-        } else if (directChats.length) {
-          state.folders.push({ id: makeId(), name: "Восстановленные чаты", color: FOLDER_COLORS[0], children: [], chat_urls: directChats });
-        }
+        // Chat records stay in state.chats and become visible under Без папки.
         return true;
       }
       if (removeFolderFromList(folder.children || [], id, folder.children)) return true;
@@ -311,6 +305,7 @@
   function addDropTarget(element, folder) {
     element.addEventListener("dragover", (event) => {
       event.preventDefault();
+      event.stopPropagation();
       if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
       element.classList.add("drop-target");
     });
@@ -319,6 +314,7 @@
     });
     element.addEventListener("drop", (event) => {
       event.preventDefault();
+      event.stopPropagation();
       element.classList.remove("drop-target");
       let raw = event.dataTransfer.getData("text/x-google-ai-chat-url");
       if (!raw) raw = event.dataTransfer.getData("text/uri-list");
