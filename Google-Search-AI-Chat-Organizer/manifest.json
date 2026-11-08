@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Google Search AI Chat Organizer",
+  "version": "0.1.0",
+  "description": "Organize Google AI Mode search conversations into nested folders, search local indexes and export chats.",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.google.com/search*",
+        "https://*.google.ru/search*",
+        "https://*.google.se/search*",
+        "https://*.google.co.uk/search*",
+        "https://*.google.de/search*",
+        "https://*.google.fr/search*",
+        "https://*.google.es/search*",
+        "https://*.google.ca/search*",
+        "https://*.google.com.au/search*",
+        "https://*.google.co.in/search*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
