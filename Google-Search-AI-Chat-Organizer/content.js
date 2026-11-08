@@ -501,33 +501,69 @@
     return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
   }
 
+  function isLeftRailAnchor(anchor) {
+    const rect = anchor.getBoundingClientRect();
+    if (!rect.width || !rect.height) return false;
+    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    // Google's main results start to the right of the narrow history rail.
+    // Fixed upper bounds still work on wide monitors and browser zoom levels.
+    return rect.left >= -2 &&
+      rect.left <= Math.min(380, width * 0.30) &&
+      rect.right <= Math.min(520, width * 0.42);
+  }
+
+  function isSidebarContainer(element) {
+    if (!element || element === document.body || element === document.documentElement) return false;
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    return rect.width >= 100 &&
+      rect.height >= 100 &&
+      rect.left >= -2 &&
+      rect.left <= Math.min(360, width * 0.22) &&
+      rect.right <= Math.min(620, width * 0.42) &&
+      rect.width <= Math.min(620, width * 0.42);
+  }
+
   function findRecentSection() {
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],button,[aria-label],span")).filter(isRecentLabel);
-    const candidates = [];
-    labels.forEach((label) => {
-      let ancestor = label;
-      for (let depth = 0; depth < 8 && ancestor && ancestor !== document.body; depth += 1) {
-        const links = countSearchLinks(ancestor);
-        if (links.length > 0 && links.length <= 140) {
-          const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) || ancestor.getAttribute("role") === "navigation" ? 1 : 0;
-          candidates.push({ container: ancestor, heading: label, links: links, depth: depth, semantic: semantic });
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],button,[aria-label],span"))
+      .filter(isRecentLabel);
+    const allLinks = countSearchLinks(document);
+    const leftLinks = allLinks.filter((entry) => isLeftRailAnchor(entry.anchor));
+    if (!leftLinks.length) return null;
+
+    const labelFor = (container) => labels.find((label) => container.contains(label)) || null;
+    const candidates = new Map();
+
+    leftLinks.forEach((entry) => {
+      let ancestor = entry.anchor.parentElement;
+      for (let depth = 1; depth <= 12 && ancestor && ancestor !== document.body; depth += 1) {
+        if (isSidebarContainer(ancestor)) {
+          const links = countSearchLinks(ancestor).filter((link) => isLeftRailAnchor(link.anchor));
+          const heading = labelFor(ancestor);
+          if (links.length >= 2 || (links.length === 1 && heading)) {
+            const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
+              ancestor.getAttribute("role") === "navigation" ? 1 : 0;
+            const rect = ancestor.getBoundingClientRect();
+            const score = links.length * 100 + (heading ? 60 : 0) + semantic * 25 -
+              rect.width * 0.1 - rect.height * 0.005 - depth * 0.01;
+            const previous = candidates.get(ancestor);
+            if (!previous || score > previous.score) {
+              candidates.set(ancestor, {
+                container: ancestor,
+                heading: heading,
+                links: links,
+                score: score,
+                explicit: true
+              });
+            }
+          }
         }
         ancestor = ancestor.parentElement;
       }
     });
-    if (candidates.length) {
-      candidates.sort((a, b) => (b.links.length + b.semantic * 1.5 - b.depth * 0.08) -
-        (a.links.length + a.semantic * 1.5 - a.depth * 0.08));
-      return Object.assign(candidates[0], { explicit: true });
-    }
-    if (isLikelyAiUrl(location.href)) {
-      const panels = Array.from(document.querySelectorAll("nav,aside,[role='navigation']"))
-        .map((container) => ({ container: container, links: countSearchLinks(container) }))
-        .filter((entry) => entry.links.length > 0 && entry.links.length < 140)
-        .sort((a, b) => b.links.length - a.links.length);
-      if (panels.length) return { container: panels[0].container, heading: null, links: panels[0].links, explicit: false };
-    }
-    return null;
+
+    if (!candidates.size) return null;
+    return Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0];
   }
 
   function getRowForAnchor(anchor, container) {
