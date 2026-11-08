@@ -13,6 +13,8 @@
   const openFolders = new Set();
   const hiddenRows = new Map();
   const dragBoundAnchors = new WeakSet();
+  const primedHistoryScrollers = new WeakSet();
+  let activeHistoryPriming = null;
   let host = null;
   let shadow = null;
   let ui = null;
@@ -636,6 +638,68 @@
     });
   }
 
+  function findHistoryScrollContainer(section) {
+    const firstAnchor = section.links[0] && section.links[0].anchor;
+    if (!firstAnchor) return null;
+    let node = firstAnchor.parentElement;
+    for (let depth = 0; depth < 14 && node; depth += 1) {
+      const style = window.getComputedStyle(node);
+      const scrollable = /(auto|scroll|overlay)/.test(style.overflowY || "") &&
+        node.scrollHeight > node.clientHeight + 60;
+      if (scrollable) return node;
+      if (node === section.container) break;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function finishHistoryPriming(scroller, initialScrollTop) {
+    if (scroller && scroller.isConnected) scroller.scrollTop = initialScrollTop;
+    activeHistoryPriming = null;
+    scheduleScan();
+  }
+
+  function advanceHistoryPriming(scroller, sectionContainer, progress) {
+    if (!scroller || !scroller.isConnected || !sectionContainer || !sectionContainer.isConnected) {
+      finishHistoryPriming(scroller, progress.initialScrollTop);
+      return;
+    }
+
+    scroller.scrollTop = scroller.scrollHeight;
+    progress.steps += 1;
+    window.setTimeout(() => {
+      const count = countSearchLinks(sectionContainer).filter((entry) => isLeftRailAnchor(entry.anchor)).length;
+      if (count > progress.previousCount) {
+        progress.previousCount = count;
+        progress.stableSteps = 0;
+      } else {
+        progress.stableSteps += 1;
+      }
+
+      // Stop after the end of the currently available list or a safety cap.
+      if (progress.stableSteps >= 3 || progress.steps >= 16) {
+        finishHistoryPriming(scroller, progress.initialScrollTop);
+        return;
+      }
+      advanceHistoryPriming(scroller, sectionContainer, progress);
+    }, 260);
+  }
+
+  function startHistoryPriming(section) {
+    const scroller = findHistoryScrollContainer(section);
+    if (!scroller || primedHistoryScrollers.has(scroller) || activeHistoryPriming) return;
+    primedHistoryScrollers.add(scroller);
+
+    const progress = {
+      initialScrollTop: scroller.scrollTop,
+      previousCount: countSearchLinks(section.container).filter((entry) => isLeftRailAnchor(entry.anchor)).length,
+      stableSteps: 0,
+      steps: 0
+    };
+    activeHistoryPriming = scroller;
+    advanceHistoryPriming(scroller, section.container, progress);
+  }
+
   function scanForChats() {
     const section = findRecentSection();
     let changed = false;
@@ -645,7 +709,11 @@
         if (recordDiscoveredChat(entry.url, titleFromAnchor(entry.anchor, entry.url))) changed = true;
         bindNativeAnchorDrag(entry.anchor, entry.url);
       });
-      hideNativeLinks(section);
+
+      // Let Google's own lazy-loaded history finish populating before hiding
+      // its rows. This imports older sidebar links without opening each chat.
+      if (!activeHistoryPriming) startHistoryPriming(section);
+      if (!activeHistoryPriming) hideNativeLinks(section);
     }
     const currentUrl = normalizeUrl(location.href);
     if (currentUrl && isCurrentAiPage()) {
