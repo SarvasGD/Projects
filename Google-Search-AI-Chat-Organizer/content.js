@@ -4,8 +4,8 @@
   const FOLDERS_KEY = "google_ai_folders";
   const CHATS_KEY = "google_ai_chats";
   const MAX_DEPTH = 4;
-  const MAX_INDEX_TEXT = 24000;
-  const MAX_INDEXED_CHATS = 250;
+  const MAX_INDEX_TEXT = 10000;
+  const MAX_INDEXED_CHATS = 100;
   const FOLDER_COLORS = ["#4285F4", "#34A853", "#FBBC04", "#EA4335", "#A142F4", "#00ACC1", "#F4511E", "#8D6E63"];
   const RECENT_LABEL = /^(recent|recent chats|recent searches|history|недавние|недавн|история|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)/i;
 
@@ -20,7 +20,6 @@
   let observer = null;
   let scanTimer = null;
   let captureTimer = null;
-  let lastCapturedText = "";
   let storageQueue = Promise.resolve();
 
   function storageGet(keys) {
@@ -641,9 +640,8 @@
     const url = normalizeUrl(location.href);
     if (!url || !isCurrentAiPage()) return;
     const text = extractPageText();
-    if (text.length < 40 || text === lastCapturedText) return;
-    lastCapturedText = text;
     const previous = state.chats[url] || { title: titleForUrl(url), text: "", updatedAt: 0 };
+    if (text.length < 40 || text === previous.text) return;
     const title = (document.title || "").replace(/\s*-\s*Google Search\s*$/i, "").trim();
     state.chats[url] = { title: title || previous.title || titleForUrl(url), text: text, updatedAt: Date.now() };
     const urls = Object.keys(state.chats).sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
