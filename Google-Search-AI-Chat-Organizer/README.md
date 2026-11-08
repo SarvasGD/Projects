@@ -29,7 +29,7 @@ No build step or external dependency is required.
 
 ### Google DOM detection
 
-Google does not provide a stable public DOM contract for its AI Mode history panel. The content script deliberately avoids obfuscated CSS class names. It detects a Recent / Недавние heading (including common localized labels), walks its ancestor structure, and looks for Google /search links with a q parameter. When that explicit section is found, native link rows are hidden and represented in the organizer's Unsorted list until assigned to folders.
+Google does not provide a stable public DOM contract for its AI Mode history panel. The content script deliberately avoids obfuscated CSS class names. It first looks for Google /search links with a q parameter inside the left-side, narrow history rail (using element geometry and semantic structure rather than Google CSS classes). A Recent / Недавние heading is a useful extra signal, but is not required. Detected links are immediately represented in Без папки and can be moved to folders without opening the corresponding conversations. Native link rows are hidden only after a likely left-rail container has been identified.
 
 If Google's labels or DOM structure change, discovery may stop. The script leaves unrelated Google navigation alone rather than hiding a guessed container. Inspect the current page DOM and update findRecentSection() / getRowForAnchor() for the new structure.
 
@@ -37,7 +37,7 @@ MutationObserver watches added history links and href changes. Google may lazy-l
 
 ### Full-text index and export
 
-For privacy and minimal permissions, the extension does not make background requests to old Google sessions. It captures visible text from the main content area only while an AI Mode session is open in the active tab. A chat's full-text search and export therefore become available after that session has been opened while the extension is installed.
+For privacy and minimal permissions, the extension does not make background requests to old Google sessions. It captures visible text from the main content area only while an AI Mode session is open in the active tab. This opening requirement applies only to the response-text index and export. It does not apply to folder organization: any chat link already rendered in the left history rail is imported as soon as it is detected and can be assigned to folders without opening that chat.
 
 The exported Markdown/TXT contains the captured page text, title and URL. This is a text snapshot, not a structured reconstruction of individual user / assistant message objects. Very long pages are capped at 10,000 characters per chat. Up to 100 most-recently indexed chat records retain body text; older records keep their URL/title but may lose cached body text.
 
@@ -63,7 +63,7 @@ The content script runs on /search URLs on these domains.
 ## Manual smoke test
 
 1. Load the unpacked extension and open a Google AI Mode conversation.
-2. Confirm the organizer appears near the Recent list and visible Recent links are represented under Без папки.
+2. Confirm the organizer appears in the left history rail and visible chat links are represented under Без папки without opening those conversations.
 3. Create a top-level folder and three nested subfolders. Confirm a fifth level cannot be created.
 4. Drag a chat into a folder, reload the page, and confirm membership is preserved.
 5. Rename a folder, change its HEX color and delete it. Confirm child folders are promoted rather than discarded.
