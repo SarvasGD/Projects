@@ -39,7 +39,7 @@ MutationObserver watches added history links and href changes. Google may lazy-l
 
 For privacy and minimal permissions, the extension does not make background requests to old Google sessions. It captures visible text from the main content area only while an AI Mode session is open in the active tab. A chat's full-text search and export therefore become available after that session has been opened while the extension is installed.
 
-The exported Markdown/TXT contains the captured page text, title and URL. This is a text snapshot, not a structured reconstruction of individual user / assistant message objects. Very long pages are capped at 24,000 characters per chat. Up to 250 most-recently indexed chat records are retained; older records keep their URL/title but may lose cached body text.
+The exported Markdown/TXT contains the captured page text, title and URL. This is a text snapshot, not a structured reconstruction of individual user / assistant message objects. Very long pages are capped at 10,000 characters per chat. Up to 100 most-recently indexed chat records retain body text; older records keep their URL/title but may lose cached body text.
 
 ### Permissions and privacy
 
