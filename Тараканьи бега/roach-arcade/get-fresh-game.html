@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8">
+<title>Получить свежую сборку игры</title>
+<style>
+ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+   background:#1b1109;font:16px/1.55 "Trebuchet MS",system-ui,sans-serif;color:#f6e2bb;padding:24px}
+ .box{max-width:640px;background:#f6e2bb;color:#2c1a10;border:4px solid #2c1a10;border-radius:22px;
+   padding:26px 28px;box-shadow:0 6px 0 rgba(44,26,16,.35),0 12px 24px rgba(44,26,16,.28)}
+ h1{font-size:24px;margin:0 0 6px} p{margin:8px 0} code{background:rgba(44,26,16,.1);padding:2px 6px;border-radius:6px}
+ input{width:100%;box-sizing:border-box;font:15px monospace;padding:10px;border:3px solid #2c1a10;border-radius:12px;margin:8px 0}
+ button{font:bold 18px "Trebuchet MS",sans-serif;background:#43a033;color:#fff;border:4px solid #2c1a10;
+   border-radius:14px;padding:12px 22px;cursor:pointer;box-shadow:0 5px 0 #2b6b21}
+ button:active{transform:translateY(4px);box-shadow:0 1px 0 #2b6b21}
+ #log{white-space:pre-wrap;font:13px monospace;background:rgba(44,26,16,.08);border-radius:10px;padding:10px;min-height:20px;margin-top:10px}
+ .ok{color:#2b6b21;font-weight:bold}.bad{color:#b32b21;font-weight:bold}
+</style>
+<body><div class="box">
+<h1>🪳 Получить свежую сборку «ТАРАКАНЬИ БЕГА»</h1>
+<p>Эта страница скачивает игру напрямую из песочницы разработки и проверяет контрольную сумму.</p>
+<p>1. Скопируйте адрес live-превью (панель предпросмотра → открыть в новой вкладке → скопировать адрес, он выглядит как <code>https://8123-….e2b.app</code>).</p>
+<input id="url" placeholder="https://8123-xxxx.e2b.app" value="">
+<p>2. Нажмите кнопку — сохранится файл <code>roach-rush-fresh.html</code>.</p>
+<button id="go">💾 Скачать и проверить</button>
+<div id="log"></div>
+<p style="font-size:13px;opacity:.75">Ожидаемый SHA-256: <code id="exp">5f426e53741e9dca8c689f71a9c4b9464cb73fdbc6c077963c177b28dea05a8a</code><br>
+Если загрузчик не смог скачать (нет сети до песочницы) — просто откройте адрес превью в новой вкладке и нажмите Ctrl+S.</p>
+</div>
+<script>
+const EXPECT='5f426e53741e9dca8c689f71a9c4b9464cb73fdbc6c077963c177b28dea05a8a';
+const log=(m,cls)=>{const l=document.getElementById('log');l.innerHTML+='<span class="'+(cls||'')+'">'+m+'</span>\n';};
+document.getElementById('exp').textContent=EXPECT;
+document.getElementById('go').onclick=async()=>{
+  const base=document.getElementById('url').value.trim().replace(/\/+$/,'');
+  if(!base){log('Вставьте адрес превью.','bad');return;}
+  log('Запрашиваю '+base+'/index.html …');
+  try{
+    const r=await fetch(base+'/index.html',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const buf=await r.arrayBuffer();
+    const hex=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(b=>b.toString(16).padStart(2,'0')).join('');
+    log('Размер: '+buf.byteLength+' байт');
+    if(hex===EXPECT){ log('SHA-256 совпадает — сборка свежая. Сохраняю…','ok'); }
+    else { log('SHA-256 НЕ совпадает ('+hex.slice(0,16)+'…) — файл устарел или подменён!','bad'); }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([buf],{type:'text/html'}));
+    a.download='roach-rush-fresh.html';
+    document.body.appendChild(a); a.click();
+    log('Готово: roach-rush-fresh.html','ok');
+  }catch(e){
+    log('Не удалось скачать: '+e.message+'. Откройте адрес превью в новой вкладке и нажмите Ctrl+S.','bad');
+  }
+};
+</script>
