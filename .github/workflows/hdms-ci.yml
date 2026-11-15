@@ -40,3 +40,6 @@ jobs:
 
       - name: Build Docker image
         run: docker build --tag hdms-mvp:ci .
+
+      - name: Validate Docker Compose
+        run: docker compose config

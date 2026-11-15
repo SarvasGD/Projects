@@ -1,12 +1,11 @@
-version: "3.9"
-
 services:
-hdms:
-build: .
-container_name: hdms-mvp
-ports:
-
-- "3000:3000"
-environment:
-- NODE_ENV=production
-restart: unless-stopped
+  hdms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hdms-mvp
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
