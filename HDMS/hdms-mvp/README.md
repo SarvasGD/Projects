@@ -81,3 +81,15 @@ GitHub Actions также выполняет Docker build и проверку Do
 - История браузера не синхронизируется.
 - Реестр карт загружается из HearthstoneJSON по сети и кэшируется в памяти Worker/процесса.
 - Web Worker применяется для A vs B, но не для матрицы.
+
+## Тестовые коды для benchmark
+
+Эти два Rogue deck-кода уже были в исходном README. Сохраняем их как стартовые fixture для ручных проверок; перед глубоким анализом необходимо декодировать их на текущей версии базы карт и убедиться, что список соответствует ожидаемому архетипу.
+
+**Тёмная Зарядка (Rogue):**
+
+    AAECAdWQCArDgwfygwe/hwfRnQfmowfIrgeZsQfysgeI2QeI3QcK958EtfoG9YEH94EHkIMHwYcHx64HmrMHurMHnIIIAAA==
+
+**ДраконЗарядка (Rogue):**
+
+    AAECAaIHCPKDB+ajB5WkB/KyB4jZB5HZB43aB4TpBwv3nwT3gQeQgwf3gwfHrgfrsgfssgeaswe6sweEvQe1wCAAA==
