@@ -39,8 +39,18 @@ Model-based Hearthstone Deck Matchup Simulator. Симуляция matchup A vs 
 
 ## Быстрый старт
 
+### Windows — запуск двойным щелчком
+
+- **Start HDMS.bat** — проверяет Node.js, при необходимости устанавливает зависимости, запускает локальный сервер и открывает браузер. Окно сервера нужно оставить открытым; закрытие окна останавливает HDMS.
+- **Check HDMS.bat** — выполняет проверку TypeScript, все автоматические тесты и production-сборку.
+- **Update HDMS.bat** — получает актуальную версию из GitHub и переустанавливает зависимости. Скрипт откажется обновляться, если в локальном Git-репозитории есть незакоммиченные изменения.
+
+Требуется Node.js 20+ и Git для обновления из GitHub.
+
+### Запуск вручную
+
 ```
-npm install
+npm ci
 npm run dev
 ```
 
@@ -57,12 +67,17 @@ npm run dev
 docker compose up --build
 ```
 
-## Тесты
+## Проверка проекта
 
 ```
-npm test              # ~80 тестов, без сети
-npm run test:live     # + smoke-тест реальной базы
-```
+npm run typecheck     # проверка TypeScript
+npm test              # автоматические тесты без сети
+npm run build         # production-сборка
+npm run check         # все три проверки последовательно
+``
+
+GitHub Actions автоматически выполняет `npm run check` при изменениях в HDMS MVP.
+
 
 ## Тестовые коды
 
