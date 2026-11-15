@@ -64,6 +64,22 @@ expect(owner.armor).toBe(4);
 expect(owner.secrets.length).toBe(0);
 });
 
+it("damages the minion that attacks the hero", () => {
+  const owner = mkPlayer('A');
+  const opponent = mkPlayer('B');
+  const attackingMinion = mkMinion(5, 5);
+  opponent.board.push(attackingMinion);
+
+  addSecret(owner, mkSecret("When your hero is attacked, deal 3 damage to the attacking minion."));
+  const result = tryTriggerSecret(owner, opponent, {
+    type: 'HERO_ATTACKED',
+    attacker: attackingMinion
+  });
+
+  expect(result).not.toBeNull();
+  expect(attackingMinion.health).toBe(2);
+});
+
 it("triggers minion-played secret: destroys minion", () => {
 const owner = mkPlayer('A');
 const attacker = mkPlayer('B');

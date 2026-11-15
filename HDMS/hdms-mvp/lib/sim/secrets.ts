@@ -99,10 +99,7 @@ const idx = opponent.board.indexOf(target);
 if (idx >= 0) opponent.board.splice(idx, 1);
 }
 parts.push(`${eff.damage} урона существу`);
-} else if (event.type === 'HERO_ATTACKED') {
-opponent.hp -= eff.damage;
-parts.push(`${eff.damage} урона герою`);
-}
+
 }
 if (eff.armor) {
 owner.armor += eff.armor;
