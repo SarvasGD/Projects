@@ -39,6 +39,8 @@ The card registry should be cached or mirrored server-side so the service is not
 
 If users need app-store installation, push notifications, native sharing or deeper device integration, package the responsive web application with a bridge such as Capacitor. This reuses much of the existing React/Next frontend.
 
+The current project is a full-stack Next.js application, so it cannot simply be copied unchanged into an APK/IPA or switched to static export while retaining its API routes. Before Capacitor packaging, separate the mobile/browser client build from the hosted Next.js API/backend. The client then calls the same hosted API; the simulation core can be shared where practical.
+
 A separate React Native client is a later alternative, not the starting point: it creates another UI codebase to maintain.
 
 ## Simulation execution
