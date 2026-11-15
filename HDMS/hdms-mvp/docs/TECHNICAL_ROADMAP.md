@@ -1,5 +1,7 @@
 # HDMS — technical direction
 
+**Product roadmap:** [PRODUCT_ROADMAP.md](./PRODUCT_ROADMAP.md) — пользовательские возможности, UX-референсы и последовательность релизов.
+
 ## Product direction
 
 HDMS should become a **web service first**, with an installable mobile experience later. A separately downloadable desktop program is useful as a developer/enthusiast preview, but should not be the main public distribution model.

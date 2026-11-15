@@ -61,6 +61,11 @@ npm run dev
 
 **Web Worker:** включи чекбокс «Web Worker» перед запуском. Первый запуск грузит базу карт в контекст воркера (10-15 сек), затем — быстро. Если worker падает — автоматически fallback на сервер.
 
+## План развития
+
+- [Product Roadmap](./docs/PRODUCT_ROADMAP.md) — пользовательские функции, этапы релизов и UX-референсы.
+- [Technical Roadmap](./docs/TECHNICAL_ROADMAP.md) — архитектура сайта, backend, PWA и мобильного приложения.
+
 ## Docker
 
 ```
