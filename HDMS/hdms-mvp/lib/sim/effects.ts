@@ -56,14 +56,14 @@ if (/[Dd]estroy a minion|Уничтожьте существо|Уничтожи�
 result.destroy = true;
 }
 
-const buff = text.match(/Give a minion +(\d+)/+(\d+)/i)
-|| text.match(/Даёт существу +(\d+)/+(\d+)/i)
-|| text.match(/Дайте существу +(\d+)/+(\d+)/i);
+const buff = text.match(/Give a minion\s+\+(\d+)\/\+(\d+)/i)
+|| text.match(/Даёт существу\s+\+(\d+)\/\+(\d+)/i)
+|| text.match(/Дайте существу\s+\+(\d+)\/\+(\d+)/i);
 if (buff) result.buff = { attack: parseInt(buff[1]), health: parseInt(buff[2]) };
 
-const summon = text.match(/Summon a (\d+)/(\d+)/i)
-|| text.match(/Призывает существо (\d+)/(\d+)/i)
-|| text.match(/Призовите существо (\d+)/(\d+)/i);
+const summon = text.match(/Summon a (\d+)\/(\d+)/i)
+|| text.match(/Призывает существо (\d+)\/(\d+)/i)
+|| text.match(/Призовите существо (\d+)\/(\d+)/i);
 if (summon) result.summon = { attack: parseInt(summon[1] ?? summon[3]), health: parseInt(summon[2] ?? summon[4]) };
 
 if (/[Ff]reeze|Заморозить|Заморозьте/i.test(text)) result.freeze = true;
@@ -75,9 +75,9 @@ result.imbue = true;
 
 if (/\btwice\b|дважды/i.test(text)) result.dealTwice = true;
 
-const transform = text.match(/[Tt]ransform.*?into a (\d+)/(\d+)/i)
-|| text.match(/[Пп]ревращает.*?в (\d+)/(\d+)/i)
-|| text.match(/[Пп]ревратите.*?в (\d+)/(\d+)/i);
+const transform = text.match(/[Tt]ransform.*?into a (\d+)\/(\d+)/i)
+|| text.match(/[Пп]ревращает.*?в (\d+)\/(\d+)/i)
+|| text.match(/[Пп]ревратите.*?в (\d+)\/(\d+)/i);
 if (transform) {
 result.transformTo = { attack: parseInt(transform[1]), health: parseInt(transform[2]) };
 }
