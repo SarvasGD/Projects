@@ -37,3 +37,6 @@ jobs:
         run: npm run check
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Build Docker image
+        run: docker build --tag hdms-mvp:ci .
