@@ -1,127 +1,83 @@
 # HDMS MVP
 
-Model-based Hearthstone Deck Matchup Simulator. Симуляция matchup A vs B (**server или Web Worker**), N×N матрицы (**с drag-and-drop**), конструктор колод с быстрым циклом «правка → тест → дельта», история тестов (IndexedDB), экспорт JSON/PNG, Docker.
+Model-based Hearthstone Deck Matchup Simulator. Локальное Next.js приложение для сравнительного тестирования колод. Это экспериментальная модель, не официальный движок Hearthstone и не статистика реальных матчей.
 
-## Что делает
+## Возможности текущей сборки
 
-### Симуляция A vs B
+### A vs B
+- Импорт двух deck-кодов.
+- Выбор числа партий, maxTurns и упрощённого mulligan.
+- Расчёт winrate, draw rate, среднего количества ходов, HP победителя и распределения по ходам.
+- Три режима: Server, Web Worker, Parallel.
+- WinPath эвристики и три отобранных примера партий.
+- Экспорт JSON/PNG и сохранение summary в локальную историю.
 
-- Парсит два deck-кода (Стандарт и Вольный).
-- Полная база карт HearthstoneJSON (ruRU).
-- Пошаговая игра: мана, добор, усталость, разыгрывание, атака, размен, face.
-- **Hero Power** Rogue (Кинжал → Imbue 1-10), **Imbue** от карт.
-- **Battlecry/Spell:** урон, лечение, добор, броня, destroy, buff, summon, freeze, silence, transform, copy from opponent hand.
-- **Секреты:** активируются, триггерятся по событию.
-- **Combo**, ручные обработчики (Морхи, Разрушитель Перекрёстка, МАТРИАРХ, Темночешуйчатая праматерь).
-- **Discover:** кэш пула + 1/3 best/average/worst.
-- **AI с lookahead:** lethal-check, AOE-pick, trade-priority.
-- **Win paths**, **Winlines** с логом.
-- **maxTurns**, **муллиган**, экспорт **JSON** и **PNG** (html2canvas).
-- **3 режима запуска:**
+### Матрица
+- 2–8 deck-кодов.
+- Декодирование слотов, изменение порядка через drag-and-drop.
+- Попарная матрица winrate и средний winrate.
+- JSON export.
+- Матрица считается на сервере; Web Worker для неё не подключён.
+- Сохранение матриц в History UI пока не подключено.
 
-- **☁ Сервер** — стандартный, POST /api/simulate.
-- **⚡ Параллельно** — 4 батча через Promise.all (от 400 партий).
-- **🖥 Web Worker** — симуляция в браузере, не блокирует UI, работает офлайн после первой загрузки базы карт.
+### Конструктор и история
+- Базовый редактор колоды с поиском карт.
+- Быстрый тест изменений из Builder.
+- История A vs B хранится в IndexedDB текущего браузера.
+- История не синхронизируется с другими устройствами.
 
-### Матрица (3+ колод) — **drag-and-drop**
+## Быстрый старт — Windows
 
-- Слоты колод с **порядком через drag-and-drop** (хватай за ⋮⋮ и тащи).
-- Автодекодирование при вставке кода: класс, format, кол-во карт, ср. мана.
-- 2–8 колод, попарный winrate N×N, средний winrate, экспорт JSON.
+1. Запусти Start HDMS.bat.
+2. Дождись вывода локального URL и автоматического открытия браузера.
+3. Не закрывай окно терминала, пока пользуешься приложением.
+4. Для обновления используй Update HDMS.bat. Он проверяет локальное состояние Git и не должен стирать незакоммиченные изменения.
+5. Для проверки проекта используй Check HDMS.bat.
 
-### Конструктор колод
+Нужны Node.js 20+ и Git для обновления с GitHub.
 
-Импорт → удаление/добавление с поиском → быстрый тест → дельта winrate.
+## Запуск вручную
 
-### История тестов (IndexedDB)
+В папке проекта:
 
-Сохранение в браузере, просмотр, экспорт JSON, удаление, очистка.
+    npm ci
+    npm run dev
 
-## Быстрый старт
+Открой http://localhost:3000.
 
-### Windows — запуск двойным щелчком
+## Режимы A vs B
 
-- **Start HDMS.bat** — проверяет Node.js, при необходимости устанавливает зависимости, запускает локальный сервер и открывает браузер. Окно сервера нужно оставить открытым; закрытие окна останавливает HDMS.
-- **Check HDMS.bat** — выполняет проверку TypeScript, все автоматические тесты и production-сборку.
-- **Update HDMS.bat** — получает актуальную версию из GitHub и переустанавливает зависимости. Скрипт откажется обновляться, если в локальном Git-репозитории есть незакоммиченные изменения.
+- **Server** — обычный запуск через POST /api/simulate. Используй по умолчанию.
+- **Web Worker** — запускает общий TypeScript simulation runner в отдельном потоке браузера, чтобы вычисления меньше блокировали интерфейс. Первый запуск Worker загружает базу карт по сети в свой контекст; это не гарантированный офлайн-режим и не режим повышенной точности.
+- **Parallel** — разбивает большой прогон (от 400 игр) на несколько серверных HTTP-запросов и объединяет сводку. Это не Web Worker и не worker_threads.
 
-Требуется Node.js 20+ и Git для обновления из GitHub.
+При ошибке Worker приложение пытается перейти на серверный режим.
 
-### Запуск вручную
+## Проверка
 
-```
-npm ci
-npm run dev
-```
+    npm run typecheck
+    npm test
+    npm run build
+    npm run check
 
-- `/` — A vs B
-- `/matrix` — матрица с drag-and-drop
-- `/builder` — конструктор
-- `/history` — история
+GitHub Actions также выполняет Docker build и проверку Docker Compose. Автоматический CI проверяет TypeScript, unit tests и build, но пока не заменяет браузерные E2E тесты.
 
-**Web Worker:** включи чекбокс «Web Worker» перед запуском. Первый запуск грузит базу карт в контекст воркера (10-15 сек), затем — быстро. Если worker падает — автоматически fallback на сервер.
+## Документация проекта
 
-## План развития
+- [Инструкция пользователя](../docs/USER_GUIDE.md)
+- [Техническая спецификация текущего кода](../docs/04_tech_spec.md)
+- [Правила и аппроксимации](../docs/07_rules_and_approximations.md)
+- [План reverse engineering](../docs/REVERSE_ENGINEERING_PLAN.md)
+- [Roadmap](../docs/09_roadmap.md)
+- [Анализ конкурентов](../docs/03_competitor_analysis.md)
 
-- [Product Roadmap](./docs/PRODUCT_ROADMAP.md) — пользовательские функции, этапы релизов и UX-референсы.
-- [Technical Roadmap](./docs/TECHNICAL_ROADMAP.md) — архитектура сайта, backend, PWA и мобильного приложения.
+## Важные ограничения
 
-## Docker
-
-```
-docker compose up --build
-```
-
-## Проверка проекта
-
-```
-npm run typecheck     # проверка TypeScript
-npm test              # автоматические тесты без сети
-npm run build         # production-сборка
-npm run check         # все три проверки последовательно
-``
-
-GitHub Actions автоматически выполняет `npm run check` при изменениях в HDMS MVP.
-
-
-## Тестовые коды
-
-**Тёмная Зарядка (Rogue):**
-
-```
-AAECAdWQCArDgwfygwe/hwfRnQfmowfIrgeZsQfysgeI2QeI3QcK958EtfoG9YEH94EHkIMHwYcHx64HmrMHurMHnIIIAAA==
-```
-
-**ДраконЗарядка (Rogue):**
-
-```
-AAECAaIHCPKDB+ajB5WkB/KyB4jZB5HZB43aB4TpBwv3nwT3gQeQgwf3gwfHrgfrsgfssgeaswe6sweEvQe1wCAAA==
-```
-
-(обрати внимание: правильный код — из README исходника; если не декодируется, скопируй из истории чата)
-
-## Архитектура
-
-- `lib/cards/registry.ts` — база карт (fetch + кэш).
-- `lib/deck/decode.ts`, `raw.ts`, `encode.ts` — парсеры.
-- `lib/presets.ts` — пресеты.
-- `lib/history/` — IndexedDB (db.ts, types.ts).
-- `lib/export/png.ts` — html2canvas-обёртка.
-- `lib/sim/runner.ts` — **общий runner** для API и Worker.
-- `lib/sim/worker.ts` — **Web Worker entry**.
-- `lib/sim/clientWorker.ts` — клиентский класс `MatchupWorker`.
-- `lib/sim/engine.ts`, `effects.ts`, `secrets.ts`, `randomCards.ts`, `heroPowers.ts`, `matchup.ts`, `parallel.ts`.
-- `components/SaveTestButton.tsx`, `ExportPngButton.tsx`.
-- `components/matrix/DeckSlot.tsx` — **drag-and-drop слот**.
-- `app/api/simulate/route.ts`, `simulate-matrix/route.ts`, `cards/batch/route.ts`, `cards/search/route.ts`, `deck/encode/route.ts`, `deck/decode/route.ts`.
-- `app/page.tsx`, `matrix/page.tsx`, `builder/page.tsx`, `history/page.tsx`.
-
-## Ограничения
-
-- Model-based, не полный движок Blizzard.
-- Сложные эффекты без шаблонов — «ванильные».
-- Секреты распознаются по regex.
-- Рекурсивное копирование не реализовано.
-- AI — жадный + lookahead на 1 ход.
-- История тестов в браузере (IndexedDB), не синхронизируется между устройствами.
-- Worker симулирует только A vs B (не матрицу).
+- Симуляция model-based; игровые решения принимаются упрощёнными эвристиками.
+- Не все карточные эффекты распознаны и протестированы.
+- Текущий WinPath не выделяет независимые стратегические линии.
+- Game log обрезан последними 15 событиями; полный replay пока не реализован.
+- На текущий момент summary содержит три выбранных примера, а не все сыгранные партии.
+- История браузера не синхронизируется.
+- Реестр карт загружается из HearthstoneJSON по сети и кэшируется в памяти Worker/процесса.
+- Web Worker применяется для A vs B, но не для матрицы.

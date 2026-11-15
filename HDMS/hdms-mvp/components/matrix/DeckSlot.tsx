@@ -21,7 +21,7 @@ isDragging: boolean;
 isDragOver: boolean;
 canRemove: boolean;
 onCodeChange: (code: string) => void;
-onCodeSubmit: () => void;
+onCodeSubmit: (code: string) => void;
 onRemove: () => void;
 onDragStart: () => void;
 onDragOver: (e: React.DragEvent) => void;
@@ -107,22 +107,31 @@ return (
         </div>
 {/* Content */}
         <div className="flex-1 min-w-0">
-          {!hasCode && (
-            <div>
+          <div>
+            <div className="flex gap-2">
               <input
-                className="w-full bg-hs-bg border border-hs-border rounded px-2 py-1.5 font-mono text-xs text-hs-text placeholder:text-hs-muted/60 focus:outline-none focus:border-hs-gold"
+                className="min-w-0 flex-1 bg-hs-bg border border-hs-border rounded px-2 py-1.5 font-mono text-xs text-hs-text placeholder:text-hs-muted/60 focus:outline-none focus:border-hs-gold"
                 value={slot.code}
                 onChange={(e) => onCodeChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") onCodeSubmit();
+                  if (e.key === "Enter") onCodeSubmit(slot.code);
                 }}
-                placeholder="Вставь deck-код и Enter"
+                placeholder="Вставь deck-код"
+                aria-label={`Код колоды ${index + 1}`}
               />
-              <div className="text-[10px] text-hs-muted mt-1">
-                Слот {index + 1} из {total}
-              </div>
+              <button
+                type="button"
+                className="shrink-0 px-3 py-1.5 rounded border border-hs-border text-xs text-hs-gold hover:border-hs-gold disabled:opacity-40"
+                onClick={() => onCodeSubmit(slot.code)}
+                disabled={!hasCode || slot.loading}
+              >
+                {slot.loading ? "…" : "Проверить"}
+              </button>
             </div>
-          )}
+            <div className="text-[10px] text-hs-muted mt-1">
+              Слот {index + 1} из {total} · после вставки нажми Enter или «Проверить»
+            </div>
+          </div>
 {hasCode && slot.loading && (
             <div className="text-xs text-hs-muted pulse">Декодирую колоду…</div>
           )}

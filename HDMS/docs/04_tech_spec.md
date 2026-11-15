@@ -1,224 +1,144 @@
 # 04 — Техническая спецификация HDMS
 
-## Архитектура
+**Редакция:** 16 ноября 2026  
+**Назначение:** фиксирует фактическую архитектуру текущего MVP и отделяет её от целевой архитектуры.  
+**Исходная концепция:** см. 01_vision.md.  
+**Пользовательская инструкция:** см. USER_GUIDE.md.
 
-```
-┌─────────────────────────────────────────┐
-│  Next.js 14 (App Router, TS, Tailwind)  │
-│  UI: deck import, deck detail, test     │
-│    runner, results, history, builder    │
-│  API routes: /api/decks, /api/tests     │
-└──────────────────┬──────────────────────┘
-                   │ Prisma
-                   ▼
-┌─────────────────────────────────────────┐
-│  SQLite (Prisma, dev) / Postgres (prod) │
-│  Deck / TestRun / GameResult / Winline  │
-└──────────────────┬──────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────┐
-│  Simulation Engine (TS, worker_threads) │
-│  deckParser, cardDB, effectRegistry     │
-│  goldfish.ts, matchup.ts                │
-│  policy.ts (AI per archetype)           │
-└──────────────────┬──────────────────────┘
-                   │ HTTP fetch (кэш)
-                   ▼
-┌─────────────────────────────────────────┐
-│  HearthstoneJSON                        │
-│  cards.collectible.{enUS,ruRU}.json     │
-└─────────────────────────────────────────┘
-```
+## 1. Статус реализации
 
----
-
-## Технологический стек
-
-| Слой ↕▾ | Выбор ↕▾ | Почему ↕▾ |
-|---|---|---|
-| −Frontend + API | **Next.js 14 App Router, TypeScript** | Single deploy, серверные роуты, типы |
-| −ORM | **Prisma** | Миграции, типы, SQLite → Postgres без изменений |
-| −БД | **SQLite** (dev) → **Postgres** (prod) | Локально бесплатно, миграция тривиальная |
-| −Стили | **Tailwind + shadcn/ui** | Быстрый UI без кастомного дизайна |
-| −Графики | **Recharts** | Мана-кривая, распределения |
-| −Симуляция | **TypeScript + worker_threads** | 10k партий за секунды |
-| −Кэш карт | локальный `data/cards/` | Не зависим от сети после первой загрузки |
-| −Тесты | **Vitest** | Парсер, движок, policy — юнит-тесты |
-| −Платежи | **Paddle** (Merchant of Record) | Берёт на себя налоги, возвраты, безопасность |
-| −Деплой | **Docker + docker-compose** | Простой self-hosted, потом — облако |
-⚙
-
-**Отказ от Python:** единый стек важнее скорости — 1000 партий модели на TS считаются за 1–3 сек.
-
----
-
-## Модель данных (Prisma)
-
-```
-model Deck {
-  id        String   @id @default(cuid())
-  name      String
-  code      String
-  class     String
-  format    String   // "standard" | "wild"
-  cards     Json
-  createdAt DateTime @default(now())
-  testsA    TestRun[] @relation("A")
-  testsB    TestRun[] @relation("B")
-}
-
-model TestRun {
-  id         String   @id @default(cuid())
-  deckAId    String
-  deckBId    String
-  deckA      Deck     @relation("A", fields: [deckAId], references: [id])
-  deckB      Deck     @relation("B", fields: [deckBId], references: [id])
-  params     Json     // { games, seed, coinA, coinB, maxTurns }
-  status     String   // pending | running | done | failed
-  summary    Json?
-  startedAt  DateTime @default(now())
-  finishedAt DateTime?
-  games      GameResult[]
-  winlines   Winline[]
-}
-
-model GameResult {
-  id            String  @id @default(cuid())
-  testRunId     String
-  gameIndex     Int
-  winner        String  // "A" | "B" | "draw"
-  turns         Int
-  hpRemainingA  Int
-  hpRemainingB  Int
-  log           Json
-  testRun       TestRun @relation(fields: [testRunId], references: [id])
-}
-
-model Winline {
-  id         String  @id @default(cuid())
-  testRunId  String
-  kind       String  // fastest_a | fastest_b | highest_hp_a | typical
-  winner     String
-  turns      Int
-  hpWinner   Int
-  hpLoser    Int
-  log        Json
-  testRun    TestRun @relation(fields: [testRunId], references: [id])
-}
-```
-
----
-
-## Симуляция: спецификация
-
-### Goldfish (Прототип, фича #2 частично)
-
-- Вход: колода + параметры (ход первый / на монете, mulligan).
-- Выход: `{ drawProbabilities, comboAssemblyTurn, damagePerTurn[] }`.
-- Monte Carlo N = 10 000, seed фиксируемый.
-- Модель: «голодная» игра карт по кривой, без противника.
-
-### Matchup (Прототип, фича #2)
-
-**Состояние игрока:**
-
-```
-{ hp, armor, mana, maxMana, heroPowerLevel,
-  hand: Card[], deck: Card[], board: Minion[],
-  fatigue, weapon?, mulliganDone: bool }
-```
-
-**Разрешение карт (effectRegistry):**
-Каждая карта имеет обработчик `(state, owner, target?) => state` в `effects.ts` по `dbfId`. Для неизвестных — фолбэк по тегам текста (damage / draw / heal / summon / buff / manaGain).
-
-**Ручные обработчики (обязательно в Task 6):**
-
-- Рыцарь Горького Цветка
-- Бесчисленные возможности
-- Зазубренное лезвие времени
-- Морхи
-- МАТРИАРХ
-- Разрушитель Перекрёстка
-- Прозорливый дракозмей
-- Темночешуйчатая праматерь
-
-**Turn loop:**
-
-1. Start: `maxMana = min(10, maxMana+1)`, `mana = maxMana`, draw 1, fatigue если пусто.
-2. Play loop: пока есть играбельные карты → score → play best → check lethal.
-3. Attack loop: minions → trade или face по policy.
-4. Hero power если mana ≥ cost.
-5. End: сброс временных бафов, `turn++`.
-
-**AI policy (`policy.ts`):**
-
-- `aggro`: face > trade, приоритет урону.
-- `tempo`: оптимальный trade по ratio, pressure.
-- `midrange`: mix, зависит от HP противника.
-- `control`: ремувал, heal, торг по HP.
-- `combo`: протект combo-кусков, добор под ключ, lethal-check.
-- `hybrid`: адаптивный (Task 12).
-
-**Win conditions:**
-
-- HP ≤ 0
-- Fatigue death
-- `maxTurns` (по умолчанию 30) → draw (или сравнение HP).
-
-**Monte Carlo:**
-
-- N партий (1000 по умолчанию, до 20 000), seed фиксируемый.
-- Агрегация: `winrate`, распределение ходов, распределение HP, средний ход победы.
-
-**Winlines:**
-Из N партий выбираются:
-
-- самый быстрый выигрыш A
-- самый быстрый выигрыш B
-- победа A с максимальным HP
-- победа B с максимальным HP
-- «медианная» партия
-
-Log = `[{ turn, player, action, detail, hpA, hpB, boardSummary }]`.
-
----
-
-## UI: страницы
-
-| Страница ↕▾ | Что показывает ↕▾ |
+| Область | Фактическое состояние на 16.11.2026 |
 |---|---|
-| −`/decks` | Список сохранённых колод |
-| −`/decks/import` | Форма импорта по deck-коду |
-| −`/decks/[id]` | Детали колоды: мана-кривая, типы, редкости, ключевые карты |
-| −`/decks/[id]/builder` | Конструктор (drag-and-drop, счётчик 30 слотов) |
-| −`/tests` | История тест-ранов |
-| −`/tests/[id]` | Результаты: winrate, распределение ходов, HP, winlines |
-| −`/tests/new` | Запуск нового matchup-теста |
-| −`/matrix` | Winrate матрица по всем тестам |
-| −`/decks/[id]/matchups` | Winrate против каждого противника |
-⚙
+| Веб-приложение | Next.js 14 App Router, React 18, TypeScript |
+| Основные разделы | A vs B, Matrix, Builder, History |
+| Deck-коды | Decode/encode через пакет deckstrings; поддержка Standard/Wild на уровне парсера |
+| База карт | HearthstoneJSON ruRU, загружается по сети при необходимости |
+| Кэш карт | In-memory cache модуля; постоянный локальный каталог data/cards не реализован |
+| Симулятор | Общий TypeScript engine для серверного API и браузерного Web Worker |
+| Параллельный режим | Несколько серверных HTTP-запросов Promise.all; не worker_threads |
+| История | IndexedDB в текущем браузере |
+| Хранение всех партий | Не реализовано; сводка содержит только три отобранных примера |
+| Матрица | API и расчёт NxN существуют; пользовательский ввод Matrix исправлен в текущем изменении, требуется проверка на локальном запуске |
+| База данных сервера | Prisma, SQLite и PostgreSQL в MVP не используются |
+| Авторизация / облачная синхронизация | Не реализованы |
+| Docker | Dockerfile и Docker Compose добавлены |
+| CI | GitHub Actions: typecheck, Vitest, Next production build, Docker build, Compose config |
 
----
+## 2. Фактическая архитектура
 
-## Плашка «model-based estimate»
+### Клиент
 
-На всех экранах с результатами — обязательная плашка: «Model-based estimate, not official simulation. See approximations.md».
+- Next.js App Router.
+- React 18 и TypeScript.
+- Tailwind CSS.
+- Страницы:
+  - / — сравнение A vs B;
+  - /matrix — матрица 2–8 колод;
+  - /builder — конструктор колоды;
+  - /history — локальная история тестов.
 
-Список упрощений доступен по клику (секреты, Discover, копирование, рекурсивные цепочки).
+### API
 
----
+- POST /api/deck/decode — декодирование deck-кода.
+- POST /api/deck/encode — создание deck-кода.
+- GET /api/cards/search — поиск карт.
+- POST /api/cards/batch — получение набора карт.
+- POST /api/simulate — симуляция A vs B.
+- POST /api/simulate-matrix — попарная симуляция нескольких колод.
 
-## Правила карт
+### База карт
 
-Отдельный файл `07_rules_and_approximations.md` — точные и упрощённые механики.
+Файл lib/cards/registry.ts загружает ruRU collectible JSON с HearthstoneJSON по адресу:
+https://api.hearthstonejson.com/v1/latest/ruRU/cards.collectible.json
 
----
+Загруженный список преобразуется в Map по dbfId и кэшируется в памяти процесса/контекста. В текущей реализации нет собственного обновляемого data/cards snapshot, нет гарантированного офлайн-кэша базы карт и нет зафиксированной версии набора карт в записи результата. Следовательно, первый запуск после очистки/перезапуска контекста требует доступа к источнику.
 
-## Карта данных
+### Сохранение
 
-- Источник: `https://api.hearthstonejson.com/v1/latest/{enUS,ruRU}/cards.collectible.json`
-- Кэш: `data/cards/` с датой скачивания.
-- Скрипт обновления: `npm run cards:update`.
-- Мерж по `id`.
-- **Русские названия карт — приоритетные** (per memory).
+- История A vs B хранится в IndexedDB браузера, база hdms-history.
+- Store tests используется страницей History.
+- Store matrix и тип MatrixRecord созданы в модуле истории, но текущий UI матрицы не вызывает saveMatrix и не показывает сохранённую историю матриц.
+- Данные не синхронизируются между браузерами и устройствами.
+- Серверной Prisma/SQLite/PostgreSQL базы в текущем MVP нет.
+
+## 3. Архитектура симуляции
+
+### Общий runner
+
+lib/sim/runner.ts предоставляет runMatchupCodes: он загружает реестр карт, декодирует два deck-кода и вызывает simulateMatchup. Этот runner используется как серверным API, так и браузерным Worker. Так достигается повторное использование основной логики.
+
+### Три режима A vs B
+
+1. Server — стандартный режим. Браузер отправляет один запрос в /api/simulate; сервер выполняет симуляцию в рамках API-запроса.
+2. Parallel — интерфейс делит большую серию на несколько серверных HTTP-запросов, запускаемых через Promise.all, а затем объединяет сводки. Опция доступна от 400 партий. Это не отдельные Node worker_threads и не фоновая очередь задач.
+3. Web Worker — браузер создаёт отдельный поток JavaScript и запускает общий runner внутри него. UI не должен блокироваться основным циклом интерфейса. Worker отдельно загружает HearthstoneJSON и кэширует карты в своей памяти. При ошибке UI пытается выполнить расчёт на сервере.
+
+Worker не повышает точность модели и не гарантирует, что расчёт будет быстрее. Он нужен прежде всего для отзывчивости страницы при локальной симуляции. На матрицу этот переключатель не распространяется.
+
+### Модель игры — текущая реализация
+
+- Создаются состояния игроков A и B с HP, бронёй, маной, рукой, колодой, полем, усталостью и уровнем силы героя.
+- Стартовая рука — 3 или 4 карты в зависимости от порядка хода.
+- Поддержан упрощённый mulligan по порогу стоимости.
+- Мана увеличивается на 1 каждый ход до 10.
+- Из доступных карт выбираются существа и заклинания; выбор основан на ограниченных эвристиках: летальный урон заклинанием, массовый урон при нескольких целях, предпочтение существа на пустом столе, затем стоимость.
+- Атаки идут по упрощённой логике: провокации, отдельные выгодные размены и атака в героя.
+- Сила героя реализована специальной моделью для Разбойника и общей заглушкой для остальных классов.
+- Результаты агрегируются в winrate, ничьи, среднюю длительность, HP на победе, распределение ходов и эвристические категории WinPath.
+
+Здесь нет отдельного полноценного policy.ts с шестью стратегическими AI, заявленного в старой архитектурной схеме. Фактическая логика выбора карт находится в engine.ts и является упрощённой эвристикой.
+
+## 4. Фактическая структура результатов и журналов
+
+Тип GameResult хранит победителя, число ходов, HP оставшихся героев, две эвристические категории winPath, источник последнего удара и массив LogEntry.
+
+LogEntry содержит ход, игрока, тип действия, текстовое описание, HP героев и размеры полей. Он не содержит полного снимка руки, колоды, маны, целей каждого действия и всех внутренних триггеров. Атаки в лицо логируются, но размены существ не получают полноценной записи отдельного действия. Поэтому текущий журнал — диагностический event log, а не воспроизводимый реплей партии.
+
+В каждом терминальном сценарии engine.ts возвращает только log.slice(-15). Сохраняются последние 15 записей, а не вся история боя.
+
+MatchupSummary возвращает три репрезентативных результата:
+- winlineFastest;
+- winlineLongest;
+- winlineHighestHp.
+
+Сводка не возвращает GameResult[] всех сыгранных партий. В интерфейсе показываются эти три примера; полный архив партий не сохранён.
+
+## 5. WinPath и Winlines — важное различие
+
+Текущий WinPath — одно из пяти общих обозначений: aggro, midrange, control, combo, mixed. Оно вычисляется classifyWinPath по составу колоды, доле дешёвых/дорогих карт и типу финального урона. Оно не распознаёт конкретный стратегический план, цепочку карт или независимую линию победы.
+
+Например, для Rogue Dragon-Charge код пока не выделит отдельно:
+- линию через зарядку/Imbue и силу героя;
+- линию через драконов и синергию драконов;
+- смешанную линию, где эти пакеты помогают друг другу;
+- несколько подвариантов каждой линии.
+
+Это направление развития описано в REVERSE_ENGINEERING_PLAN.md и 09_roadmap.md. До появления событийной модели и проверок нельзя трактовать распределение текущих WinPath как анализ win conditions.
+
+## 6. Автоматические проверки
+
+В package.json доступны:
+- npm run typecheck;
+- npm test;
+- npm run build;
+- npm run check — все три проверки последовательно.
+
+GitHub Actions дополнительно собирает Docker image и проверяет конфигурацию Docker Compose. Последний подтверждённый кодовый CI run до текущего исправления: 70/70 Vitest tests, TypeScript, Next production build, Docker build и Compose validation. Тесты матрицы проверяют вычислительную функцию на тестовых fixtures, но не ввод данных через браузерную форму. В проекте пока нет полноценного Playwright E2E набора.
+
+## 7. Целевая архитектура, пока не реализованная
+
+Следующие решения остаются планом, а не частью текущего MVP:
+
+- серверная БД и аккаунты;
+- сохранение полного набора партий и журналов;
+- постоянный версионированный snapshot базы карт;
+- job queue для длинных симуляций;
+- серверные worker-процессы для больших матриц;
+- история и синхронизация матриц;
+- событийная модель партий и система распознавания нескольких winlines;
+- Goldfish-режим отдельным инструментом;
+- расширенная проверка покрытия эффектов и предупреждения о неподдерживаемых картах;
+- PWA с управляемым offline cache;
+- мобильная упаковка через Capacitor после проверки спроса.
+
+Технический порядок работ — в 09_roadmap.md. Архитектурные решения по reverse engineering — в REVERSE_ENGINEERING_PLAN.md.

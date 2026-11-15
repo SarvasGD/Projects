@@ -34,12 +34,16 @@ function updateSlot(idx: number, patch: Partial<SlotData>) {
 setSlots((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
 }
 
-async function decodeSlot(idx: number) {
-const slot = slots[idx];
-const code = slot.code.trim();
+async function decodeSlot(slotId: string, rawCode?: string) {
+const slot = slots.find((item) => item.id === slotId);
+const code = (rawCode ?? slot?.code ?? "").trim();
 if (!code) return;
 
-updateSlot(idx, { loading: true, error: null, heroClass: null, cardCount: null });
+setSlots((prev) => prev.map((item) =>
+item.id === slotId
+? { ...item, loading: true, error: null, heroClass: null, format: null, cardCount: null, avgCost: null }
+: item
+));
 
 try {
 const res = await fetch("/api/deck/decode", {
@@ -49,18 +53,29 @@ body: JSON.stringify({ code })
 });
 const data = await res.json();
 if (!res.ok) throw new Error(data.error ?? "Неверный код");
-updateSlot(idx, {
+setSlots((prev) => prev.map((item) =>
+item.id === slotId && item.code.trim() === code
+? {
+...item,
 loading: false,
+error: null,
 heroClass: data.heroClass,
 format: data.format,
 cardCount: data.cardCount,
 avgCost: data.avgCost
-});
+}
+: item
+));
 } catch (err: unknown) {
-updateSlot(idx, {
+setSlots((prev) => prev.map((item) =>
+item.id === slotId && item.code.trim() === code
+? {
+...item,
 loading: false,
 error: err instanceof Error ? err.message : "Ошибка декодирования"
-});
+}
+: item
+));
 }
 }
 
@@ -103,15 +118,22 @@ setResult(null);
 }
 
 function addPreset(code: string) {
-const emptyIdx = slots.findIndex((s) => !s.code.trim());
-if (emptyIdx >= 0) {
-updateSlot(emptyIdx, { code });
-setTimeout(() => void decodeSlot(emptyIdx), 0);
+const emptySlotData = slots.find((s) => !s.code.trim());
+if (emptySlotData) {
+updateSlot(slots.indexOf(emptySlotData), {
+code,
+heroClass: null,
+format: null,
+cardCount: null,
+avgCost: null,
+loading: false,
+error: null
+});
+void decodeSlot(emptySlotData.id, code);
 } else if (slots.length < 8) {
-const newSlot = { ...emptySlot(), code };
-setSlots([...slots, newSlot]);
-const idx = slots.length;
-setTimeout(() => void decodeSlot(idx), 0);
+const newSlotData = { ...emptySlot(), code };
+setSlots((prev) => [...prev, newSlotData]);
+void decodeSlot(newSlotData.id, code);
 }
 }
 
@@ -166,7 +188,7 @@ a.click();
 URL.revokeObjectURL(url);
 }
 
-const readyCount = slots.filter((s) => s.cardCount !== null).length;
+const readyCount = slots.filter((s) => s.cardCount !== null && s.heroClass !== null).length;
 const canRun = !loading && readyCount >= 2;
 
 return (
@@ -214,8 +236,19 @@ return (
             isDragging={dragIdx === idx}
             isDragOver={dragOverIdx === idx && dragIdx !== idx}
             canRemove={slots.length > 2}
-            onCodeChange={(code) => updateSlot(idx, { code })}
-            onCodeSubmit={() => void decodeSlot(idx)}
+            onCodeChange={(code) => {
+              updateSlot(idx, {
+                code,
+                heroClass: null,
+                format: null,
+                cardCount: null,
+                avgCost: null,
+                loading: false,
+                error: null
+              });
+              setResult(null);
+            }}
+            onCodeSubmit={(code) => void decodeSlot(slot.id, code)}
             onRemove={() => removeDeck(idx)}
             onDragStart={() => onDragStart(idx)}
             onDragOver={(e) => onDragOver(idx, e)}
