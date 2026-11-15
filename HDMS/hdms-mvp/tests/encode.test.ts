@@ -11,7 +11,8 @@ describe("Deck encode/decode round-trip (iteration D)", () => {
 it("decodeRaw preserves heroes, format, cards", () => {
 const raw = decodeRaw(CODE_TEMNAYA);
 expect(raw.heroes.length).toBeGreaterThan(0);
-expect(raw.format).toBe(1);
+// Hearthstone deckstrings: 1 = Wild, 2 = Standard.
+expect(raw.format).toBe(2);
 const total = raw.cards.reduce((s, [, c]) => s + c, 0);
 expect(total).toBe(30);
 });

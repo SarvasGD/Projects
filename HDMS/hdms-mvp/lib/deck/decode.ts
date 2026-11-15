@@ -32,7 +32,7 @@ const signature = [...cards]
 return {
 code,
 heroClass: HERO_CLASSES[decoded.heroes[0]] ?? "UNKNOWN",
-format: decoded.format === 1 ? "standard" : "wild",
+format: decoded.format === 1 ? "wild" : "standard",
 cards,
 signature
 };
