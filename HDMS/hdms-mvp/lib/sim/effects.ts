@@ -235,7 +235,7 @@ return "Разрушитель Перекрёстка: 7 урона";
 }
 },
 {
-pattern: /^МАТРИАРХ<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi mathvariant="normal">∣</mi><mi>M</mi></msup><mi>A</mi><mi>T</mi><mi>R</mi><mi>I</mi><mi>A</mi><mi>R</mi><mi>C</mi><mi>H</mi></mrow><annotation encoding="application/x-tex">|^MATRIARCH</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">M</span></span></span></span></span></span></span></span><span class="mord mathnormal">A</span><span class="mord mathnormal" style="margin-right:0.00773em;">TR</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mord mathnormal">A</span><span class="mord mathnormal" style="margin-right:0.07153em;">RC</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span></span></span></span>/i,
+pattern: /^(?:МАТРИАРХ(?:\s*[|∣]\^?MATRIARCH)?|[|∣]?\^?MATRIARCH)$/i,
 apply: (player) => {
 for (let i = 0; i < 2 && player.deck.length > 0; i++) {
 player.hand.push(player.deck.shift()!);

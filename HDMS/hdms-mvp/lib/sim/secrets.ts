@@ -64,7 +64,7 @@ if (armor) result.armor = parseInt(armor[1] ?? armor[2]);
 const heal = text.match(/Restore (\d+) Health|Восстановите (\d+) ед. здоровья/i);
 if (heal) result.heal = parseInt(heal[1] ?? heal[2]);
 
-const summon = text.match(/Summon a (\d+)/(\d+)|Призовите существо (\d+)/(\d+)/i);
+const summon = text.match(/Summon a (\d+)\/(\d+)|Призовите существо (\d+)\/(\d+)/i);
 if (summon) result.summon = { attack: parseInt(summon[1] ?? summon[3]), health: parseInt(summon[2] ?? summon[4]) };
 
 return result;

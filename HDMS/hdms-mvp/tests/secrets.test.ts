@@ -75,6 +75,21 @@ expect(result).not.toBeNull();
 expect(attacker.board.length).toBe(0);
 });
 
+it("parses summon stats from a secret", () => {
+  const owner = mkPlayer('A');
+  const opponent = mkPlayer('B');
+  const played = mkMinion(1, 2);
+  opponent.board.push(played);
+
+  addSecret(owner, mkSecret("When your opponent plays a minion, summon a 2/3 Elemental."));
+  const result = tryTriggerSecret(owner, opponent, { type: 'MINION_PLAYED', minion: played });
+
+  expect(result).not.toBeNull();
+  expect(owner.board).toHaveLength(1);
+  expect(owner.board[0].attack).toBe(2);
+  expect(owner.board[0].health).toBe(3);
+});
+
 it("secret pops after triggering (no double-trigger)", () => {
 const owner = mkPlayer('A');
 const attacker = mkPlayer('B');
