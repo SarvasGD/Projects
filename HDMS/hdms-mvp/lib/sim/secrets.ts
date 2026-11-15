@@ -90,8 +90,7 @@ if (idx >= 0) opponent.board.splice(idx, 1);
 parts.push("существо уничтожено");
 }
 }
-if (eff.damage) {
-if (event.type === 'MINION_PLAYED' || event.type === 'HERO_ATTACKED') {
+if (eff.damage && (event.type === 'MINION_PLAYED' || event.type === 'HERO_ATTACKED')) {
 const target = event.type === 'MINION_PLAYED' ? event.minion : event.attacker;
 target.health -= eff.damage;
 if (target.health <= 0) {
@@ -99,7 +98,6 @@ const idx = opponent.board.indexOf(target);
 if (idx >= 0) opponent.board.splice(idx, 1);
 }
 parts.push(`${eff.damage} урона существу`);
-
 }
 if (eff.armor) {
 owner.armor += eff.armor;
