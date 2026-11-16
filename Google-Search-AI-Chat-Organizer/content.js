@@ -515,19 +515,6 @@
     return candidates.some((label) => label.length <= 48 && RECENT_LABEL.test(label));
   }
 
-  function isLeftRailAnchor(anchor, headingRect) {
-    const rect = anchor.getBoundingClientRect();
-    if (!rect.width || !rect.height || !headingRect) return false;
-
-    // Compare history links with the actual "Recent" heading instead of
-    // assuming the rail begins at viewport x=0. Google may reserve a narrow
-    // icon rail to its left, and browser zoom changes CSS viewport geometry.
-    const headingLeft = headingRect.left;
-    return rect.left >= headingLeft - 28 &&
-      rect.left <= headingLeft + 240 &&
-      rect.right <= headingLeft + 620;
-  }
-
   function isSidebarContainer(element, headingRect) {
     if (!element || element === document.body || element === document.documentElement || !headingRect) return false;
     const rect = element.getBoundingClientRect();
@@ -559,8 +546,11 @@
       let ancestor = label.parentElement;
       for (let depth = 1; depth <= 14 && ancestor && ancestor !== document.body; depth += 1) {
         if (isSidebarContainer(ancestor, headingRect)) {
-          const links = countSearchLinks(ancestor)
-            .filter((entry) => isLeftRailAnchor(entry.anchor, headingRect));
+          // The ancestor is already validated as the narrow rail around
+          // the visible Recent heading. Count its chat links directly:
+          // individual anchor coordinates can shift during Google's
+          // dynamic layout updates and caused found/not-found flicker.
+          const links = countSearchLinks(ancestor);
           if (links.length >= 1) {
             const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
               ancestor.getAttribute("role") === "navigation" ? 1 : 0;
@@ -844,7 +834,7 @@
     scroller.scrollTop = scroller.scrollHeight;
     progress.steps += 1;
     window.setTimeout(() => {
-      const count = countSearchLinks(sectionContainer).filter((entry) => isLeftRailAnchor(entry.anchor)).length;
+      const count = countSearchLinks(sectionContainer).length;
       if (count > progress.previousCount) {
         progress.previousCount = count;
         progress.stableSteps = 0;
@@ -868,7 +858,7 @@
 
     const progress = {
       initialScrollTop: scroller.scrollTop,
-      previousCount: countSearchLinks(section.container).filter((entry) => isLeftRailAnchor(entry.anchor)).length,
+      previousCount: countSearchLinks(section.container).length,
       stableSteps: 0,
       steps: 0
     };
