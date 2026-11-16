@@ -728,7 +728,8 @@
       });
     }
 
-    diagnosticInfo.textContent = lines.join("\n");
+    const diagnosticText = lines.join("\n");
+    if (diagnosticInfo.textContent !== diagnosticText) diagnosticInfo.textContent = diagnosticText;
   }
 
   function recordDiscoveredChat(url, title) {
