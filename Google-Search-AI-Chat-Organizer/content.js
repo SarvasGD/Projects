@@ -436,7 +436,7 @@
   function createInterface() {
     host = document.createElement("div");
     host.id = "google-search-ai-chat-organizer";
-    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:8px 0;position:relative;z-index:2;flex:0 0 100%;grid-column:1 / -1;clear:both;";
+    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:8px 0;position:static;flex:0 0 auto;grid-column:1 / -1;clear:both;";
     shadow = host.attachShadow({ mode: "open" });
 
     const style = createElement("style");
@@ -503,31 +503,34 @@
     return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
   }
 
-  function isLeftRailAnchor(anchor) {
+  function isLeftRailAnchor(anchor, headingRect) {
     const rect = anchor.getBoundingClientRect();
-    if (!rect.width || !rect.height) return false;
-    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    if (!rect.width || !rect.height || !headingRect) return false;
 
-    // History items must begin close to the viewport's left edge. A broad
-    // percentage-based test also matched links in Google's main content.
-    return rect.left >= -2 &&
-      rect.left <= Math.min(96, width * 0.10) &&
-      rect.right <= Math.min(520, width * 0.48);
+    // Compare history links with the actual "Recent" heading instead of
+    // assuming the rail begins at viewport x=0. Google may reserve a narrow
+    // icon rail to its left, and browser zoom changes CSS viewport geometry.
+    const headingLeft = headingRect.left;
+    return rect.left >= headingLeft - 28 &&
+      rect.left <= headingLeft + 240 &&
+      rect.right <= headingLeft + 620;
   }
 
-  function isSidebarContainer(element) {
-    if (!element || element === document.body || element === document.documentElement) return false;
+  function isSidebarContainer(element, headingRect) {
+    if (!element || element === document.body || element === document.documentElement || !headingRect) return false;
     const rect = element.getBoundingClientRect();
     const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    const maxWidth = Math.min(520, width * 0.48);
+    const maxWidth = Math.min(620, width * 0.65);
+    const headingLeft = headingRect.left;
 
-    // The real Google history rail is anchored to the page's left edge.
-    // Reject adjacent content columns even when they contain search links.
-    return rect.width >= 140 &&
-      rect.height >= 120 &&
-      rect.left >= -2 &&
-      rect.left <= Math.min(32, width * 0.04) &&
-      rect.right <= maxWidth &&
+    // A valid container must begin at the heading's left edge and remain a
+    // bounded-width vertical rail containing the history section.
+    return rect.width >= 110 &&
+      rect.height >= 100 &&
+      rect.left >= headingLeft - 72 &&
+      rect.left <= headingLeft + 24 &&
+      rect.right >= headingRect.right &&
+      rect.right <= headingLeft + maxWidth &&
       rect.width <= maxWidth;
   }
 
@@ -538,18 +541,20 @@
 
     const candidates = new Map();
     labels.forEach((label) => {
+      const headingRect = label.getBoundingClientRect();
+      if (!headingRect.width || !headingRect.height) return;
+
       let ancestor = label.parentElement;
-      for (let depth = 1; depth <= 12 && ancestor && ancestor !== document.body; depth += 1) {
-        if (isSidebarContainer(ancestor)) {
-          const links = countSearchLinks(ancestor).filter((entry) => isLeftRailAnchor(entry.anchor));
-          // Require both the localized Recent heading and multiple chat URLs
-          // inside the same left-anchored rail. No geometry-only fallback.
-          if (links.length >= 2) {
+      for (let depth = 1; depth <= 14 && ancestor && ancestor !== document.body; depth += 1) {
+        if (isSidebarContainer(ancestor, headingRect)) {
+          const links = countSearchLinks(ancestor)
+            .filter((entry) => isLeftRailAnchor(entry.anchor, headingRect));
+          if (links.length >= 1) {
             const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
               ancestor.getAttribute("role") === "navigation" ? 1 : 0;
             const rect = ancestor.getBoundingClientRect();
             const score = links.length * 100 + semantic * 25 -
-              rect.width * 0.1 - rect.height * 0.005 - depth * 0.01;
+              rect.width * 0.25 - rect.height * 0.005 - depth * 2;
             const previous = candidates.get(ancestor);
             if (!previous || score > previous.score) {
               candidates.set(ancestor, {
@@ -611,20 +616,18 @@
     }
     if (!host) createInterface();
     if (!host.isConnected) {
-      const headingRow = section.heading && section.heading.parentElement;
-      const rowRect = headingRow && headingRow.getBoundingClientRect();
-      const containerRect = section.container.getBoundingClientRect();
-      const canInsertAfterHeadingRow = headingRow &&
-        headingRow !== section.container &&
-        rowRect.height <= 90 &&
-        Math.abs(rowRect.left - containerRect.left) <= 36 &&
-        rowRect.width >= containerRect.width * 0.65;
-
-      // Insert below the heading's row, not beside the heading inside a
-      // horizontal flex/grid row. Force a full-width row in either layout.
-      const insertionPoint = canInsertAfterHeadingRow ? headingRow : section.heading;
-      if (insertionPoint && insertionPoint.parentElement) insertionPoint.after(host);
-      else section.container.prepend(host);
+      // Insert after the heading's top-level row inside the detected history
+      // rail. Inserting after the heading node itself can put the panel beside
+      // the heading when Google's wrapper uses a horizontal flex layout.
+      let headingRow = section.heading;
+      while (headingRow && headingRow.parentElement && headingRow.parentElement !== section.container) {
+        headingRow = headingRow.parentElement;
+      }
+      if (headingRow && headingRow.parentElement === section.container) {
+        headingRow.after(host);
+      } else {
+        section.container.prepend(host);
+      }
     }
   }
 
