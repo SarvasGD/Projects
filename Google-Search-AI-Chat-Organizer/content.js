@@ -7,7 +7,7 @@
   const MAX_INDEX_TEXT = 10000;
   const MAX_INDEXED_CHATS = 100;
   const FOLDER_COLORS = ["#4285F4", "#34A853", "#FBBC04", "#EA4335", "#A142F4", "#00ACC1", "#F4511E", "#8D6E63"];
-  const RECENT_LABEL = /^(recent|recent chats|recent searches|недавние|недавнее|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)(?:\\s*\\(?\\d+\\)?)?$/i;
+  const RECENT_LABEL = /^(recent|recent chats|recent searches|недавние|недавнее|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)(?: *[0-9]+)?$/i;
 
   const state = { folders: [], chats: {} };
   const openFolders = new Set();
