@@ -18,6 +18,8 @@
   let host = null;
   let shadow = null;
   let ui = null;
+  let diagnosticHost = null;
+  let diagnosticInfo = null;
   let currentContainer = null;
   let observer = null;
   let scanTimer = null;
@@ -631,6 +633,92 @@
     }
   }
 
+  function removeDetectionDiagnostic() {
+    if (diagnosticHost) diagnosticHost.remove();
+    diagnosticHost = null;
+    diagnosticInfo = null;
+  }
+
+  function updateDetectionDiagnostic(section) {
+    if (section) {
+      removeDetectionDiagnostic();
+      return;
+    }
+
+    let pageUrl;
+    try { pageUrl = new URL(location.href); }
+    catch (_error) { removeDetectionDiagnostic(); return; }
+
+    const supportedGoogle = /(^|\\.)google\\.(com|ru|se|co\\.uk|de|fr|es|ca|com\\.au|co\\.in)$/i.test(pageUrl.hostname);
+    if (!supportedGoogle || pageUrl.pathname !== "/search") {
+      removeDetectionDiagnostic();
+      return;
+    }
+
+    if (!diagnosticHost || !diagnosticHost.isConnected) {
+      diagnosticHost = document.createElement("div");
+      diagnosticHost.id = "gsaco-detection-diagnostic";
+      diagnosticHost.style.cssText = "position:fixed;top:76px;right:12px;z-index:2147483647;width:min(360px,calc(100vw - 24px));max-height:38vh;box-sizing:border-box;";
+      const root = diagnosticHost.attachShadow({ mode: "open" });
+      const style = document.createElement("style");
+      style.textContent = ":host{all:initial}section{font:12px/1.4 Arial,sans-serif;background:#202124;color:#e8eaed;border:1px solid #fbbc04;border-radius:9px;box-shadow:0 3px 16px #0008;padding:10px;max-height:38vh;overflow:auto}strong{display:block;color:#fbbc04;font-size:12px;margin-bottom:5px}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.45 Consolas,monospace;color:#e8eaed}";
+      const panel = document.createElement("section");
+      const title = document.createElement("strong");
+      title.textContent = "AI Chat Organizer — диагностика";
+      diagnosticInfo = document.createElement("pre");
+      panel.append(title, diagnosticInfo);
+      root.append(style, panel);
+      document.documentElement.appendChild(diagnosticHost);
+    }
+
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],[aria-label],span,div"))
+      .filter(isRecentLabel);
+    const allLinks = countSearchLinks(document);
+    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    const lines = [
+      "Скрипт расширения: ЗАГРУЖЕН",
+      "Страница: " + pageUrl.pathname + " · " + pageUrl.hostname,
+      "Ширина viewport: " + Math.round(width) + " CSS px",
+      "Ссылок Google Search с q: " + allLinks.length,
+      "Заголовков «Недавнее»: " + labels.length,
+      "Кандидат панели истории: НЕ НАЙДЕН"
+    ];
+
+    labels.slice(0, 3).forEach((label, index) => {
+      const labelRect = label.getBoundingClientRect();
+      const labelText = (label.textContent || label.getAttribute("aria-label") || "").replace(/\\s+/g, " ").trim().slice(0, 45);
+      lines.push("");
+      lines.push("Заголовок " + (index + 1) + ": «" + labelText + "» x=" + Math.round(labelRect.left) + " y=" + Math.round(labelRect.top));
+      let ancestor = label.parentElement;
+      let depth = 0;
+      while (ancestor && ancestor !== document.body && depth < 12) {
+        const rect = ancestor.getBoundingClientRect();
+        const links = countSearchLinks(ancestor);
+        if (links.length || depth < 2) {
+          lines.push("  " + ancestor.tagName.toLowerCase() +
+            " x=" + Math.round(rect.left) +
+            " w=" + Math.round(rect.width) +
+            " h=" + Math.round(rect.height) +
+            " links=" + links.length);
+        }
+        ancestor = ancestor.parentElement;
+        depth += 1;
+      }
+    });
+
+    if (!labels.length && allLinks.length) {
+      lines.push("");
+      lines.push("Примеры ссылок:");
+      allLinks.slice(0, 4).forEach((entry) => {
+        const rect = entry.anchor.getBoundingClientRect();
+        lines.push("  x=" + Math.round(rect.left) + " y=" + Math.round(rect.top) +
+          " · " + (entry.anchor.textContent || "").replace(/\\s+/g, " ").trim().slice(0, 35));
+      });
+    }
+
+    diagnosticInfo.textContent = lines.join("\\n");
+  }
+
   function recordDiscoveredChat(url, title) {
     if (!state.chats[url]) {
       state.chats[url] = { title: title || titleForUrl(url), text: "", updatedAt: Date.now() };
@@ -720,6 +808,7 @@
   function scanForChats() {
     const section = findRecentSection();
     let changed = false;
+    updateDetectionDiagnostic(section);
     if (!section && currentContainer) {
       // If Google collapses/replaces the history rail, remove the organizer
       // rather than leaving it floating over the conversation/results pane.
