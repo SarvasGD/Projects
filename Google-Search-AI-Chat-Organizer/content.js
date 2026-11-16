@@ -513,7 +513,9 @@
     return rect.left >= -2 &&
       rect.left <= Math.min(96, width * 0.10) &&
       rect.right <= Math.min(520, width * 0.48);
-  }  function isSidebarContainer(element) {
+  }
+
+  function isSidebarContainer(element) {
     if (!element || element === document.body || element === document.documentElement) return false;
     const rect = element.getBoundingClientRect();
     const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -527,7 +529,9 @@
       rect.left <= Math.min(32, width * 0.04) &&
       rect.right <= maxWidth &&
       rect.width <= maxWidth;
-  }  function findRecentSection() {
+  }
+
+  function findRecentSection() {
     const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],[aria-label],span,div"))
       .filter(isRecentLabel);
     if (!labels.length) return null;
@@ -564,7 +568,9 @@
 
     if (!candidates.size) return null;
     return Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0];
-  }  function getRowForAnchor(anchor, container) {
+  }
+
+  function getRowForAnchor(anchor, container) {
     const semanticRow = anchor.closest("li,[role='listitem']");
     if (semanticRow && semanticRow !== container && container.contains(semanticRow)) return semanticRow;
     const parent = anchor.parentElement;
@@ -620,7 +626,9 @@
       if (insertionPoint && insertionPoint.parentElement) insertionPoint.after(host);
       else section.container.prepend(host);
     }
-  }  function recordDiscoveredChat(url, title) {
+  }
+
+  function recordDiscoveredChat(url, title) {
     if (!state.chats[url]) {
       state.chats[url] = { title: title || titleForUrl(url), text: "", updatedAt: Date.now() };
       return true;
