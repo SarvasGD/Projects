@@ -436,7 +436,7 @@
   function createInterface() {
     host = document.createElement("div");
     host.id = "google-search-ai-chat-organizer";
-    host.style.cssText = "display:block;width:100%;box-sizing:border-box;margin:10px 0;position:relative;z-index:2;";
+    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:8px 0;position:relative;z-index:2;flex:0 0 100%;grid-column:1 / -1;clear:both;";
     shadow = host.attachShadow({ mode: "open" });
 
     const style = createElement("style");
@@ -507,52 +507,50 @@
     const rect = anchor.getBoundingClientRect();
     if (!rect.width || !rect.height) return false;
     const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    // Google's main results start to the right of the narrow history rail.
-    // Fixed upper bounds still work on wide monitors and browser zoom levels.
-    return rect.left >= -2 &&
-      rect.left <= Math.min(380, width * 0.30) &&
-      rect.right <= Math.min(520, width * 0.42);
-  }
 
-  function isSidebarContainer(element) {
+    // History items must begin close to the viewport's left edge. A broad
+    // percentage-based test also matched links in Google's main content.
+    return rect.left >= -2 &&
+      rect.left <= Math.min(96, width * 0.10) &&
+      rect.right <= Math.min(520, width * 0.48);
+  }  function isSidebarContainer(element) {
     if (!element || element === document.body || element === document.documentElement) return false;
     const rect = element.getBoundingClientRect();
     const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    return rect.width >= 100 &&
-      rect.height >= 100 &&
+    const maxWidth = Math.min(520, width * 0.48);
+
+    // The real Google history rail is anchored to the page's left edge.
+    // Reject adjacent content columns even when they contain search links.
+    return rect.width >= 140 &&
+      rect.height >= 120 &&
       rect.left >= -2 &&
-      rect.left <= Math.min(360, width * 0.22) &&
-      rect.right <= Math.min(620, width * 0.42) &&
-      rect.width <= Math.min(620, width * 0.42);
-  }
-
-  function findRecentSection() {
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],button,[aria-label],span"))
+      rect.left <= Math.min(32, width * 0.04) &&
+      rect.right <= maxWidth &&
+      rect.width <= maxWidth;
+  }  function findRecentSection() {
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],[aria-label],span,div"))
       .filter(isRecentLabel);
-    const allLinks = countSearchLinks(document);
-    const leftLinks = allLinks.filter((entry) => isLeftRailAnchor(entry.anchor));
-    if (!leftLinks.length) return null;
+    if (!labels.length) return null;
 
-    const labelFor = (container) => labels.find((label) => container.contains(label)) || null;
     const candidates = new Map();
-
-    leftLinks.forEach((entry) => {
-      let ancestor = entry.anchor.parentElement;
+    labels.forEach((label) => {
+      let ancestor = label.parentElement;
       for (let depth = 1; depth <= 12 && ancestor && ancestor !== document.body; depth += 1) {
         if (isSidebarContainer(ancestor)) {
-          const links = countSearchLinks(ancestor).filter((link) => isLeftRailAnchor(link.anchor));
-          const heading = labelFor(ancestor);
-          if (links.length >= 2 || (links.length === 1 && heading)) {
+          const links = countSearchLinks(ancestor).filter((entry) => isLeftRailAnchor(entry.anchor));
+          // Require both the localized Recent heading and multiple chat URLs
+          // inside the same left-anchored rail. No geometry-only fallback.
+          if (links.length >= 2) {
             const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
               ancestor.getAttribute("role") === "navigation" ? 1 : 0;
             const rect = ancestor.getBoundingClientRect();
-            const score = links.length * 100 + (heading ? 60 : 0) + semantic * 25 -
+            const score = links.length * 100 + semantic * 25 -
               rect.width * 0.1 - rect.height * 0.005 - depth * 0.01;
             const previous = candidates.get(ancestor);
             if (!previous || score > previous.score) {
               candidates.set(ancestor, {
                 container: ancestor,
-                heading: heading,
+                heading: label,
                 links: links,
                 score: score,
                 explicit: true
@@ -566,9 +564,7 @@
 
     if (!candidates.size) return null;
     return Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0];
-  }
-
-  function getRowForAnchor(anchor, container) {
+  }  function getRowForAnchor(anchor, container) {
     const semanticRow = anchor.closest("li,[role='listitem']");
     if (semanticRow && semanticRow !== container && container.contains(semanticRow)) return semanticRow;
     const parent = anchor.parentElement;
@@ -609,12 +605,22 @@
     }
     if (!host) createInterface();
     if (!host.isConnected) {
-      if (section.heading && section.heading.parentElement && section.container.contains(section.heading)) section.heading.after(host);
+      const headingRow = section.heading && section.heading.parentElement;
+      const rowRect = headingRow && headingRow.getBoundingClientRect();
+      const containerRect = section.container.getBoundingClientRect();
+      const canInsertAfterHeadingRow = headingRow &&
+        headingRow !== section.container &&
+        rowRect.height <= 90 &&
+        Math.abs(rowRect.left - containerRect.left) <= 36 &&
+        rowRect.width >= containerRect.width * 0.65;
+
+      // Insert below the heading's row, not beside the heading inside a
+      // horizontal flex/grid row. Force a full-width row in either layout.
+      const insertionPoint = canInsertAfterHeadingRow ? headingRow : section.heading;
+      if (insertionPoint && insertionPoint.parentElement) insertionPoint.after(host);
       else section.container.prepend(host);
     }
-  }
-
-  function recordDiscoveredChat(url, title) {
+  }  function recordDiscoveredChat(url, title) {
     if (!state.chats[url]) {
       state.chats[url] = { title: title || titleForUrl(url), text: "", updatedAt: Date.now() };
       return true;
@@ -703,6 +709,16 @@
   function scanForChats() {
     const section = findRecentSection();
     let changed = false;
+    if (!section && currentContainer) {
+      // If Google collapses/replaces the history rail, remove the organizer
+      // rather than leaving it floating over the conversation/results pane.
+      restoreHiddenRows();
+      if (host) host.remove();
+      currentContainer = null;
+      host = null;
+      shadow = null;
+      ui = null;
+    }
     if (section) {
       mountInterface(section);
       section.links.forEach((entry) => {
