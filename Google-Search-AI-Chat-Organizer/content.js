@@ -515,7 +515,7 @@
     return candidates.some((label) => label.length <= 48 && RECENT_LABEL.test(label));
   }
 
-    function isLeftRailAnchor(anchor, headingRect) {
+  function isLeftRailAnchor(anchor, headingRect) {
     const rect = anchor.getBoundingClientRect();
     if (!rect.width || !rect.height || !headingRect) return false;
 
@@ -790,7 +790,7 @@
     if (diagnosticInfo.textContent !== diagnosticText) diagnosticInfo.textContent = diagnosticText;
   }
 
-    function recordDiscoveredChat(url, title) {
+  function recordDiscoveredChat(url, title) {
     if (!state.chats[url]) {
       state.chats[url] = { title: title || titleForUrl(url), text: "", updatedAt: Date.now() };
       return true;
