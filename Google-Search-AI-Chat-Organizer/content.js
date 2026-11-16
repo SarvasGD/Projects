@@ -501,11 +501,17 @@
   }
 
   function isRecentLabel(element) {
-    const label = (element.getAttribute("aria-label") || element.textContent || "").replace(/\s+/g, " ").trim();
-    return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
+    const values = [
+      element.getAttribute("aria-label") || "",
+      element.textContent || ""
+    ];
+    return values.some((value) => {
+      const label = value.replace(/\s+/g, " ").trim();
+      return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
+    });
   }
 
-  function isLeftRailAnchor(anchor, headingRect) {
+    function isLeftRailAnchor(anchor, headingRect) {
     const rect = anchor.getBoundingClientRect();
     if (!rect.width || !rect.height || !headingRect) return false;
 
@@ -649,7 +655,13 @@
     try { pageUrl = new URL(location.href); }
     catch (_error) { removeDetectionDiagnostic(); return; }
 
-    const supportedGoogle = /(^|\\.)google\\.(com|ru|se|co\\.uk|de|fr|es|ca|com\\.au|co\\.in)$/i.test(pageUrl.hostname);
+    const supportedDomains = [
+      "google.com", "google.ru", "google.se", "google.co.uk", "google.de",
+      "google.fr", "google.es", "google.ca", "google.com.au", "google.co.in"
+    ];
+    const supportedGoogle = supportedDomains.some((domain) =>
+      pageUrl.hostname === domain || pageUrl.hostname.endsWith("." + domain)
+    );
     if (!supportedGoogle || pageUrl.pathname !== "/search") {
       removeDetectionDiagnostic();
       return;
@@ -686,7 +698,7 @@
 
     labels.slice(0, 3).forEach((label, index) => {
       const labelRect = label.getBoundingClientRect();
-      const labelText = (label.textContent || label.getAttribute("aria-label") || "").replace(/\\s+/g, " ").trim().slice(0, 45);
+      const labelText = (label.textContent || label.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim().slice(0, 45);
       lines.push("");
       lines.push("Заголовок " + (index + 1) + ": «" + labelText + "» x=" + Math.round(labelRect.left) + " y=" + Math.round(labelRect.top));
       let ancestor = label.parentElement;
@@ -712,11 +724,11 @@
       allLinks.slice(0, 4).forEach((entry) => {
         const rect = entry.anchor.getBoundingClientRect();
         lines.push("  x=" + Math.round(rect.left) + " y=" + Math.round(rect.top) +
-          " · " + (entry.anchor.textContent || "").replace(/\\s+/g, " ").trim().slice(0, 35));
+          " · " + (entry.anchor.textContent || "").replace(/\s+/g, " ").trim().slice(0, 35));
       });
     }
 
-    diagnosticInfo.textContent = lines.join("\\n");
+    diagnosticInfo.textContent = lines.join("\n");
   }
 
   function recordDiscoveredChat(url, title) {
