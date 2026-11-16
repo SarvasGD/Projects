@@ -17,7 +17,8 @@
 - 08_mcp_workflow.md — историческая заметка о процессе исследования и разработки.
 - 09_roadmap.md — текущий roadmap и активные P0-задачи.
 - USER_GUIDE.md — инструкция по использованию локального MVP.
-- [reverse-engineering/README.md](../reverse-engineering/README.md) — актуальный пакет деконструкции: ТЗ, распределение доноров, шаблоны, clean-room и независимая проверка.
+- [../реверс/01_QWEN_REVERSE_TZ.md](../реверс/01_QWEN_REVERSE_TZ.md) — пакет первичной деконструкции для Qwen: ТЗ, доноры, шаблоны спецификации и evidence register.
+- [../контроль/01_CHATGPT_REVIEW_TZ.md](../контроль/01_CHATGPT_REVIEW_TZ.md) — пакет независимого контроля ChatGPT со ссылками на документацию, код HDMS и все пять доноров.
 - REVERSE_ENGINEERING_PLAN.md — вспомогательные инструменты исследования UI и аналитики winlines.
 - CHANGELOG.md — история актуализации документации.
 
