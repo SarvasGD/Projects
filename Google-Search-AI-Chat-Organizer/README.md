@@ -29,7 +29,7 @@ No build step or external dependency is required.
 
 ### Google DOM detection
 
-Google does not provide a stable public DOM contract for its AI Mode history panel. The content script deliberately avoids obfuscated CSS class names. It first looks for Google /search links with a q parameter inside the left-side, narrow history rail (using element geometry and semantic structure rather than Google CSS classes). A Recent / Недавние heading is a useful extra signal, but is not required. Detected links are immediately represented in Без папки and can be moved to folders without opening the corresponding conversations. Native link rows are hidden only after a likely left-rail container has been identified.
+Google does not provide a stable public DOM contract for its AI Mode history panel. The content script deliberately avoids obfuscated CSS class names. It requires a Recent / Недавние heading and multiple Google /search links within the left-anchored history rail. The heading and links must belong to the same narrow, left-edge container; links elsewhere in the content area are not accepted. If Google collapses or replaces the history rail, the organizer is removed instead of floating over the conversation. Detected links are immediately represented in Без папки and can be moved to folders without opening the corresponding conversations. Native link rows are hidden only after a likely left-rail container has been identified.
 
 If Google's labels or DOM structure change, discovery may stop. The script leaves unrelated Google navigation alone rather than hiding a guessed container. Inspect the current page DOM and update findRecentSection() / getRowForAnchor() for the new structure.
 
