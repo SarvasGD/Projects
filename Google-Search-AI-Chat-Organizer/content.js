@@ -13,6 +13,8 @@
   const openFolders = new Set();
   const hiddenRows = new Map();
   const dragBoundAnchors = new WeakSet();
+  const primedHistoryScrollers = new WeakSet();
+  let activeHistoryPriming = null;
   let host = null;
   let shadow = null;
   let ui = null;
@@ -501,33 +503,69 @@
     return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
   }
 
+  function isLeftRailAnchor(anchor) {
+    const rect = anchor.getBoundingClientRect();
+    if (!rect.width || !rect.height) return false;
+    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    // Google's main results start to the right of the narrow history rail.
+    // Fixed upper bounds still work on wide monitors and browser zoom levels.
+    return rect.left >= -2 &&
+      rect.left <= Math.min(380, width * 0.30) &&
+      rect.right <= Math.min(520, width * 0.42);
+  }
+
+  function isSidebarContainer(element) {
+    if (!element || element === document.body || element === document.documentElement) return false;
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    return rect.width >= 100 &&
+      rect.height >= 100 &&
+      rect.left >= -2 &&
+      rect.left <= Math.min(360, width * 0.22) &&
+      rect.right <= Math.min(620, width * 0.42) &&
+      rect.width <= Math.min(620, width * 0.42);
+  }
+
   function findRecentSection() {
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],button,[aria-label],span")).filter(isRecentLabel);
-    const candidates = [];
-    labels.forEach((label) => {
-      let ancestor = label;
-      for (let depth = 0; depth < 8 && ancestor && ancestor !== document.body; depth += 1) {
-        const links = countSearchLinks(ancestor);
-        if (links.length > 0 && links.length <= 140) {
-          const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) || ancestor.getAttribute("role") === "navigation" ? 1 : 0;
-          candidates.push({ container: ancestor, heading: label, links: links, depth: depth, semantic: semantic });
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],button,[aria-label],span"))
+      .filter(isRecentLabel);
+    const allLinks = countSearchLinks(document);
+    const leftLinks = allLinks.filter((entry) => isLeftRailAnchor(entry.anchor));
+    if (!leftLinks.length) return null;
+
+    const labelFor = (container) => labels.find((label) => container.contains(label)) || null;
+    const candidates = new Map();
+
+    leftLinks.forEach((entry) => {
+      let ancestor = entry.anchor.parentElement;
+      for (let depth = 1; depth <= 12 && ancestor && ancestor !== document.body; depth += 1) {
+        if (isSidebarContainer(ancestor)) {
+          const links = countSearchLinks(ancestor).filter((link) => isLeftRailAnchor(link.anchor));
+          const heading = labelFor(ancestor);
+          if (links.length >= 2 || (links.length === 1 && heading)) {
+            const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
+              ancestor.getAttribute("role") === "navigation" ? 1 : 0;
+            const rect = ancestor.getBoundingClientRect();
+            const score = links.length * 100 + (heading ? 60 : 0) + semantic * 25 -
+              rect.width * 0.1 - rect.height * 0.005 - depth * 0.01;
+            const previous = candidates.get(ancestor);
+            if (!previous || score > previous.score) {
+              candidates.set(ancestor, {
+                container: ancestor,
+                heading: heading,
+                links: links,
+                score: score,
+                explicit: true
+              });
+            }
+          }
         }
         ancestor = ancestor.parentElement;
       }
     });
-    if (candidates.length) {
-      candidates.sort((a, b) => (b.links.length + b.semantic * 1.5 - b.depth * 0.08) -
-        (a.links.length + a.semantic * 1.5 - a.depth * 0.08));
-      return Object.assign(candidates[0], { explicit: true });
-    }
-    if (isLikelyAiUrl(location.href)) {
-      const panels = Array.from(document.querySelectorAll("nav,aside,[role='navigation']"))
-        .map((container) => ({ container: container, links: countSearchLinks(container) }))
-        .filter((entry) => entry.links.length > 0 && entry.links.length < 140)
-        .sort((a, b) => b.links.length - a.links.length);
-      if (panels.length) return { container: panels[0].container, heading: null, links: panels[0].links, explicit: false };
-    }
-    return null;
+
+    if (!candidates.size) return null;
+    return Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0];
   }
 
   function getRowForAnchor(anchor, container) {
@@ -600,6 +638,68 @@
     });
   }
 
+  function findHistoryScrollContainer(section) {
+    const firstAnchor = section.links[0] && section.links[0].anchor;
+    if (!firstAnchor) return null;
+    let node = firstAnchor.parentElement;
+    for (let depth = 0; depth < 14 && node; depth += 1) {
+      const style = window.getComputedStyle(node);
+      const scrollable = /(auto|scroll|overlay)/.test(style.overflowY || "") &&
+        node.scrollHeight > node.clientHeight + 60;
+      if (scrollable) return node;
+      if (node === section.container) break;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function finishHistoryPriming(scroller, initialScrollTop) {
+    if (scroller && scroller.isConnected) scroller.scrollTop = initialScrollTop;
+    activeHistoryPriming = null;
+    scheduleScan();
+  }
+
+  function advanceHistoryPriming(scroller, sectionContainer, progress) {
+    if (!scroller || !scroller.isConnected || !sectionContainer || !sectionContainer.isConnected) {
+      finishHistoryPriming(scroller, progress.initialScrollTop);
+      return;
+    }
+
+    scroller.scrollTop = scroller.scrollHeight;
+    progress.steps += 1;
+    window.setTimeout(() => {
+      const count = countSearchLinks(sectionContainer).filter((entry) => isLeftRailAnchor(entry.anchor)).length;
+      if (count > progress.previousCount) {
+        progress.previousCount = count;
+        progress.stableSteps = 0;
+      } else {
+        progress.stableSteps += 1;
+      }
+
+      // Stop after the end of the currently available list or a safety cap.
+      if (progress.stableSteps >= 3 || progress.steps >= 16) {
+        finishHistoryPriming(scroller, progress.initialScrollTop);
+        return;
+      }
+      advanceHistoryPriming(scroller, sectionContainer, progress);
+    }, 260);
+  }
+
+  function startHistoryPriming(section) {
+    const scroller = findHistoryScrollContainer(section);
+    if (!scroller || primedHistoryScrollers.has(scroller) || activeHistoryPriming) return;
+    primedHistoryScrollers.add(scroller);
+
+    const progress = {
+      initialScrollTop: scroller.scrollTop,
+      previousCount: countSearchLinks(section.container).filter((entry) => isLeftRailAnchor(entry.anchor)).length,
+      stableSteps: 0,
+      steps: 0
+    };
+    activeHistoryPriming = scroller;
+    advanceHistoryPriming(scroller, section.container, progress);
+  }
+
   function scanForChats() {
     const section = findRecentSection();
     let changed = false;
@@ -609,7 +709,11 @@
         if (recordDiscoveredChat(entry.url, titleFromAnchor(entry.anchor, entry.url))) changed = true;
         bindNativeAnchorDrag(entry.anchor, entry.url);
       });
-      hideNativeLinks(section);
+
+      // Let Google's own lazy-loaded history finish populating before hiding
+      // its rows. This imports older sidebar links without opening each chat.
+      if (!activeHistoryPriming) startHistoryPriming(section);
+      if (!activeHistoryPriming) hideNativeLinks(section);
     }
     const currentUrl = normalizeUrl(location.href);
     if (currentUrl && isCurrentAiPage()) {
