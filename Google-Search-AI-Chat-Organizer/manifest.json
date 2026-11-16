@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Google Search AI Chat Organizer",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Organize Google AI Mode search conversations into nested folders, search local indexes and export chats.",
   "permissions": [
     "storage"

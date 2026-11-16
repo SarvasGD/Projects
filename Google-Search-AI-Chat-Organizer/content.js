@@ -7,7 +7,7 @@
   const MAX_INDEX_TEXT = 10000;
   const MAX_INDEXED_CHATS = 100;
   const FOLDER_COLORS = ["#4285F4", "#34A853", "#FBBC04", "#EA4335", "#A142F4", "#00ACC1", "#F4511E", "#8D6E63"];
-  const RECENT_LABEL = /^(recent|recent chats|recent searches|history|недавние|недавн|история|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)/i;
+  const RECENT_LABEL = /^(recent|recent chats|recent searches|недавние|недавнее|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)(?: *[0-9]+)?$/i;
 
   const state = { folders: [], chats: {} };
   const openFolders = new Set();
@@ -20,6 +20,7 @@
   let ui = null;
   let diagnosticHost = null;
   let diagnosticInfo = null;
+  let diagnosticDismissed = false;
   let currentContainer = null;
   let observer = null;
   let scanTimer = null;
@@ -501,17 +502,20 @@
   }
 
   function isRecentLabel(element) {
-    const values = [
-      element.getAttribute("aria-label") || "",
-      element.textContent || ""
-    ];
-    return values.some((value) => {
-      const label = value.replace(/\s+/g, " ").trim();
-      return label.length > 0 && label.length < 90 && RECENT_LABEL.test(label);
-    });
+    if (!element || !element.isConnected) return false;
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 8 || rect.height < 8 || rect.bottom < 0 || rect.top > window.innerHeight) return false;
+
+    // Prefer rendered text. An aria-label can describe a hidden history
+    // control (for example "История режима ИИ") rather than the visible
+    // "Недавнее" heading, which previously produced a zero-sized false hit.
+    const renderedText = (element.textContent || "").replace(/\s+/g, " ").trim();
+    const ariaText = (element.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
+    const candidates = [renderedText, ariaText].filter(Boolean);
+    return candidates.some((label) => label.length <= 48 && RECENT_LABEL.test(label));
   }
 
-    function isLeftRailAnchor(anchor, headingRect) {
+  function isLeftRailAnchor(anchor, headingRect) {
     const rect = anchor.getBoundingClientRect();
     if (!rect.width || !rect.height || !headingRect) return false;
 
@@ -645,12 +649,19 @@
     diagnosticInfo = null;
   }
 
-  function updateDetectionDiagnostic(section) {
-    if (section) {
-      removeDetectionDiagnostic();
-      return;
+  function isDiagnosticMutation(mutation) {
+    if (!diagnosticHost) return false;
+    if (diagnosticHost === mutation.target || diagnosticHost.contains(mutation.target)) return true;
+    if (mutation.type === "childList") {
+      const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+      if (changedNodes.length && changedNodes.every((node) =>
+        node === diagnosticHost || diagnosticHost.contains(node)
+      )) return true;
     }
+    return false;
+  }
 
+  function updateDetectionDiagnostic(section) {
     let pageUrl;
     try { pageUrl = new URL(location.href); }
     catch (_error) { removeDetectionDiagnostic(); return; }
@@ -662,7 +673,7 @@
     const supportedGoogle = supportedDomains.some((domain) =>
       pageUrl.hostname === domain || pageUrl.hostname.endsWith("." + domain)
     );
-    if (!supportedGoogle || pageUrl.pathname !== "/search") {
+    if (!supportedGoogle || pageUrl.pathname !== "/search" || diagnosticDismissed) {
       removeDetectionDiagnostic();
       return;
     }
@@ -670,15 +681,46 @@
     if (!diagnosticHost || !diagnosticHost.isConnected) {
       diagnosticHost = document.createElement("div");
       diagnosticHost.id = "gsaco-detection-diagnostic";
-      diagnosticHost.style.cssText = "position:fixed;top:76px;right:12px;z-index:2147483647;width:min(360px,calc(100vw - 24px));max-height:38vh;box-sizing:border-box;";
+      diagnosticHost.style.cssText = "position:fixed;top:76px;right:12px;z-index:2147483647;width:min(380px,calc(100vw - 24px));max-height:42vh;box-sizing:border-box;pointer-events:auto;";
       const root = diagnosticHost.attachShadow({ mode: "open" });
       const style = document.createElement("style");
-      style.textContent = ":host{all:initial}section{font:12px/1.4 Arial,sans-serif;background:#202124;color:#e8eaed;border:1px solid #fbbc04;border-radius:9px;box-shadow:0 3px 16px #0008;padding:10px;max-height:38vh;overflow:auto}strong{display:block;color:#fbbc04;font-size:12px;margin-bottom:5px}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.45 Consolas,monospace;color:#e8eaed}";
+      style.textContent = ":host{all:initial;pointer-events:auto}section{font:12px/1.4 Arial,sans-serif;background:#202124;color:#e8eaed;border:1px solid #fbbc04;border-radius:9px;box-shadow:0 3px 16px #0008;padding:10px;max-height:42vh;overflow:auto;pointer-events:auto}header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}strong{color:#fbbc04;font-size:12px}button{font:11px Arial,sans-serif;color:#e8eaed;background:#3c4043;border:1px solid #5f6368;border-radius:5px;padding:4px 7px;cursor:pointer}button:hover{background:#4b5055}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.45 Consolas,monospace;color:#e8eaed;user-select:text}";
       const panel = document.createElement("section");
+      const header = document.createElement("header");
       const title = document.createElement("strong");
       title.textContent = "AI Chat Organizer — диагностика";
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:5px";
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.textContent = "Копировать";
+      copyButton.addEventListener("click", async () => {
+        const text = diagnosticInfo ? diagnosticInfo.textContent : "";
+        try {
+          await navigator.clipboard.writeText(text);
+          copyButton.textContent = "Скопировано";
+        } catch (_error) {
+          const temporary = document.createElement("textarea");
+          temporary.value = text;
+          temporary.style.cssText = "position:fixed;left:-10000px;top:0";
+          document.body.appendChild(temporary);
+          temporary.select();
+          const copied = document.execCommand("copy");
+          temporary.remove();
+          copyButton.textContent = copied ? "Скопировано" : "Выделите текст";
+        }
+      });
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.textContent = "Скрыть";
+      closeButton.addEventListener("click", () => {
+        diagnosticDismissed = true;
+        removeDetectionDiagnostic();
+      });
+      actions.append(copyButton, closeButton);
+      header.append(title, actions);
       diagnosticInfo = document.createElement("pre");
-      panel.append(title, diagnosticInfo);
+      panel.append(header, diagnosticInfo);
       root.append(style, panel);
       document.documentElement.appendChild(diagnosticHost);
     }
@@ -692,18 +734,34 @@
       "Страница: " + pageUrl.pathname + " · " + pageUrl.hostname,
       "Ширина viewport: " + Math.round(width) + " CSS px",
       "Ссылок Google Search с q: " + allLinks.length,
-      "Заголовков «Недавнее»: " + labels.length,
-      "Кандидат панели истории: НЕ НАЙДЕН"
+      "Видимых заголовков Recent / Недавнее: " + labels.length
     ];
 
-    labels.slice(0, 3).forEach((label, index) => {
+    if (section) {
+      const rect = section.container.getBoundingClientRect();
+      const headingRect = section.heading.getBoundingClientRect();
+      lines.push("Кандидат панели истории: НАЙДЕН");
+      lines.push("Контейнер: " + section.container.tagName.toLowerCase() +
+        " x=" + Math.round(rect.left) +
+        " w=" + Math.round(rect.width) +
+        " h=" + Math.round(rect.height) +
+        " links=" + section.links.length);
+      lines.push("Заголовок: «" + (section.heading.textContent || "").replace(/\s+/g, " ").trim().slice(0, 45) +
+        "» x=" + Math.round(headingRect.left) + " y=" + Math.round(headingRect.top));
+    } else {
+      lines.push("Кандидат панели истории: НЕ НАЙДЕН");
+    }
+
+    labels.slice(0, 5).forEach((label, index) => {
       const labelRect = label.getBoundingClientRect();
       const labelText = (label.textContent || label.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim().slice(0, 45);
       lines.push("");
-      lines.push("Заголовок " + (index + 1) + ": «" + labelText + "» x=" + Math.round(labelRect.left) + " y=" + Math.round(labelRect.top));
+      lines.push("Видимый заголовок " + (index + 1) + ": «" + labelText + "» x=" + Math.round(labelRect.left) +
+        " y=" + Math.round(labelRect.top) + " w=" + Math.round(labelRect.width) +
+        " h=" + Math.round(labelRect.height));
       let ancestor = label.parentElement;
       let depth = 0;
-      while (ancestor && ancestor !== document.body && depth < 12) {
+      while (ancestor && ancestor !== document.body && depth < 10) {
         const rect = ancestor.getBoundingClientRect();
         const links = countSearchLinks(ancestor);
         if (links.length || depth < 2) {
@@ -721,7 +779,7 @@
     if (!labels.length && allLinks.length) {
       lines.push("");
       lines.push("Примеры ссылок:");
-      allLinks.slice(0, 4).forEach((entry) => {
+      allLinks.slice(0, 5).forEach((entry) => {
         const rect = entry.anchor.getBoundingClientRect();
         lines.push("  x=" + Math.round(rect.left) + " y=" + Math.round(rect.top) +
           " · " + (entry.anchor.textContent || "").replace(/\s+/g, " ").trim().slice(0, 35));
@@ -893,7 +951,8 @@
     catch (error) { console.warn("[GSACO] Could not load local data:", error); state.folders = []; state.chats = {}; }
     scanForChats();
     if (document.documentElement) {
-      observer = new MutationObserver(() => {
+      observer = new MutationObserver((mutations) => {
+        if (mutations.every(isDiagnosticMutation)) return;
         scheduleScan();
         if (isCurrentAiPage()) scheduleCapture();
       });

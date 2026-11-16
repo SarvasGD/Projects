@@ -62,7 +62,7 @@ The content script runs on /search URLs on these domains.
 
 ## Detection diagnostics
 
-When a Google Search page is matched but the history rail cannot be identified, the extension temporarily shows a compact diagnostic card in the upper-right corner. It reports whether the content script loaded, how many Google chat links and localized Recent headings are present, and the geometry/link counts of heading ancestors. The card disappears when a history container is detected. This is intended to diagnose Google DOM variants without requiring DevTools.
+On supported Google Search pages the diagnostic card remains visible until manually dismissed, including when a candidate history container is found. It reports script loading, matched chat links, visible Recent headings and the selected container geometry. The card includes Copy and Hide controls. Its own DOM mutations are excluded from the page observer to prevent scan loops or flicker.
 
 ## Manual smoke test
 
