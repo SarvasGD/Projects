@@ -44,7 +44,7 @@ HDMS (Hearthstone Deck Matchup Simulator) должен стать симулят
 
 Важно различать публичный репозиторий и open source:
 - HDT: README содержит All Rights Reserved — не open source.
-- Firestone: в корневой структуре репозитория лицензия не обнаружена — считать не-OSS, пока не предъявлено иное лицензионное основание.
+- Firestone: есть противоречивый сигнал — страница-список организации показывала MIT-0, но repository API возвращает license:null, README не содержит лицензии, а дерево master не содержит LICENSE/COPYING. До подтверждения лицензии владельцем считать не-OSS.
 - hearthstone-oracle: MIT — open source.
 - Fireplace: AGPL-3.0 — open source.
 - MetaStone: GPL-2.0 — open source.
