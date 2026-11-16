@@ -439,7 +439,7 @@
   function createInterface() {
     host = document.createElement("div");
     host.id = "google-search-ai-chat-organizer";
-    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin:8px 0;position:static;flex:0 0 auto;grid-column:1 / -1;clear:both;";
+    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;min-height:1px;box-sizing:border-box;margin:8px 0;position:relative;z-index:2;flex:0 0 auto;grid-column:1 / -1;clear:both;align-self:stretch;";
     shadow = host.attachShadow({ mode: "open" });
 
     const style = createElement("style");
@@ -607,6 +607,56 @@
     hiddenRows.clear();
   }
 
+  function normalizedVisibleLabel(element) {
+    return (element && (element.innerText || element.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLocaleLowerCase();
+  }
+
+  function isVisibleSidebarElement(element) {
+    if (!element || !element.isConnected) return false;
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 8 || rect.height < 8 || rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  }
+
+  function findThreadSearchControl(container) {
+    if (!container) return null;
+    const labels = new Set([
+      "поиск цепочек",
+      "thread search",
+      "search threads"
+    ]);
+    const candidates = Array.from(container.querySelectorAll(
+      "a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex],span,div"
+    )).filter((element) =>
+      isVisibleSidebarElement(element) && labels.has(normalizedVisibleLabel(element))
+    );
+
+    if (!candidates.length) return null;
+
+    const resolved = candidates.map((element) => {
+      const interactive = element.closest("a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex]");
+      const target = interactive && container.contains(interactive) ? interactive : element;
+      const rect = target.getBoundingClientRect();
+      const semantic = /^(A|BUTTON)$/.test(target.tagName) ||
+        /^(button|link|menuitem)$/.test(target.getAttribute("role") || "") ? 1 : 0;
+      return { target, area: rect.width * rect.height, semantic };
+    });
+
+    resolved.sort((a, b) => b.semantic - a.semantic || a.area - b.area);
+    return resolved[0].target;
+  }
+
+  function getDirectChild(container, descendant) {
+    if (!container || !descendant || !container.contains(descendant)) return null;
+    let child = descendant;
+    while (child && child.parentElement !== container) child = child.parentElement;
+    return child && child.parentElement === container ? child : null;
+  }
+
   function mountInterface(section) {
     if (currentContainer !== section.container) {
       restoreHiddenRows();
@@ -617,19 +667,26 @@
       ui = null;
     }
     if (!host) createInterface();
-    if (!host.isConnected) {
-      // Insert after the heading's top-level row inside the detected history
-      // rail. Inserting after the heading node itself can put the panel beside
-      // the heading when Google's wrapper uses a horizontal flex layout.
-      let headingRow = section.heading;
-      while (headingRow && headingRow.parentElement && headingRow.parentElement !== section.container) {
-        headingRow = headingRow.parentElement;
-      }
-      if (headingRow && headingRow.parentElement === section.container) {
-        headingRow.after(host);
-      } else {
-        section.container.prepend(host);
-      }
+
+    // Recent identifies the history section. It is not necessarily the best
+    // insertion point for the organizer itself.
+    const threadSearch = findThreadSearchControl(section.container);
+    const threadSearchRow = getDirectChild(section.container, threadSearch);
+    const headingGroup = getDirectChild(section.container, section.heading);
+
+    let insertAfter = threadSearchRow;
+    let insertBefore = null;
+    if (!insertAfter) insertBefore = headingGroup;
+
+    const isInRightPosition = host.parentElement === section.container &&
+      (insertAfter ? insertAfter.nextElementSibling === host :
+        insertBefore ? host.nextElementSibling === insertBefore :
+          section.container.firstElementChild === host);
+
+    if (!isInRightPosition) {
+      if (insertAfter) insertAfter.after(host);
+      else if (insertBefore) section.container.insertBefore(host, insertBefore);
+      else section.container.prepend(host);
     }
   }
 
@@ -738,6 +795,16 @@
         " links=" + section.links.length);
       lines.push("Заголовок: «" + (section.heading.textContent || "").replace(/\s+/g, " ").trim().slice(0, 45) +
         "» x=" + Math.round(headingRect.left) + " y=" + Math.round(headingRect.top));
+      const hostRect = host && host.getBoundingClientRect();
+      lines.push("Органайзер: " + (host && host.isConnected ? "ВСТАВЛЕН В DOM" : "НЕ ВСТАВЛЕН"));
+      if (host && host.isConnected && hostRect) {
+        lines.push("Позиция органайзера: x=" + Math.round(hostRect.left) +
+          " y=" + Math.round(hostRect.top) +
+          " w=" + Math.round(hostRect.width) +
+          " h=" + Math.round(hostRect.height));
+        lines.push("Родитель органайзера: " + host.parentElement.tagName.toLowerCase() +
+          " id=" + (host.parentElement.id || "—"));
+      }
     } else {
       lines.push("Кандидат панели истории: НЕ НАЙДЕН");
     }
@@ -869,7 +936,6 @@
   function scanForChats() {
     const section = findRecentSection();
     let changed = false;
-    updateDetectionDiagnostic(section);
     if (!section && currentContainer) {
       // If Google collapses/replaces the history rail, remove the organizer
       // rather than leaving it floating over the conversation/results pane.
@@ -892,6 +958,7 @@
       if (!activeHistoryPriming) startHistoryPriming(section);
       if (!activeHistoryPriming) hideNativeLinks(section);
     }
+    updateDetectionDiagnostic(section);
     const currentUrl = normalizeUrl(location.href);
     if (currentUrl && isCurrentAiPage()) {
       const title = (document.title || "").replace(/\s*-\s*Google Search\s*$/i, "").trim() || titleForUrl(currentUrl);
