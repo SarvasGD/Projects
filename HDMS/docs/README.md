@@ -16,7 +16,7 @@
 - 08_mcp_workflow.md — историческая заметка о процессе исследования и разработки.
 - 09_roadmap.md — текущий roadmap и активные P0-задачи.
 - USER_GUIDE.md — инструкция по использованию локального MVP.
-- [reverse-engineering/README.md](./reverse-engineering/README.md) — актуальный пакет деконструкции: ТЗ, распределение доноров, шаблоны, clean-room и независимая проверка.
+- [reverse-engineering/README.md](../reverse-engineering/README.md) — актуальный пакет деконструкции: ТЗ, распределение доноров, шаблоны, clean-room и независимая проверка.
 - REVERSE_ENGINEERING_PLAN.md — вспомогательные инструменты исследования UI и аналитики winlines.
 - CHANGELOG.md — история актуализации документации.
 
