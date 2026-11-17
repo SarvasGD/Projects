@@ -1,0 +1,11 @@
+{
+  "name": "google-search-ai-chat-organizer",
+  "private": true,
+  "version": "0.3.1",
+  "scripts": {
+    "test": "node tests/smoke.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
