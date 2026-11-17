@@ -1,81 +1,74 @@
 # Google Search AI Chat Organizer
 
-Manifest V3 extension for Chromium-based browsers: Yandex Browser, Vivaldi, Opera and Chrome.
+Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).
 
-## Implemented in this MVP
+Adds nested folders, local full-text search over captured conversations, and Markdown/TXT export to Google AI Mode history.
 
-- Nested folders with a hard limit of four levels.
-- Folder naming, colors, rename and delete actions.
-- HTML5 drag-and-drop from the detected Google Recent list and from organizer chat rows.
-- Local storage in chrome.storage.local:
-  - google_ai_folders — nested folder tree and chat URL membership.
-  - google_ai_chats — chat titles, timestamps and locally captured text index.
-- Search across titles, query URLs and captured conversation text.
-- Markdown and TXT export of a session's captured page text.
-- MutationObserver-based discovery for Google's dynamic / SPA sidebar.
-- Shadow DOM UI to isolate organizer styles from Google page styles.
+## User-facing behaviour
 
-## Install for local testing
+- Replaces Google's Recent history box with an overlay occupying the same measured area.
+- Detects clickable history rows even when they do not expose an ordinary `<a href>`.
+- Scrolls Google's own history scroller to the end before replacing the native list.
+- Keeps Google's original list available through the `⇄` collapse control.
+- Supports four folder levels, rename, color, delete, drag-and-drop, local search and export.
+- Clicking an organizer row proxies the click to the live Google row; a saved URL is used as fallback when the row is no longer present.
+- Uses only `chrome.storage.local`; no background fetching or external service.
 
-1. Download this folder or clone this repository and check out branch feature/google-search-ai-chat-organizer.
-2. Open the browser's extensions page.
-3. Enable Developer mode.
-4. Choose Load unpacked / Загрузить распакованное расширение and select this folder.
-5. Open a Google AI Mode search page on a supported Google domain.
+## Detection and identity
 
-No build step or external dependency is required.
+The visible `Recent / Недавнее` heading identifies the history area. The overlay is positioned over a bounded history region, not inserted into Google's navigation layout. The nearest bounded scroll container is used for lazy loading; a larger enclosing box is selected only when it remains within the left rail and does not contain New chat, Search threads or Settings.
 
-## Important behavior and limits
+Rows are detected from clickable elements and row geometry, not only from `q` links. Identity priority is:
 
-### Google DOM detection
+1. Explicit row data ID (`data-session-thread-id`, `data-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id`, `data-mtid`).
+2. Canonical Google URL identity: host, path, `q`, `udm` and known thread ID query parameters.
+3. Normalised title as a fallback.
 
-Google does not provide a stable public DOM contract for its AI Mode history panel. The content script deliberately avoids obfuscated CSS class names. It locates the visible Recent / Недавние heading and validates its containing narrow rail using Google /search links. This history heading is only a detection anchor, not the desired UI insertion point. The organizer is inserted after the actual Google "Поиск цепочек" navigation row; if that control cannot be identified, it is inserted immediately before the actual Recent navigation row. It is never inserted after the large ancestor that also contains Settings and the full history area. Detected links are represented in Без папки and can be moved to folders without opening the corresponding conversations. Native link rows are hidden only after a likely left-rail container has been identified.
+When multiple rows share a base key, they remain separate with an order suffix. Their order can change if Google reorders rows that expose no unique ID or URL identity.
 
-If Google's labels or DOM structure change, discovery may stop. The script leaves unrelated Google navigation alone rather than hiding a guessed container. Inspect the current page DOM and update findRecentSection() / getRowForAnchor() for the new structure.
+## Reconciliation and data safety
 
-MutationObserver watches added history links and href changes. If Google places the history list in its own scroll container, the extension briefly scrolls that container to the end before hiding the native rows (with a bounded number of passes), so additional lazy-loaded links can be imported without opening each conversation. The original scroll position is restored. The extension does not fetch hidden conversations in the background.
+- Existing 0.2.x records are migrated with an exact old-URL-to-new-key map; collisions are preserved as separate suffixed records rather than merged.
+- Folder assignments follow the same migration map.
+- Obvious accessibility skip-links such as `Skip to settings` are excluded.
+- Once Google confirms that its history list is fully loaded, records absent from the current list are marked missing and placed in a collapsed `Нет в текущей истории` group (or remain in their assigned folder).
+- Old records are not automatically deleted. This avoids losing conversations that are archived, temporarily unavailable or not currently shown by Google.
 
-### Full-text index and export
+## Full-text index and export
 
-For privacy and minimal permissions, the extension does not make background requests to old Google sessions. It captures visible text from the main content area only while an AI Mode session is open in the active tab. This opening requirement applies only to the response-text index and export. It does not apply to folder organization: any chat link already rendered in the left history rail is imported as soon as it is detected and can be assigned to folders without opening that chat.
+Text is captured only while an AI Mode chat is open in the active tab. There are no background requests for old sessions. Up to 100 most recently indexed chats retain up to 10,000 characters each. Export contains a text snapshot, title and source URL.
 
-The exported Markdown/TXT contains the captured page text, title and URL. This is a text snapshot, not a structured reconstruction of individual user / assistant message objects. Very long pages are capped at 10,000 characters per chat. Up to 100 most-recently indexed chat records retain body text; older records keep their URL/title but may lose cached body text.
+## Diagnostics
 
-### Permissions and privacy
+The top-right diagnostic card reports the detected heading, history region, row count and key types, lazy-load completion, overlay visibility, native-list visibility and retained missing records. It provides **Копировать**, **Снимок DOM** (an anonymised DOM outline without titles/query values), and **Скрыть**.
 
-Only the storage permission is requested. No analytics, remote server, account, cloud sync, translator or prompt manager is included. Folder structure and captured text remain in browser local extension storage.
+## Permissions
 
-## Supported URL patterns
+Only the `storage` permission is requested. Folder structure and captured text remain in browser-local extension storage.
 
-- google.com
-- google.ru
-- google.se
-- google.co.uk
-- google.de
-- google.fr
-- google.es
-- google.ca
-- google.com.au
-- google.co.in
+## Supported Google domains
 
-The content script runs on /search URLs on these domains.
+`google.com`, `google.ru`, `google.se`, `google.co.uk`, `google.de`, `google.fr`, `google.es`, `google.ca`, `google.com.au`, `google.co.in`.
 
-## Detection diagnostics
+## Automated tests
 
-On supported Google Search pages the diagnostic card remains visible until manually dismissed, including when a candidate history container is found. It reports script loading, matched chat links, visible Recent headings and the selected container geometry. The card includes Copy and Hide controls. Its own DOM mutations are excluded from the page observer to prevent scan loops or flicker.
+The jsdom smoke suite covers row discovery without q-links, explicit row IDs, duplicate titles, overlay geometry, lazy loading, non-destructive migration, folder assignment preservation, click proxying, teardown and anonymised diagnostics.
+
+Run from this directory:
+
+```bash
+npm install --no-save --package-lock=false
+npm test
+```
+
+These tests use synthetic DOM geometry. They verify the logic but do not replace a real-browser visual check.
 
 ## Manual smoke test
 
-1. Load the unpacked extension and open a Google AI Mode conversation.
-2. Confirm the organizer appears in the left history rail and visible chat links are represented under Без папки without opening those conversations.
-3. Create a top-level folder and three nested subfolders. Confirm a fifth level cannot be created.
-4. Drag a chat into a folder, reload the page, and confirm membership is preserved.
-5. Rename a folder, change its HEX color and delete it. Confirm child folders are promoted rather than discarded.
-6. Open at least two AI Mode conversations so both get indexed. Search for a distinctive word that appears only in the response text.
-7. Export a chat to Markdown and TXT.
-8. Repeat in Yandex Browser, Vivaldi and Opera. Google may serve different DOM variants by locale and account, so the history-panel detection requires real-browser verification.
-
-## Files
-
-- manifest.json — Manifest V3 configuration.
-- content.js — detection, sidebar integration, tree UI, storage, local index, search, export and drag-and-drop.
+1. Open a Google AI Mode search page and confirm the overlay covers the native Recent history box.
+2. Wait for lazy loading; diagnostics must report `Список загружен полностью: да`.
+3. Compare organizer rows with Google's native list after pressing `⇄`.
+4. Reload twice; the active row count must not grow.
+5. Create folders and nested folders up to four levels.
+6. Drag a chat into a folder and reload.
+7. Open chats from the organizer, then test local search and Markdown/TXT export.
