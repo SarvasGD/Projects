@@ -534,7 +534,7 @@
   }
 
   function findRecentSection() {
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],[aria-label],span,div"))
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,button,[role='heading'],[role='button']"))
       .filter(isRecentLabel);
     if (!labels.length) return null;
 
@@ -608,10 +608,13 @@
   }
 
   function normalizedVisibleLabel(element) {
-    return (element && (element.innerText || element.textContent) || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLocaleLowerCase();
+    return (element && (
+      element.getAttribute("aria-label") ||
+      element.innerText ||
+      element.textContent ||
+      element.getAttribute("title") ||
+      ""
+    )).replace(/\s+/g, " ").trim().toLocaleLowerCase();
   }
 
   function isVisibleSidebarElement(element) {
@@ -622,39 +625,49 @@
     return style.display !== "none" && style.visibility !== "hidden";
   }
 
-  function findThreadSearchControl(container) {
-    if (!container) return null;
+  function findThreadSearchControl() {
     const labels = new Set([
       "поиск цепочек",
       "thread search",
       "search threads"
     ]);
-    const candidates = Array.from(container.querySelectorAll(
-      "a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex],span,div"
-    )).filter((element) =>
-      isVisibleSidebarElement(element) && labels.has(normalizedVisibleLabel(element))
-    );
+    const candidates = Array.from(document.querySelectorAll(
+      "a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex],span"
+    )).filter((element) => {
+      if (!isVisibleSidebarElement(element)) return false;
+      const rect = element.getBoundingClientRect();
+      if (rect.left > 360 || rect.right > 620) return false;
+      return labels.has(normalizedVisibleLabel(element));
+    });
 
     if (!candidates.length) return null;
 
     const resolved = candidates.map((element) => {
       const interactive = element.closest("a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex]");
-      const target = interactive && container.contains(interactive) ? interactive : element;
+      const target = interactive || element;
       const rect = target.getBoundingClientRect();
       const semantic = /^(A|BUTTON)$/.test(target.tagName) ||
         /^(button|link|menuitem)$/.test(target.getAttribute("role") || "") ? 1 : 0;
       return { target, area: rect.width * rect.height, semantic };
     });
-
     resolved.sort((a, b) => b.semantic - a.semantic || a.area - b.area);
     return resolved[0].target;
   }
 
-  function getDirectChild(container, descendant) {
-    if (!container || !descendant || !container.contains(descendant)) return null;
-    let child = descendant;
-    while (child && child.parentElement !== container) child = child.parentElement;
-    return child && child.parentElement === container ? child : null;
+  function findSidebarNavigationRow(control) {
+    if (!control) return null;
+    let row = control;
+    let parent = control.parentElement;
+    for (let depth = 0; depth < 4 && parent && parent !== document.body; depth += 1) {
+      const rect = parent.getBoundingClientRect();
+      const isNavigationRow = rect.width >= 160 && rect.width <= 420 &&
+        rect.height >= 24 && rect.height <= 90 &&
+        rect.left >= -24 && rect.left <= 120;
+      if (!isNavigationRow) break;
+      row = parent;
+      parent = parent.parentElement;
+    }
+    return row;
   }
 
   function mountInterface(section) {
@@ -668,25 +681,32 @@
     }
     if (!host) createInterface();
 
-    // Recent identifies the history section. It is not necessarily the best
-    // insertion point for the organizer itself.
-    const threadSearch = findThreadSearchControl(section.container);
-    const threadSearchRow = getDirectChild(section.container, threadSearch);
-    const headingGroup = getDirectChild(section.container, section.heading);
+    // Find the actual "Поиск цепочек" navigation row across the page. Do not
+    // promote it to a broad ancestor: that ancestor can also contain Settings
+    // and the entire history panel, which moved the organizer to the bottom.
+    const threadSearch = findThreadSearchControl();
+    const threadSearchRow = findSidebarNavigationRow(threadSearch);
 
-    let insertAfter = threadSearchRow;
-    let insertBefore = null;
-    if (!insertAfter) insertBefore = headingGroup;
+    let targetRow = threadSearchRow;
+    let placement = "after-thread-search";
+    if (!targetRow) {
+      const recentControl = section.heading.closest("button,[role='button']") || section.heading;
+      targetRow = findSidebarNavigationRow(recentControl) || recentControl;
+      placement = "before-recent";
+    }
 
-    const isInRightPosition = host.parentElement === section.container &&
-      (insertAfter ? insertAfter.nextElementSibling === host :
-        insertBefore ? host.nextElementSibling === insertBefore :
-          section.container.firstElementChild === host);
-
-    if (!isInRightPosition) {
-      if (insertAfter) insertAfter.after(host);
-      else if (insertBefore) section.container.insertBefore(host, insertBefore);
-      else section.container.prepend(host);
+    host.dataset.gsacoMountTarget = placement;
+    if (targetRow && targetRow.parentElement) {
+      const shouldBeAfter = placement === "after-thread-search";
+      const isCorrect = host.parentElement === targetRow.parentElement &&
+        (shouldBeAfter ? targetRow.nextElementSibling === host : targetRow.previousElementSibling === host);
+      if (!isCorrect) {
+        if (shouldBeAfter) targetRow.after(host);
+        else targetRow.before(host);
+      }
+    } else if (!host.isConnected) {
+      section.heading.before(host);
+      host.dataset.gsacoMountTarget = "before-recent-heading";
     }
   }
 
@@ -772,7 +792,7 @@
       document.documentElement.appendChild(diagnosticHost);
     }
 
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,[role='heading'],[aria-label],span,div"))
+    const labels = Array.from(document.querySelectorAll("h1,h2,h3,button,[role='heading'],[role='button']"))
       .filter(isRecentLabel);
     const allLinks = countSearchLinks(document);
     const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -804,6 +824,7 @@
           " h=" + Math.round(hostRect.height));
         lines.push("Родитель органайзера: " + host.parentElement.tagName.toLowerCase() +
           " id=" + (host.parentElement.id || "—"));
+        lines.push("Точка вставки: " + (host.dataset.gsacoMountTarget || "не определена"));
       }
     } else {
       lines.push("Кандидат панели истории: НЕ НАЙДЕН");
@@ -842,6 +863,38 @@
           " · " + (entry.anchor.textContent || "").replace(/\s+/g, " ").trim().slice(0, 35));
       });
     }
+
+
+    const localEntries = Object.entries(state.chats);
+    const titleGroups = new Map();
+    localEntries.forEach(([url, item]) => {
+      const title = (item.title || titleForUrl(url)).replace(/\s+/g, " ").trim();
+      const key = title.toLocaleLowerCase();
+      if (!titleGroups.has(key)) titleGroups.set(key, { title, urls: [] });
+      titleGroups.get(key).urls.push(url);
+    });
+    const repeatedTitles = Array.from(titleGroups.values()).filter((group) => group.urls.length > 1);
+    const indexedCount = localEntries.filter(([, item]) => item.text).length;
+    lines.push("");
+    lines.push("Локальная база: " + localEntries.length + " URL · " + indexedCount + " проиндексировано");
+    lines.push("Повторяющиеся названия: " + repeatedTitles.length + " групп (записи не объединялись)");
+    repeatedTitles.slice(0, 6).forEach((group) => {
+      const queries = new Set();
+      let aiMode = 0;
+      let withVsrid = 0;
+      group.urls.forEach((url) => {
+        try {
+          const parsed = new URL(url);
+          queries.add((parsed.searchParams.get("q") || "").trim().toLocaleLowerCase());
+          if (isLikelyAiUrl(url)) aiMode += 1;
+          if (parsed.searchParams.has("vsrid")) withVsrid += 1;
+        } catch (_error) {}
+      });
+      lines.push("  «" + group.title.slice(0, 42) + "» ×" + group.urls.length +
+        "; разных q=" + queries.size +
+        "; AI-признак=" + aiMode + "/" + group.urls.length +
+        "; vsrid=" + withVsrid + "/" + group.urls.length);
+    });
 
     const diagnosticText = lines.join("\n");
     if (diagnosticInfo.textContent !== diagnosticText) diagnosticInfo.textContent = diagnosticText;
