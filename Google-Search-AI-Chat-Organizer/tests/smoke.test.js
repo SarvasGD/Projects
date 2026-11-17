@@ -168,6 +168,29 @@ test("renamed key keeps folder membership (re-bind by title)", async () => {
   assert.ok(T.state.chats["t:чат а"].text.startsWith("индекс"), "indexed text preserved");
 });
 
+test("ambiguous title does not steal an old chat's index or folder", async () => {
+  const stored = {
+    google_ai_chats: {
+      "id:thread-old-a": { title: "Общий заголовок", text: "Индекс старого чата A ".repeat(5), updatedAt: 100 },
+      "id:thread-old-b": { title: "Общий заголовок", text: "Индекс старого чата B ".repeat(5), updatedAt: 200 }
+    },
+    google_ai_folders: [
+      { id: "f1", name: "Сохранённая папка", color: "#4285F4", children: [], chat_urls: ["id:thread-old-b"] }
+    ]
+  };
+  const { T } = await boot({ kind: "div", titles: ["Общий заголовок"], stored });
+  assert.ok(T.state.chats["id:thread-old-a"]);
+  assert.ok(T.state.chats["id:thread-old-b"]);
+  assert.ok(T.state.chats["t:общий заголовок"], "new ambiguous row gets its own record");
+  assert.ok(T.state.chats["id:thread-old-a"].text.includes("старого чата A"));
+  assert.ok(T.state.chats["id:thread-old-b"].text.includes("старого чата B"));
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(T.state.folders[0].chat_urls)),
+    ["id:thread-old-b"],
+    "existing folder assignment remains attached to its original record"
+  );
+});
+
 test("clicking an organizer row proxies the click to the native row", async () => {
   const { w, T } = await boot({ kind: "div", titles: ["Первый чат", "Второй чат"] });
   let clicked = 0;
