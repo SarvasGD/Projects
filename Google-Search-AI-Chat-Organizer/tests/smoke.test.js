@@ -79,6 +79,12 @@ test("rows without any link get title keys; same titles stay separate rows", asy
   assert.deepStrictEqual(JSON.parse(JSON.stringify(scan.rows.map((r) => r.key))), ["t:бесплатные ии", "t:бесплатные ии|2", "t:сказка о людоеде"]);
 });
 
+test("chat rows expose Markdown export only", async () => {
+  const { T } = await boot({ kind: "div", titles: ["Чат для экспорта"] });
+  const buttons = [...T.getHost().shadowRoot.querySelectorAll(".chat-row .export-button")];
+  assert.deepStrictEqual(buttons.map((button) => button.textContent), ["MD"]);
+});
+
 test("explicit thread IDs take precedence over identical q/udm URLs", async () => {
   const { T } = await boot({ kind: "anchor-id", titles: ["Одинаковый запрос", "Одинаковый запрос"] });
   const scan = T.scanHistory();
