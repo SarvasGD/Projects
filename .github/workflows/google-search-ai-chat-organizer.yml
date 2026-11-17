@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate extension files
+    name: Validate extension and smoke tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -39,7 +39,7 @@ jobs:
             if (manifest.manifest_version !== 3) {
               throw new Error("Expected manifest_version: 3");
             }
-            if (!/^\d+\.\d+\.\d+$/.test(manifest.version || "")) {
+            if (!/^\\d+\\.\\d+\\.\\d+$/.test(manifest.version || "")) {
               throw new Error("Manifest version must use MAJOR.MINOR.PATCH format");
             }
             for (const scriptGroup of manifest.content_scripts || []) {
@@ -54,3 +54,9 @@ jobs:
 
       - name: Check JavaScript syntax
         run: node --check content.js
+
+      - name: Install test dependencies
+        run: npm install --no-package-lock
+
+      - name: Run DOM smoke tests
+        run: npm test
