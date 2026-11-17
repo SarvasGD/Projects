@@ -39,7 +39,8 @@ jobs:
             if (manifest.manifest_version !== 3) {
               throw new Error("Expected manifest_version: 3");
             }
-            if (!/^\\d+\\.\\d+\\.\\d+$/.test(manifest.version || "")) {
+            const versionParts = (manifest.version || "").split(".");
+            if (versionParts.length !== 3 || versionParts.some((part) => !/^[0-9]+$/.test(part))) {
               throw new Error("Manifest version must use MAJOR.MINOR.PATCH format");
             }
             for (const scriptGroup of manifest.content_scripts || []) {
