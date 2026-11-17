@@ -1,27 +1,42 @@
 (() => {
   "use strict";
 
+  const VERSION = "0.3.1";
   const FOLDERS_KEY = "google_ai_folders";
   const CHATS_KEY = "google_ai_chats";
+  const UI_KEY = "google_ai_ui";
   const MAX_DEPTH = 4;
   const MAX_INDEX_TEXT = 10000;
   const MAX_INDEXED_CHATS = 100;
+  const HOST_Z_INDEX = 2147483000;
   const FOLDER_COLORS = ["#4285F4", "#34A853", "#FBBC04", "#EA4335", "#A142F4", "#00ACC1", "#F4511E", "#8D6E63"];
   const RECENT_LABEL = /^(recent|recent chats|recent searches|недавние|недавнее|récents|recientes|zuletzt|最近|最近の会話|최근|son aramalar)(?: *[0-9]+)?$/i;
+  const GOOGLE_DOMAINS = ["google.com", "google.ru", "google.se", "google.co.uk", "google.de", "google.fr", "google.es", "google.ca", "google.com.au", "google.co.in"];
+  // Only these URL parameters take part in a chat's identity. Everything else
+  // (ved, ei, sei, mstk, aep, source, ...) changes between page loads and used
+  // to create duplicates. Extend this list if the diagnostics show a real thread-id parameter.
+  const IDENTITY_PARAMS = ["mtid", "tid", "thread", "thread_id", "threadid"];
+  const NAV_LABELS = new Set(["новый чат", "new chat", "поиск цепочек", "thread search", "search threads", "настройки", "settings"]);
+  const NOISE_ROW = /^(show more|show less|see more|more|показать ещё|показать еще|показать больше|ещё|еще|сегодня|вчера|today|yesterday|last week|previous 7 days|previous 30 days)$/i;
+  const CLICKABLE = "a[href],[role='link'],[role='button'],[role='option'],[role='menuitem'],[role='listitem'],li,[tabindex],[jsaction],[data-href]";
 
   const state = { folders: [], chats: {} };
+  const uiPrefs = { open: true, diagHidden: false };
   const openFolders = new Set();
-  const hiddenRows = new Map();
-  const dragBoundAnchors = new WeakSet();
-  const primedHistoryScrollers = new WeakSet();
-  let activeHistoryPriming = null;
+  const primedScrollers = new WeakSet();
+  const completeScrollers = new WeakSet();
+  let activePriming = null;
   let host = null;
   let shadow = null;
   let ui = null;
+  let region = null;
+  let lastScan = null;
+  let missCount = 0;
+  let currentKey = null;
+  let nativeHidden = null;
   let diagnosticHost = null;
   let diagnosticInfo = null;
-  let diagnosticDismissed = false;
-  let currentContainer = null;
+  let diagnosticSnapshot = null;
   let observer = null;
   let scanTimer = null;
   let captureTimer = null;
@@ -52,27 +67,42 @@
     return "folder_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
   }
 
-  function normalizeUrl(value) {
+  function isGoogleHost(hostname) {
+    const h = String(hostname || "").toLowerCase();
+    return GOOGLE_DOMAINS.some((domain) => h === domain || h.endsWith("." + domain));
+  }
+
+  // Stable chat identity: host + path + q/udm + known thread-id params only.
+  function toKey(value) {
     try {
       const url = new URL(value, location.href);
-      const h = url.hostname.toLowerCase();
-      const isGoogle = h === "google.com" || h.endsWith(".google.com") ||
-        h === "google.ru" || h.endsWith(".google.ru") ||
-        h === "google.se" || h.endsWith(".google.se") ||
-        h === "google.co.uk" || h.endsWith(".google.co.uk") ||
-        h === "google.de" || h.endsWith(".google.de") ||
-        h === "google.fr" || h.endsWith(".google.fr") ||
-        h === "google.es" || h.endsWith(".google.es") ||
-        h === "google.ca" || h.endsWith(".google.ca") ||
-        h === "google.com.au" || h.endsWith(".google.com.au") ||
-        h === "google.co.in" || h.endsWith(".google.co.in");
-      if (!isGoogle || url.pathname !== "/search" || !url.searchParams.get("q") || url.protocol !== "https:") return null;
-      url.hash = "";
-      return url.href;
+      if (url.protocol !== "https:" || !isGoogleHost(url.hostname)) return null;
+      if (url.pathname !== "/search" && !/^\/ai(\/|$)/.test(url.pathname)) return null;
+      const keep = [];
+      ["q", "udm"].concat(IDENTITY_PARAMS).forEach((name) => {
+        const v = url.searchParams.get(name);
+        if (v) keep.push(name + "=" + encodeURIComponent(v));
+      });
+      if (!keep.length) return null;
+      return "https://" + url.hostname.toLowerCase() + url.pathname + "?" + keep.join("&");
     } catch (_error) {
       return null;
     }
   }
+
+  // Keys: canonical URL, "id:<attribute id>", or "t:<title>"; "|N" marks the N-th
+  // row that shares the same base key inside Google's own list.
+  function normalizeKey(raw) {
+    if (typeof raw !== "string" || !raw) return null;
+    const suffix = raw.match(/^(.*)\|(\d+)$/);
+    const base = suffix ? suffix[1] : raw;
+    const clean = /^(t|id):/.test(base) ? base.slice(0, 300) : toKey(base);
+    return clean ? clean + (suffix ? "|" + suffix[2] : "") : null;
+  }
+
+  function cleanText(value) { return String(value || "").replace(/\s+/g, " ").trim(); }
+  function normTitle(value) { return cleanText(value).toLocaleLowerCase(); }
+  function isJunkTitle(title) { return /^(skip to |перейти к )/i.test(cleanText(title)); }
 
   function getQueryFromUrl(value) {
     try { return new URL(value).searchParams.get("q") || ""; }
@@ -87,7 +117,7 @@
   }
 
   function isCurrentAiPage() {
-    if (!normalizeUrl(location.href)) return false;
+    if (!isGoogleHost(location.hostname)) return false;
     if (isLikelyAiUrl(location.href)) return true;
     const title = (document.title || "").toLowerCase();
     if (title.includes("ai mode") || title.includes("режим ии") || title.includes("режим искусственного интеллекта")) return true;
@@ -96,25 +126,22 @@
     return activeLabel.includes("ai mode") || activeLabel.includes("режим ии");
   }
 
-  function titleForUrl(url) {
-    return (getQueryFromUrl(url) || "Чат Google AI").slice(0, 140);
-  }
-
-  function titleFromAnchor(anchor, url) {
-    const text = (anchor.innerText || anchor.textContent || anchor.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
-    return text && text.length > 1 && text.length < 180 ? text : titleForUrl(url);
-  }
-
-  function normalizeFolderList(list, depth) {
+  function normalizeFolderList(list, depth, rawKeyToMigratedKey) {
     if (!Array.isArray(list) || depth > MAX_DEPTH) return [];
     return list.map((raw) => {
       const item = raw && typeof raw === "object" ? raw : {};
+      const chatUrls = Array.isArray(item.chat_urls)
+        ? Array.from(new Set(item.chat_urls.map((rawUrl) => {
+            if (rawKeyToMigratedKey && rawKeyToMigratedKey.has(rawUrl)) return rawKeyToMigratedKey.get(rawUrl);
+            return normalizeKey(rawUrl);
+          }).filter(Boolean)))
+        : [];
       return {
         id: typeof item.id === "string" ? item.id : makeId(),
         name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : "Новая папка",
         color: /^#[0-9a-f]{6}$/i.test(item.color || "") ? item.color : FOLDER_COLORS[0],
-        children: normalizeFolderList(item.children, depth + 1),
-        chat_urls: Array.isArray(item.chat_urls) ? Array.from(new Set(item.chat_urls.map(normalizeUrl).filter(Boolean))) : []
+        children: normalizeFolderList(item.children, depth + 1, rawKeyToMigratedKey),
+        chat_urls: chatUrls
       };
     });
   }
@@ -128,23 +155,69 @@
     return result;
   }
 
-  async function loadState() {
-    const stored = await storageGet([FOLDERS_KEY, CHATS_KEY]);
-    state.folders = normalizeFolderList(stored[FOLDERS_KEY], 1);
-    const chats = stored[CHATS_KEY] && typeof stored[CHATS_KEY] === "object" ? stored[CHATS_KEY] : {};
-    state.chats = {};
-    Object.keys(chats).forEach((rawUrl) => {
-      const url = normalizeUrl(rawUrl);
-      if (!url) return;
-      const item = chats[rawUrl] || {};
-      state.chats[url] = {
-        title: typeof item.title === "string" && item.title.trim() ? item.title : titleForUrl(url),
-        text: typeof item.text === "string" ? item.text.slice(0, MAX_INDEX_TEXT) : "",
-        updatedAt: Number(item.updatedAt) || 0
-      };
+  function titleForUrl(key) {
+    if (typeof key === "string" && key.startsWith("t:")) return key.slice(2).slice(0, 140);
+    const base = String(key || "").replace(/\|\d+$/, "");
+    return (getQueryFromUrl(base) || "Чат Google AI").slice(0, 140);
+  }
+
+  function cleanChatItem(item, key, rawKey) {
+    const src = item && typeof item === "object" ? item : {};
+    return {
+      title: typeof src.title === "string" && src.title.trim() ? src.title : titleForUrl(key),
+      text: typeof src.text === "string" ? src.text.slice(0, MAX_INDEX_TEXT) : "",
+      updatedAt: Number(src.updatedAt) || 0,
+      url: typeof src.url === "string" && src.url ? src.url : (/^https:/.test(rawKey) ? rawKey : ""),
+      threadId: typeof src.threadId === "string" ? src.threadId : "",
+      order: Number.isFinite(src.order) ? src.order : null,
+      missing: !!src.missing
+    };
+  }
+
+  function mergeChatItems(a, b) {
+    const first = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a;
+    const other = first === a ? b : a;
+    return Object.assign({}, other, first, {
+      text: first.text || other.text,
+      url: first.url || other.url,
+      threadId: first.threadId || other.threadId,
+      order: first.order !== null ? first.order : other.order
     });
-    collectAssignedUrls(state.folders).forEach((url) => {
-      if (!state.chats[url]) state.chats[url] = { title: titleForUrl(url), text: "", updatedAt: 0 };
+  }
+
+  async function loadState() {
+    const stored = await storageGet([FOLDERS_KEY, CHATS_KEY, UI_KEY]);
+    if (stored[UI_KEY] && typeof stored[UI_KEY] === "object") {
+      uiPrefs.open = stored[UI_KEY].open !== false;
+      uiPrefs.diagHidden = !!stored[UI_KEY].diagHidden;
+    }
+
+    const chats = stored[CHATS_KEY] && typeof stored[CHATS_KEY] === "object" ? stored[CHATS_KEY] : {};
+    const rawKeyToMigratedKey = new Map();
+    state.chats = {};
+
+    Object.keys(chats).forEach((rawKey) => {
+      const normalized = normalizeKey(rawKey);
+      if (!normalized) { rawKeyToMigratedKey.set(rawKey, null); return; }
+      const item = cleanChatItem(chats[rawKey], normalized, rawKey);
+      if (isJunkTitle(item.title)) { rawKeyToMigratedKey.set(rawKey, null); return; }
+
+      let key = normalized;
+      if (state.chats[key]) {
+        const base = normalized.replace(/\|\d+$/, "");
+        let suffix = 2;
+        while (state.chats[base + "|" + suffix]) suffix += 1;
+        key = base + "|" + suffix;
+      }
+      rawKeyToMigratedKey.set(rawKey, key);
+      state.chats[key] = item;
+    });
+
+    state.folders = normalizeFolderList(stored[FOLDERS_KEY], 1, rawKeyToMigratedKey);
+    collectAssignedUrls(state.folders).forEach((key) => {
+      if (!state.chats[key] && !isJunkTitle(titleForUrl(key))) {
+        state.chats[key] = cleanChatItem({}, key, key);
+      }
     });
   }
 
@@ -245,7 +318,7 @@
   }
 
   function assignChat(url, folder) {
-    const cleanUrl = normalizeUrl(url);
+    const cleanUrl = normalizeKey(url);
     if (!cleanUrl || !folder) return;
     if (!state.chats[cleanUrl]) state.chats[cleanUrl] = { title: titleForUrl(cleanUrl), text: "", updatedAt: Date.now() };
     removeChatFromFolders(state.folders, cleanUrl);
@@ -269,8 +342,8 @@
     }
     const title = item.title || titleForUrl(url);
     const output = format === "md"
-      ? "# " + title + "\n\nИсточник: " + url + "\n\n" + item.text + "\n"
-      : title + "\n" + url + "\n\n" + item.text + "\n";
+      ? "# " + title + "\n\nИсточник: " + (item.url || (/^https:/.test(url) ? url : "")) + "\n\n" + item.text + "\n"
+      : title + "\n" + (item.url || (/^https:/.test(url) ? url : "")) + "\n\n" + item.text + "\n";
     const blob = new Blob(["\uFEFF", output], { type: format === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -285,23 +358,29 @@
   }
 
   function createChatRow(url) {
-    const item = state.chats[url] || { title: titleForUrl(url), text: "", updatedAt: 0 };
-    const row = createElement("div", "chat-row");
-    const link = createElement("a", "chat-link", item.title || titleForUrl(url));
-    link.href = url;
-    link.title = url;
+    const key = url;
+    const item = state.chats[key] || { title: titleForUrl(key), text: "", updatedAt: 0, url: "" };
+    const row = createElement("div", key === currentKey ? "chat-row current" : "chat-row");
+    const link = createElement("a", "chat-link", item.title || titleForUrl(key));
+    link.href = item.url || "#";
+    link.title = item.title || key;
     link.draggable = true;
     if (!item.text) link.classList.add("not-indexed");
+    if (item.missing) link.classList.add("missing");
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      event.preventDefault();
+      openChat(key);
+    });
     link.addEventListener("dragstart", (event) => {
       event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/x-google-ai-chat-url", url);
-      event.dataTransfer.setData("text/uri-list", url);
-      event.dataTransfer.setData("text/plain", url);
+      event.dataTransfer.setData("text/x-google-ai-chat-key", key);
+      event.dataTransfer.setData("text/plain", key);
     });
     row.appendChild(link);
     const actions = createElement("div", "chat-actions");
-    actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(url, "md"), "export-button"));
-    actions.appendChild(createButton("TXT", "Экспортировать в TXT", () => exportChat(url, "txt"), "export-button"));
+    actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(key, "md"), "export-button"));
+    actions.appendChild(createButton("TXT", "Экспортировать в TXT", () => exportChat(key, "txt"), "export-button"));
     row.appendChild(actions);
     return row;
   }
@@ -320,16 +399,13 @@
       event.preventDefault();
       event.stopPropagation();
       element.classList.remove("drop-target");
-      let raw = event.dataTransfer.getData("text/x-google-ai-chat-url");
-      if (!raw) raw = event.dataTransfer.getData("text/uri-list");
-      if (!raw) raw = event.dataTransfer.getData("text/plain");
-      raw = (raw || "").split(/\r?\n/).find((line) => line && !line.startsWith("#")) || "";
-      const url = normalizeUrl(raw.trim());
-      if (!url) {
-        setStatus("Сюда можно перетащить ссылку на поисковый чат Google AI.");
+      let key = event.dataTransfer.getData("text/x-google-ai-chat-key") || "";
+      if (!key) key = normalizeKey((event.dataTransfer.getData("text/plain") || "").split(/\r?\n/)[0].trim()) || "";
+      if (!key || !state.chats[key]) {
+        setStatus("Перетащите сюда чат из списка органайзера.");
         return;
       }
-      assignChat(url, folder);
+      assignChat(key, folder);
     });
   }
 
@@ -413,7 +489,13 @@
     } else {
       state.folders.forEach((folder) => ui.tree.appendChild(renderFolder(folder, 1)));
       const assigned = new Set(collectAssignedUrls(state.folders));
-      const unassigned = getAllChatUrls().filter((url) => !assigned.has(url));
+      const unassigned = getAllChatUrls().filter((url) =>
+        !assigned.has(url) && !(state.chats[url] && state.chats[url].missing)
+      );
+      const missing = getAllChatUrls().filter((url) =>
+        !assigned.has(url) && state.chats[url] && state.chats[url].missing
+      );
+
       const recent = createElement("details", "folder unassigned");
       recent.open = true;
       const summary = createElement("summary", "folder-summary");
@@ -423,60 +505,91 @@
       recent.appendChild(summary);
       const contents = createElement("div", "folder-contents");
       if (unassigned.length) {
-        unassigned.sort((a, b) => ((state.chats[b] || {}).updatedAt || 0) - ((state.chats[a] || {}).updatedAt || 0));
+        unassigned.sort((a, b) => {
+          const ia = state.chats[a] || {}; const ib = state.chats[b] || {};
+          const oa = Number.isFinite(ia.order) ? ia.order : 1e9;
+          const ob = Number.isFinite(ib.order) ? ib.order : 1e9;
+          return oa - ob || (ib.updatedAt || 0) - (ia.updatedAt || 0);
+        });
         unassigned.forEach((url) => contents.appendChild(createChatRow(url)));
       } else {
         contents.appendChild(createElement("div", "empty-note", "Новые найденные AI-чаты появятся здесь."));
       }
       recent.appendChild(contents);
       ui.tree.appendChild(recent);
+
+      if (missing.length) {
+        const archive = createElement("details", "folder archived");
+        const archiveSummary = createElement("summary", "folder-summary");
+        archiveSummary.append(createElement("span", "folder-marker neutral-marker"));
+        archiveSummary.append(createElement("span", "folder-name", "Нет в текущей истории"));
+        archiveSummary.append(createElement("span", "folder-count", String(missing.length)));
+        archive.appendChild(archiveSummary);
+        const archiveContents = createElement("div", "folder-contents");
+        missing.sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
+        missing.forEach((url) => archiveContents.appendChild(createChatRow(url)));
+        archive.appendChild(archiveContents);
+        ui.tree.appendChild(archive);
+      }
     }
+
     const all = getAllChatUrls();
     const indexed = all.filter((url) => state.chats[url] && state.chats[url].text).length;
-    setStatus(all.length + " чатов · " + indexed + " проиндексировано · хранение локально");
+    const missingCount = all.filter((url) => state.chats[url] && state.chats[url].missing).length;
+    setStatus(all.length + " сохранено · " + (all.length - missingCount) +
+      " в истории · " + missingCount + " вне истории · " + indexed + " проиндексировано");
   }
 
   function createInterface() {
     host = document.createElement("div");
     host.id = "google-search-ai-chat-organizer";
-    host.style.cssText = "display:block;width:100%;max-width:100%;min-width:0;min-height:1px;box-sizing:border-box;margin:8px 0;position:relative;z-index:2;flex:0 0 auto;grid-column:1 / -1;clear:both;align-self:stretch;";
+    // The organizer is a fixed overlay laid exactly over Google's own "Recent" box,
+    // so it never depends on (or disturbs) Google's flex/grid layout.
+    host.style.cssText = "position:fixed;z-index:" + HOST_Z_INDEX + ";display:none;box-sizing:border-box;margin:0;padding:0;overflow:hidden;border-radius:12px;";
     shadow = host.attachShadow({ mode: "open" });
 
     const style = createElement("style");
     style.textContent = [
-      ":host { all: initial; display:block; width:100%; color-scheme:light dark; font-family:Arial,sans-serif; }",
-      "* { box-sizing:border-box; }",
-      ".panel { color:var(--gsaco-text,#202124); background:var(--gsaco-bg,#fff); border:1px solid var(--gsaco-border,#dadce0); border-radius:12px; padding:10px; font:13px/1.4 Arial,sans-serif; width:100%; min-width:0; }",
-      ".header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; }",
-      ".brand { min-width:0; } .brand strong { display:block; font-size:13px; font-weight:700; } .brand small { display:block; color:var(--gsaco-muted,#5f6368); font-size:10px; }",
+      ":host { all: initial; display:block; font-family:Arial,sans-serif; }",
+      "* { box-sizing:border-box; } [hidden] { display:none !important; }",
+      ".wrap { height:100%; color-scheme:light; --gsaco-text:#202124; --gsaco-bg:#fff; --gsaco-border:#dadce0; --gsaco-muted:#5f6368; --gsaco-input:#fff; --gsaco-hover:#f1f3f4; --gsaco-link:#1a73e8; }",
+      ".wrap.dark { color-scheme:dark; --gsaco-text:#e8eaed; --gsaco-bg:#202124; --gsaco-border:#5f6368; --gsaco-muted:#bdc1c6; --gsaco-input:#292a2d; --gsaco-hover:#303134; --gsaco-link:#8ab4f8; }",
+      ".panel { display:flex; flex-direction:column; height:100%; color:var(--gsaco-text); background:var(--gsaco-bg); border:1px solid var(--gsaco-border); border-radius:12px; padding:10px; font:13px/1.4 Arial,sans-serif; min-width:0; }",
+      ".bar { display:block; width:100%; height:34px; color:var(--gsaco-text); background:var(--gsaco-bg); border:1px solid var(--gsaco-border); border-radius:10px; font:12px Arial,sans-serif; cursor:pointer; }",
+      ".header { flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; }",
+      ".brand { min-width:0; } .brand strong { display:block; font-size:13px; font-weight:700; } .brand small { display:block; color:var(--gsaco-muted); font-size:10px; }",
+      ".header-actions { display:flex; align-items:center; gap:4px; }",
       "button { font:inherit; cursor:pointer; } .primary { border:0; border-radius:8px; padding:6px 9px; background:#1a73e8; color:white; font-weight:600; white-space:nowrap; } .primary:hover { background:#1765cc; }",
-      ".search-wrap { display:flex; align-items:center; gap:7px; border:1px solid var(--gsaco-border,#dadce0); border-radius:8px; padding:0 8px; margin:0 0 8px; background:var(--gsaco-input,#fff); }",
-      ".search-icon { color:var(--gsaco-muted,#5f6368); font-size:16px; } input { min-width:0; width:100%; height:32px; border:0; outline:0; background:transparent; color:inherit; font:inherit; }",
-      ".tree { max-height:48vh; min-height:34px; overflow:auto; overscroll-behavior:contain; } details { min-width:0; } .folder { margin:2px 0; border-radius:7px; }",
+      ".search-wrap { flex:0 0 auto; display:flex; align-items:center; gap:7px; border:1px solid var(--gsaco-border); border-radius:8px; padding:0 8px; margin:0 0 8px; background:var(--gsaco-input); }",
+      ".search-icon { color:var(--gsaco-muted); font-size:16px; } input { min-width:0; width:100%; height:32px; border:0; outline:0; background:transparent; color:inherit; font:inherit; }",
+      ".tree { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; } details { min-width:0; } .folder { margin:2px 0; border-radius:7px; }",
       ".folder-summary { list-style:none; display:flex; align-items:center; gap:6px; min-height:31px; padding:4px 5px; border-radius:7px; cursor:pointer; user-select:none; } .folder-summary::-webkit-details-marker { display:none; }",
-      ".folder-summary::before { content:'›'; display:inline-block; width:9px; color:var(--gsaco-muted,#5f6368); transition:transform .12s ease; } details[open] > .folder-summary::before { transform:rotate(90deg); }",
+      ".folder-summary::before { content:'›'; display:inline-block; width:9px; color:var(--gsaco-muted); transition:transform .12s ease; } details[open] > .folder-summary::before { transform:rotate(90deg); }",
       ".folder-marker { flex:0 0 9px; width:9px; height:9px; border-radius:3px; } .neutral-marker { background:#9aa0a6; }",
-      ".folder-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; } .folder-count { color:var(--gsaco-muted,#5f6368); font-size:10px; }",
-      ".folder-actions { display:flex; align-items:center; gap:1px; opacity:.75; } .mini-button { border:0; color:var(--gsaco-muted,#5f6368); background:transparent; border-radius:5px; min-width:21px; height:21px; padding:0 4px; font-size:13px; }",
-      ".mini-button:hover,.export-button:hover { background:var(--gsaco-hover,#f1f3f4); color:var(--gsaco-text,#202124); } .folder-contents { margin-left:13px; padding-left:8px; border-left:1px solid var(--gsaco-border,#dadce0); }",
-      ".chat-row { display:flex; align-items:center; gap:4px; min-width:0; padding:4px 3px 4px 5px; border-radius:6px; } .chat-row:hover { background:var(--gsaco-hover,#f8f9fa); }",
-      ".chat-link { flex:1; min-width:0; color:var(--gsaco-link,#1a73e8); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; } .chat-link:hover { text-decoration:underline; } .chat-link.not-indexed { color:var(--gsaco-muted,#5f6368); }",
-      ".chat-actions { display:flex; gap:2px; flex:0 0 auto; } .export-button { border:1px solid transparent; border-radius:4px; background:transparent; color:var(--gsaco-muted,#5f6368); padding:2px 3px; font-size:9px; }",
-      ".empty-note,.search-caption { color:var(--gsaco-muted,#5f6368); font-size:11px; padding:7px 6px; } .search-caption { font-weight:600; }",
-      ".status { border-top:1px solid var(--gsaco-border,#dadce0); margin-top:8px; padding-top:7px; font-size:10px; color:var(--gsaco-muted,#5f6368); }",
-      ".drop-target > .folder-summary,.drop-target { background:rgba(26,115,232,.10); outline:1px dashed #1a73e8; outline-offset:-1px; }",
-      "@media (prefers-color-scheme:dark) { :host { color-scheme:dark; } .panel { --gsaco-text:#e8eaed; --gsaco-bg:#202124; --gsaco-border:#5f6368; --gsaco-muted:#bdc1c6; --gsaco-input:#292a2d; --gsaco-hover:#303134; --gsaco-link:#8ab4f8; } }",
-      "@media (prefers-color-scheme:light) { :host { color-scheme:light; } }"
+      ".folder-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; } .folder-count { color:var(--gsaco-muted); font-size:10px; }",
+      ".folder-actions { display:flex; align-items:center; gap:1px; opacity:.75; } .mini-button { border:0; color:var(--gsaco-muted); background:transparent; border-radius:5px; min-width:21px; height:21px; padding:0 4px; font-size:13px; }",
+      ".mini-button:hover,.export-button:hover { background:var(--gsaco-hover); color:var(--gsaco-text); } .folder-contents { margin-left:13px; padding-left:8px; border-left:1px solid var(--gsaco-border); }",
+      ".chat-row { display:flex; align-items:center; gap:4px; min-width:0; padding:4px 3px 4px 5px; border-radius:6px; } .chat-row:hover { background:var(--gsaco-hover); } .chat-row.current { background:var(--gsaco-hover); box-shadow:inset 2px 0 0 #1a73e8; }",
+      ".chat-link { flex:1; min-width:0; color:var(--gsaco-link); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; } .chat-link:hover { text-decoration:underline; } .chat-link.not-indexed { color:var(--gsaco-text); } .chat-link.missing { opacity:.55; font-style:italic; }",
+      ".chat-actions { display:flex; gap:2px; flex:0 0 auto; } .export-button { border:1px solid transparent; border-radius:4px; background:transparent; color:var(--gsaco-muted); padding:2px 3px; font-size:9px; }",
+      ".empty-note,.search-caption { color:var(--gsaco-muted); font-size:11px; padding:7px 6px; } .search-caption { font-weight:600; }",
+      ".status { flex:0 0 auto; border-top:1px solid var(--gsaco-border); margin-top:8px; padding-top:7px; font-size:10px; color:var(--gsaco-muted); }",
+      ".drop-target > .folder-summary,.drop-target { background:rgba(26,115,232,.10); outline:1px dashed #1a73e8; outline-offset:-1px; }"
     ].join("\n");
     shadow.appendChild(style);
 
+    const wrap = createElement("div", "wrap");
     const panel = createElement("section", "panel");
     const header = createElement("div", "header");
     const brand = createElement("div", "brand");
     brand.append(createElement("strong", "", "AI Chat Organizer"));
     brand.append(createElement("small", "", "Папки для поисковых AI-диалогов"));
-    const add = createButton("+ Папка", "Создать папку верхнего уровня", () => addFolder(), "primary");
-    header.append(brand, add);
+    const headerActions = createElement("div", "header-actions");
+    headerActions.append(
+      createButton("+ Папка", "Создать папку верхнего уровня", () => addFolder(), "primary"),
+      createButton("⇄", "Свернуть органайзер и показать родной список Google", () => setOpen(false))
+    );
+    header.append(brand, headerActions);
 
     const searchWrap = createElement("label", "search-wrap");
     searchWrap.appendChild(createElement("span", "search-icon", "⌕"));
@@ -490,224 +603,370 @@
     const tree = createElement("div", "tree");
     const status = createElement("div", "status");
     panel.append(header, searchWrap, tree, status);
-    shadow.appendChild(panel);
-    ui = { tree: tree, status: status, search: search };
+    const bar = createButton("📁 Папки AI-чатов — открыть органайзер", "Показать органайзер вместо списка Google", () => setOpen(true), "bar");
+    bar.hidden = true;
+    wrap.append(panel, bar);
+    shadow.appendChild(wrap);
+    ui = { wrap: wrap, panel: panel, bar: bar, tree: tree, status: status, search: search };
     render();
   }
 
-  function countSearchLinks(container) {
-    return Array.from(container.querySelectorAll("a[href]"))
-      .map((anchor) => ({ anchor: anchor, url: normalizeUrl(anchor.href) }))
-      .filter((entry) => entry.url);
-  }
+  // ===================== Detection of Google's native history =====================
 
   function isRecentLabel(element) {
     if (!element || !element.isConnected) return false;
     const rect = element.getBoundingClientRect();
-    if (rect.width < 8 || rect.height < 8 || rect.bottom < 0 || rect.top > window.innerHeight) return false;
-
-    // Prefer rendered text. An aria-label can describe a hidden history
-    // control (for example "История режима ИИ") rather than the visible
-    // "Недавнее" heading, which previously produced a zero-sized false hit.
-    const renderedText = (element.textContent || "").replace(/\s+/g, " ").trim();
-    const ariaText = (element.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
-    const candidates = [renderedText, ariaText].filter(Boolean);
-    return candidates.some((label) => label.length <= 48 && RECENT_LABEL.test(label));
+    // No viewport check: the heading may be scrolled out of view while the list is primed.
+    if (rect.width < 8 || rect.height < 8) return false;
+    const renderedText = cleanText(element.textContent);
+    const ariaText = cleanText(element.getAttribute("aria-label"));
+    return [renderedText, ariaText].filter(Boolean).some((label) => label.length <= 48 && RECENT_LABEL.test(label));
   }
 
-  function isSidebarContainer(element, headingRect) {
-    if (!element || element === document.body || element === document.documentElement || !headingRect) return false;
-    const rect = element.getBoundingClientRect();
-    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    const maxWidth = Math.min(620, width * 0.65);
-    const headingLeft = headingRect.left;
-
-    // A valid container must begin at the heading's left edge and remain a
-    // bounded-width vertical rail containing the history section.
-    return rect.width >= 110 &&
-      rect.height >= 100 &&
-      rect.left >= headingLeft - 72 &&
-      rect.left <= headingLeft + 24 &&
-      rect.right >= headingRect.right &&
-      rect.right <= headingLeft + maxWidth &&
-      rect.width <= maxWidth;
-  }
-
-  function findRecentSection() {
+  function findRecentLabel() {
     const labels = Array.from(document.querySelectorAll("h1,h2,h3,button,[role='heading'],[role='button']"))
-      .filter(isRecentLabel);
-    if (!labels.length) return null;
+      .filter((el) => isRecentLabel(el) && el.getBoundingClientRect().left < 420);
+    const area = (el) => { const r = el.getBoundingClientRect(); return r.width * r.height; };
+    labels.sort((a, b) => area(b) - area(a));
+    return labels[0] || null;
+  }
 
-    const candidates = new Map();
-    labels.forEach((label) => {
-      const headingRect = label.getBoundingClientRect();
-      if (!headingRect.width || !headingRect.height) return;
+  function findScroller(from) {
+    let node = from.parentElement;
+    for (let depth = 0; depth < 16 && node && node !== document.body; depth += 1, node = node.parentElement) {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      const isLeftRail = rect.width >= 150 && rect.width <= 460 &&
+        rect.left >= -80 && rect.left <= 360 &&
+        rect.height >= 100 && rect.height <= 1600;
+      if (isLeftRail && /(auto|scroll|overlay)/.test(style.overflowY || "") &&
+          node.scrollHeight > node.clientHeight + 20) return node;
+    }
+    return null;
+  }
 
-      let ancestor = label.parentElement;
-      for (let depth = 1; depth <= 14 && ancestor && ancestor !== document.body; depth += 1) {
-        if (isSidebarContainer(ancestor, headingRect)) {
-          // The ancestor is already validated as the narrow rail around
-          // the visible Recent heading. Count its chat links directly:
-          // individual anchor coordinates can shift during Google's
-          // dynamic layout updates and caused found/not-found flicker.
-          const links = countSearchLinks(ancestor);
-          if (links.length >= 1) {
-            const semantic = /^(NAV|ASIDE)$/.test(ancestor.tagName) ||
-              ancestor.getAttribute("role") === "navigation" ? 1 : 0;
-            const rect = ancestor.getBoundingClientRect();
-            const score = links.length * 100 + semantic * 25 -
-              rect.width * 0.25 - rect.height * 0.005 - depth * 2;
-            const previous = candidates.get(ancestor);
-            if (!previous || score > previous.score) {
-              candidates.set(ancestor, {
-                container: ancestor,
-                heading: label,
-                links: links,
-                score: score,
-                explicit: true
-              });
-            }
-          }
+  function containsNavLabel(root) {
+    const nodes = root.querySelectorAll("a,button,[role='button'],[role='link'],[role='menuitem']");
+    for (let i = 0; i < Math.min(nodes.length, 80); i += 1) {
+      if (NAV_LABELS.has(normTitle(nodes[i].getAttribute("aria-label") || nodes[i].textContent))) return true;
+    }
+    return false;
+  }
+
+  // Region = the exact box Google uses for "Recent": the organizer is laid over it.
+  function findHistoryRegion(heading) {
+    const scroller = findScroller(heading);
+    let region = scroller || heading.parentElement;
+    let node = scroller ? scroller.parentElement : heading.parentElement;
+
+    // Use the nearest scroller for lazy loading, but let the overlay cover a
+    // bounded enclosing history box when Google separates the header and list.
+    for (let depth = 0; depth < 8 && node && node !== document.body; depth += 1, node = node.parentElement) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width > 460 || rect.left > 360 || rect.left < -120 || containsNavLabel(node)) break;
+      const boundedHistoryBox = rect.width >= 150 && rect.height >= 100 &&
+        rect.width <= 460 && rect.height <= 1600;
+      if (boundedHistoryBox && node.contains(heading) && (!scroller || node.contains(scroller))) region = node;
+    }
+    return { region: region, scroller: scroller };
+  }
+
+  function rowTitle(el) {
+    // Icon-font ligatures ("chat_bubble") may be separate lines or glued to the title.
+    let lines = String(el.innerText || el.textContent || "").split(/\n+/)
+      .map((line) => cleanText(line).replace(/^[a-z][a-z_]{2,39}(?=[^a-z_\s])/, ""))
+      .filter(Boolean);
+    if (lines.length > 1) {
+      const filtered = lines.filter((line) => !/^[a-z][a-z_]{2,39}$/.test(line));
+      if (filtered.length) lines = filtered;
+    }
+    return (lines[0] || cleanText(el.getAttribute("aria-label"))).slice(0, 180);
+  }
+
+  // Rows are NOT required to be <a href="...q=...">: any outermost clickable,
+  // row-sized element inside the history region counts.
+  function detectRows(root, heading) {
+    const rows = [];
+    let last = null;
+    const all = root.querySelectorAll("*");
+    for (let i = 0; i < all.length; i += 1) {
+      const el = all[i];
+      if (last && last.contains(el)) continue;
+      if (el === heading || el.contains(heading) || heading.contains(el)) continue;
+      if (/^(svg|path|script|style|img)$/i.test(el.tagName)) continue;
+      const len = (el.textContent || "").length;
+      if (len < 1 || len > 220) continue;
+      if (!el.matches(CLICKABLE) && window.getComputedStyle(el).cursor !== "pointer") continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 100 || rect.height < 20 || rect.height > 90) continue;
+      const title = rowTitle(el);
+      if (!title || title.length < 2 || NAV_LABELS.has(normTitle(title)) || NOISE_ROW.test(title) ||
+          RECENT_LABEL.test(title) || isJunkTitle(title)) continue;
+      rows.push(el);
+      last = el;
+    }
+    return rows;
+  }
+
+  function attributeId(el) {
+    const names = [
+      "data-session-thread-id",
+      "data-thread-id",
+      "data-conversation-id",
+      "data-chat-id",
+      "data-session-id",
+      "data-mtid"
+    ];
+    const selector = names.map((name) => "[" + name + "]").join(",");
+    const nodes = [el].concat(Array.from(el.querySelectorAll(selector)).slice(0, 8));
+    for (const node of nodes) {
+      for (const name of names) {
+        const value = cleanText(node.getAttribute(name));
+        if (value.length >= 4 && value.length <= 200 && /^[A-Za-z0-9._:-]+$/.test(value) &&
+            !/^(true|false|null|undefined)$/i.test(value)) return value;
+      }
+    }
+    return "";
+  }
+
+  function describeRow(el) {
+    const title = rowTitle(el);
+    const anchor = el.matches("a[href]") ? el : el.querySelector("a[href]");
+    let href = "";
+    if (anchor) {
+      try {
+        const url = new URL(anchor.getAttribute("href"), location.href);
+        if (!url.hash && url.protocol === "https:" && isGoogleHost(url.hostname) && toKey(url.href)) href = url.href;
+      } catch (_error) {}
+    }
+
+    const id = attributeId(el);
+    const urlKey = href ? toKey(href) : null;
+    const base = id ? "id:" + id : (urlKey || "t:" + normTitle(title));
+    return {
+      el: el, title: title, href: href, urlKey: urlKey, threadId: id,
+      base: base, hasUrl: !!urlKey, hasId: !!id, key: base
+    };
+  }
+
+  function scanHistory() {
+    const heading = findRecentLabel();
+    if (!heading) return null;
+    const found = findHistoryRegion(heading);
+    const rows = detectRows(found.region, heading).map(describeRow);
+    const seen = new Map();
+    rows.forEach((row) => {
+      const n = seen.get(row.base) || 0;
+      seen.set(row.base, n + 1);
+      row.key = n ? row.base + "|" + (n + 1) : row.base;
+    });
+    return {
+      heading: heading, region: found.region, scroller: found.scroller, rows: rows,
+      complete: !found.scroller || completeScrollers.has(found.scroller)
+    };
+  }
+
+  // ===================== Reconciling Google's list with local state =====================
+
+  function renameKeyInFolders(folders, from, to) {
+    (folders || []).forEach((folder) => {
+      folder.chat_urls = Array.from(new Set((folder.chat_urls || []).map((k) => (k === from ? to : k))));
+      renameKeyInFolders(folder.children || [], from, to);
+    });
+  }
+
+  function applyScan(scan) {
+    const now = Date.now();
+    const entries = state.chats;
+    const scanKeys = new Set(scan.rows.map((row) => row.key));
+    let changed = false;
+
+    scan.rows.forEach((row, index) => {
+      let item = entries[row.key];
+      if (!item) {
+        const candidates = Object.keys(entries).filter((key) => !scanKeys.has(key));
+        const wantedTitle = normTitle(row.title);
+        const byThread = row.threadId
+          ? candidates.find((key) => entries[key].threadId && entries[key].threadId === row.threadId)
+          : null;
+        const byUrl = row.urlKey
+          ? candidates.find((key) => {
+              const oldUrl = entries[key].url;
+              return oldUrl && toKey(oldUrl) === row.urlKey && normTitle(entries[key].title) === wantedTitle;
+            })
+          : null;
+        const byTitle = candidates.find((key) => normTitle(entries[key].title) === wantedTitle);
+        const oldKey = byThread || byUrl || byTitle;
+
+        if (oldKey) {
+          item = entries[oldKey];
+          delete entries[oldKey];
+          entries[row.key] = item;
+          renameKeyInFolders(state.folders, oldKey, row.key);
+        } else {
+          item = { title: row.title, text: "", updatedAt: now, url: row.href,
+            threadId: row.threadId || "", order: index, missing: false };
+          entries[row.key] = item;
         }
-        ancestor = ancestor.parentElement;
+        changed = true;
       }
+
+      if (item.title !== row.title || item.order !== index || item.missing ||
+          (row.href && item.url !== row.href) || (row.threadId && item.threadId !== row.threadId)) changed = true;
+      item.title = row.title;
+      item.order = index;
+      item.missing = false;
+      if (row.href) item.url = row.href;
+      if (row.threadId) item.threadId = row.threadId;
     });
 
-    if (!candidates.size) return null;
-    return Array.from(candidates.values()).sort((a, b) => b.score - a.score)[0];
-  }
-
-  function getRowForAnchor(anchor, container) {
-    const semanticRow = anchor.closest("li,[role='listitem']");
-    if (semanticRow && semanticRow !== container && container.contains(semanticRow)) return semanticRow;
-    const parent = anchor.parentElement;
-    if (parent && parent !== container && parent.querySelectorAll("a[href]").length === 1 &&
-        parent.querySelectorAll("button,[role='button']").length === 0 && parent.textContent.length < 500) return parent;
-    return anchor;
-  }
-
-  function hideNativeLinks(section) {
-    if (!section.explicit) return;
-    section.links.forEach((entry) => {
-      const row = getRowForAnchor(entry.anchor, section.container);
-      if (!row || row === section.container || row === host || row.contains(host)) return;
-      if (!hiddenRows.has(row)) hiddenRows.set(row, { style: row.getAttribute("style"), hidden: row.hasAttribute("hidden") });
-      row.style.setProperty("display", "none", "important");
-    });
-  }
-
-  function restoreHiddenRows() {
-    hiddenRows.forEach((original, row) => {
-      if (!row || !row.isConnected) return;
-      if (original.style === null) row.removeAttribute("style");
-      else row.setAttribute("style", original.style);
-      if (original.hidden) row.setAttribute("hidden", "");
-      else row.removeAttribute("hidden");
-    });
-    hiddenRows.clear();
-  }
-
-  function normalizedVisibleLabel(element) {
-    return (element && (
-      element.getAttribute("aria-label") ||
-      element.innerText ||
-      element.textContent ||
-      element.getAttribute("title") ||
-      ""
-    )).replace(/\s+/g, " ").trim().toLocaleLowerCase();
-  }
-
-  function isVisibleSidebarElement(element) {
-    if (!element || !element.isConnected) return false;
-    const rect = element.getBoundingClientRect();
-    if (rect.width < 8 || rect.height < 8 || rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden";
-  }
-
-  function findThreadSearchControl() {
-    const labels = new Set([
-      "поиск цепочек",
-      "thread search",
-      "search threads"
-    ]);
-    const candidates = Array.from(document.querySelectorAll(
-      "a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex],span"
-    )).filter((element) => {
-      if (!isVisibleSidebarElement(element)) return false;
-      const rect = element.getBoundingClientRect();
-      if (rect.left > 360 || rect.right > 620) return false;
-      return labels.has(normalizedVisibleLabel(element));
-    });
-
-    if (!candidates.length) return null;
-
-    const resolved = candidates.map((element) => {
-      const interactive = element.closest("a,button,[role='button'],[role='link'],[role='menuitem'],[tabindex]");
-      const target = interactive || element;
-      const rect = target.getBoundingClientRect();
-      const semantic = /^(A|BUTTON)$/.test(target.tagName) ||
-        /^(button|link|menuitem)$/.test(target.getAttribute("role") || "") ? 1 : 0;
-      return { target, area: rect.width * rect.height, semantic };
-    });
-    resolved.sort((a, b) => b.semantic - a.semantic || a.area - b.area);
-    return resolved[0].target;
-  }
-
-  function findSidebarNavigationRow(control) {
-    if (!control) return null;
-    let row = control;
-    let parent = control.parentElement;
-    for (let depth = 0; depth < 4 && parent && parent !== document.body; depth += 1) {
-      const rect = parent.getBoundingClientRect();
-      const isNavigationRow = rect.width >= 160 && rect.width <= 420 &&
-        rect.height >= 24 && rect.height <= 90 &&
-        rect.left >= -24 && rect.left <= 120;
-      if (!isNavigationRow) break;
-      row = parent;
-      parent = parent.parentElement;
+    // Keep records absent from the completed Google list; never auto-delete user data.
+    if (scan.complete && scan.rows.length) {
+      Object.keys(entries).forEach((key) => {
+        if (scanKeys.has(key)) return;
+        if (!entries[key].missing) { entries[key].missing = true; changed = true; }
+      });
     }
-    return row;
+    return changed;
   }
 
-  function mountInterface(section) {
-    if (currentContainer !== section.container) {
-      restoreHiddenRows();
-      if (host) host.remove();
-      currentContainer = section.container;
-      host = null;
-      shadow = null;
-      ui = null;
+  function findNativeRow(key, title) {
+    const live = lastScan && lastScan.rows.find((row) => row.key === key && row.el.isConnected);
+    if (live) return live.el;
+    const fresh = scanHistory();
+    if (!fresh) return null;
+    const match = fresh.rows.find((row) => row.key === key) || fresh.rows.find((row) => normTitle(row.title) === normTitle(title));
+    return match ? match.el : null;
+  }
+
+  function clickNative(row) {
+    const anchor = row.matches("a[href]") ? row : row.querySelector("a[href]");
+    if (anchor) { anchor.click(); return; }
+    ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((type) => {
+      row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 }));
+    });
+  }
+
+  function openChat(key) {
+    const item = state.chats[key] || {};
+    const row = findNativeRow(key, item.title);
+    if (row) { clickNative(row); return; }
+    if (item.url) { location.assign(item.url); return; }
+    setStatus("Этого чата сейчас нет в списке «Недавнее» Google. Раскройте «Недавнее» и повторите.");
+  }
+
+  // ===================== Overlay layout =====================
+
+  function detectBackground(el) {
+    for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+      const m = /rgba?\(([^)]+)\)/.exec(window.getComputedStyle(node).backgroundColor || "");
+      if (!m) continue;
+      const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number);
+      if (p.length >= 3 && (p.length < 4 || p[3] >= 0.9)) {
+        const lum = (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255;
+        return { css: "rgb(" + p[0] + "," + p[1] + "," + p[2] + ")", dark: lum < 0.45 };
+      }
     }
+    return null;
+  }
+
+  function ensureInterface() {
     if (!host) createInterface();
+    if (!host.isConnected) (document.body || document.documentElement).appendChild(host);
+  }
 
-    // Find the actual "Поиск цепочек" navigation row across the page. Do not
-    // promote it to a broad ancestor: that ancestor can also contain Settings
-    // and the entire history panel, which moved the organizer to the bottom.
-    const threadSearch = findThreadSearchControl();
-    const threadSearchRow = findSidebarNavigationRow(threadSearch);
-
-    let targetRow = threadSearchRow;
-    let placement = "after-thread-search";
-    if (!targetRow) {
-      const recentControl = section.heading.closest("button,[role='button']") || section.heading;
-      targetRow = findSidebarNavigationRow(recentControl) || recentControl;
-      placement = "before-recent";
+  function positionHost() {
+    if (!host || !ui || !region || !region.isConnected) return false;
+    const r = region.getBoundingClientRect();
+    if (r.width < 150 || r.height < 100 || r.width > 460 || r.left > 360) {
+      host.style.display = "none";
+      return false;
     }
 
-    host.dataset.gsacoMountTarget = placement;
-    if (targetRow && targetRow.parentElement) {
-      const shouldBeAfter = placement === "after-thread-search";
-      const isCorrect = host.parentElement === targetRow.parentElement &&
-        (shouldBeAfter ? targetRow.nextElementSibling === host : targetRow.previousElementSibling === host);
-      if (!isCorrect) {
-        if (shouldBeAfter) targetRow.after(host);
-        else targetRow.before(host);
+    const open = uiPrefs.open;
+    const height = open ? r.height : 34;
+    host.style.display = "block";
+    host.style.left = Math.round(r.left) + "px";
+    host.style.width = Math.round(r.width) + "px";
+    host.style.top = Math.round(open ? r.top : r.bottom - height) + "px";
+    host.style.height = Math.round(height) + "px";
+
+    const bg = detectBackground(region);
+    const dark = bg ? bg.dark : !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    ui.wrap.classList.toggle("dark", dark);
+    host.style.background = open && bg ? bg.css : "transparent";
+    ui.panel.hidden = !open;
+    ui.bar.hidden = open;
+    return true;
+  }
+
+  function setNativeHidden(hide) {
+    const target = hide && region && region.isConnected ? region : null;
+    if (nativeHidden && nativeHidden.el !== target) {
+      const saved = nativeHidden;
+      if (saved.el.isConnected) {
+        if (saved.value) saved.el.style.setProperty("visibility", saved.value, saved.priority);
+        else saved.el.style.removeProperty("visibility");
       }
-    } else if (!host.isConnected) {
-      section.heading.before(host);
-      host.dataset.gsacoMountTarget = "before-recent-heading";
+      nativeHidden = null;
     }
+    if (target && !nativeHidden) {
+      nativeHidden = { el: target, value: target.style.getPropertyValue("visibility"), priority: target.style.getPropertyPriority("visibility") };
+      target.style.setProperty("visibility", "hidden", "important");
+    }
+  }
+
+  function setOpen(value) {
+    uiPrefs.open = !!value;
+    saveUiPrefs();
+    const positioned = positionHost();
+    setNativeHidden(uiPrefs.open && !!(lastScan && lastScan.complete) && positioned);
+  }
+
+  function teardown() {
+    setNativeHidden(false);
+    if (host) host.remove();
+    host = null; shadow = null; ui = null; region = null; lastScan = null;
+  }
+
+  // ===================== Priming lazy-loaded history =====================
+
+  function finishPriming(scroller, progress, stable) {
+    if (scroller.isConnected) scroller.scrollTop = progress.initialScrollTop;
+    if (stable) completeScrollers.add(scroller);
+    else primedScrollers.delete(scroller);   // try again on a later scan
+    activePriming = null;
+    scheduleScan();
+  }
+
+  function stepPriming(scroller, heading, progress) {
+    if (!scroller.isConnected) { finishPriming(scroller, progress, false); return; }
+    scroller.scrollTop = scroller.scrollHeight;
+    progress.steps += 1;
+    window.setTimeout(() => {
+      const count = detectRows(scroller, heading).length;
+      if (count > progress.previousCount) { progress.previousCount = count; progress.stableSteps = 0; }
+      else progress.stableSteps += 1;
+      if (progress.stableSteps >= 4) finishPriming(scroller, progress, true);
+      else if (progress.steps >= 80) finishPriming(scroller, progress, false);
+      else stepPriming(scroller, heading, progress);
+    }, 300);
+  }
+
+  function startPriming(scan) {
+    const scroller = scan.scroller;
+    if (!scroller || primedScrollers.has(scroller) || completeScrollers.has(scroller) || activePriming) return;
+    primedScrollers.add(scroller);
+    activePriming = scroller;
+    stepPriming(scroller, scan.heading, { initialScrollTop: scroller.scrollTop, previousCount: scan.rows.length, stableSteps: 0, steps: 0 });
+  }
+
+  // ===================== Diagnostics =====================
+
+  function saveUiPrefs() {
+    const value = {};
+    value[UI_KEY] = { open: uiPrefs.open, diagHidden: uiPrefs.diagHidden };
+    storageQueue = storageQueue.then(() => storageSet(value)).catch(() => {});
   }
 
   function removeDetectionDiagnostic() {
@@ -716,315 +975,191 @@
     diagnosticInfo = null;
   }
 
-  function isDiagnosticMutation(mutation) {
-    if (!diagnosticHost) return false;
-    if (diagnosticHost === mutation.target || diagnosticHost.contains(mutation.target)) return true;
+  function isOwnNode(node) {
+    return !!node && ((diagnosticHost && (node === diagnosticHost || diagnosticHost.contains(node))) ||
+      (host && (node === host || host.contains(node))));
+  }
+
+  function isOwnMutation(mutation) {
+    if (isOwnNode(mutation.target)) return true;
     if (mutation.type === "childList") {
-      const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
-      if (changedNodes.length && changedNodes.every((node) =>
-        node === diagnosticHost || diagnosticHost.contains(node)
-      )) return true;
+      const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
+      return nodes.length > 0 && nodes.every(isOwnNode);
     }
     return false;
   }
 
-  function updateDetectionDiagnostic(section) {
-    let pageUrl;
-    try { pageUrl = new URL(location.href); }
-    catch (_error) { removeDetectionDiagnostic(); return; }
+  function describeNode(el) {
+    const r = el.getBoundingClientRect();
+    const cs = window.getComputedStyle(el);
+    const attrs = Array.from(el.attributes).map((a) => a.name).filter((n) => n !== "class" && n !== "style").slice(0, 12).join(",");
+    const role = el.getAttribute("role");
+    return el.tagName.toLowerCase() + (role ? "[role=" + role + "]" : "") + " attrs=" + attrs +
+      " w=" + Math.round(r.width) + " h=" + Math.round(r.height) + " cursor=" + cs.cursor +
+      " overflowY=" + cs.overflowY + " textLen=" + cleanText(el.textContent).length;
+  }
 
-    const supportedDomains = [
-      "google.com", "google.ru", "google.se", "google.co.uk", "google.de",
-      "google.fr", "google.es", "google.ca", "google.com.au", "google.co.in"
-    ];
-    const supportedGoogle = supportedDomains.some((domain) =>
-      pageUrl.hostname === domain || pageUrl.hostname.endsWith("." + domain)
-    );
-    if (!supportedGoogle || pageUrl.pathname !== "/search" || diagnosticDismissed) {
-      removeDetectionDiagnostic();
-      return;
+  // Anonymised outline (no titles, no query values) to send back for debugging.
+  function buildSnapshot(scan) {
+    const lines = ["--- DOM snapshot (v" + VERSION + ") ---"];
+    if (scan) {
+      lines.push("Цепочка предков заголовка:");
+      let node = scan.heading;
+      for (let i = 0; i < 9 && node && node !== document.body; i += 1, node = node.parentElement) lines.push("  " + describeNode(node));
+      scan.rows.slice(0, 3).forEach((row, index) => {
+        lines.push("Строка " + (index + 1) + ": " + describeNode(row.el) + " titleLen=" + row.title.length +
+          " key=" + (row.hasUrl ? "url" : row.hasId ? "id" : "title"));
+        Array.from(row.el.querySelectorAll("*")).slice(0, 6).forEach((child) => lines.push("    " + describeNode(child)));
+        const anchor = row.el.matches("a[href]") ? row.el : row.el.querySelector("a[href]");
+        if (anchor) {
+          try {
+            const u = new URL(anchor.getAttribute("href"), location.href);
+            lines.push("    href: " + u.pathname + " params=" + Array.from(u.searchParams.keys()).join(",") + " hash=" + (u.hash ? "да" : "нет"));
+          } catch (_error) { lines.push("    href: не разобран"); }
+        }
+      });
     }
+    const thread = document.querySelector("[data-session-thread-id]");
+    lines.push("data-session-thread-id на странице: " + (thread ? "да, длина " + (thread.getAttribute("data-session-thread-id") || "").length : "нет"));
+    const railLinks = Array.from(document.querySelectorAll("a[href]")).filter((a) => a.getBoundingClientRect().left < 300).slice(0, 8);
+    lines.push("Ссылки у левого края (первые " + railLinks.length + "):");
+    railLinks.forEach((a) => {
+      try {
+        const u = new URL(a.href);
+        lines.push("  " + u.hostname + u.pathname + " params=" + Array.from(u.searchParams.keys()).join(",") + " hash=" + (u.hash ? "да" : "нет"));
+      } catch (_error) {}
+    });
+    return lines.join("\n");
+  }
 
+  function buildDiagnosticText(scan) {
+    const rows = scan ? scan.rows : [];
+    const url = rows.filter((r) => r.hasUrl).length;
+    const id = rows.filter((r) => r.hasId).length;
+    const keys = Object.keys(state.chats);
+    const assigned = new Set(collectAssignedUrls(state.folders));
+    const titles = new Map();
+    rows.forEach((r) => titles.set(normTitle(r.title), (titles.get(normTitle(r.title)) || 0) + 1));
+    const repeated = Array.from(titles.values()).filter((n) => n > 1).length;
+    const lines = [
+      "Версия " + VERSION + " · скрипт ЗАГРУЖЕН",
+      "Страница: " + location.pathname + " · " + location.hostname + " · AI-страница: " + (isCurrentAiPage() ? "да" : "нет"),
+      "Ширина viewport: " + Math.round(Math.max(document.documentElement.clientWidth, window.innerWidth || 0)) + " CSS px"
+    ];
+    if (scan) {
+      const hr = scan.heading.getBoundingClientRect();
+      const rr = scan.region.getBoundingClientRect();
+      lines.push("Заголовок «Недавнее»: НАЙДЕН x=" + Math.round(hr.left) + " y=" + Math.round(hr.top));
+      lines.push("Область истории: " + scan.region.tagName.toLowerCase() + " x=" + Math.round(rr.left) + " w=" + Math.round(rr.width) +
+        " h=" + Math.round(rr.height) + (scan.scroller ? " · прокрутка " + scan.scroller.scrollHeight + "/" + scan.scroller.clientHeight : " · без прокрутки"));
+      lines.push("Строк в истории Google: " + rows.length + " (по URL " + url + " · по id " + id + " · по названию " + (rows.length - url - id) + ")");
+      lines.push("Список загружен полностью: " + (scan.complete ? "да" : "нет") + (activePriming ? " · идёт подгрузка…" : ""));
+      lines.push("Повторяющихся названий: " + repeated + " (ключи различаются суффиксом, записи не склеиваются)");
+    } else {
+      lines.push("Заголовок «Недавнее»: НЕ НАЙДЕН");
+    }
+    const missingCount = keys.filter((k) => state.chats[k].missing).length;
+    lines.push("В базе: " + keys.length + " · в папках " + assigned.size + " · вне текущей истории " + missingCount + " · проиндексировано " + keys.filter((k) => state.chats[k].text).length);
+    lines.push("Органайзер: " + (host && host.isConnected ? (uiPrefs.open ? "заменяет список" : "свёрнут") : "НЕ ВСТАВЛЕН") +
+      " · родной список скрыт: " + (nativeHidden ? "да" : "нет"));
+    rows.slice(0, 3).forEach((row, i) => {
+      lines.push("  #" + (i + 1) + " <" + row.el.tagName.toLowerCase() + (row.el.getAttribute("role") ? " role=" + row.el.getAttribute("role") : "") +
+        "> ключ: " + (row.hasUrl ? "URL" : row.hasId ? "id" : "название") + " · название " + row.title.length + " симв.");
+    });
+    return lines.join("\n");
+  }
+
+  function copyText(text, button) {
+    const done = (ok) => { button.textContent = ok ? "Скопировано" : "Выделите текст"; window.setTimeout(() => { button.textContent = button.dataset.label; }, 1500); };
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error("no clipboard"))).then(() => done(true), () => {
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      temp.style.cssText = "position:fixed;left:-10000px;top:0";
+      document.body.appendChild(temp);
+      temp.select();
+      const ok = document.execCommand("copy");
+      temp.remove();
+      done(ok);
+    });
+  }
+
+  function updateDetectionDiagnostic(scan) {
+    if (!isGoogleHost(location.hostname) || location.pathname !== "/search" || uiPrefs.diagHidden) { removeDetectionDiagnostic(); return; }
     if (!diagnosticHost || !diagnosticHost.isConnected) {
       diagnosticHost = document.createElement("div");
       diagnosticHost.id = "gsaco-detection-diagnostic";
       diagnosticHost.style.cssText = "position:fixed;top:76px;right:12px;z-index:2147483647;width:min(380px,calc(100vw - 24px));max-height:42vh;box-sizing:border-box;pointer-events:auto;";
       const root = diagnosticHost.attachShadow({ mode: "open" });
       const style = document.createElement("style");
-      style.textContent = ":host{all:initial;pointer-events:auto}section{font:12px/1.4 Arial,sans-serif;background:#202124;color:#e8eaed;border:1px solid #fbbc04;border-radius:9px;box-shadow:0 3px 16px #0008;padding:10px;max-height:42vh;overflow:auto;pointer-events:auto}header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}strong{color:#fbbc04;font-size:12px}button{font:11px Arial,sans-serif;color:#e8eaed;background:#3c4043;border:1px solid #5f6368;border-radius:5px;padding:4px 7px;cursor:pointer}button:hover{background:#4b5055}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.45 Consolas,monospace;color:#e8eaed;user-select:text}";
+      style.textContent = ":host{all:initial;pointer-events:auto}section{font:12px/1.4 Arial,sans-serif;background:#202124;color:#e8eaed;border:1px solid #fbbc04;border-radius:9px;box-shadow:0 3px 16px #0008;padding:10px;max-height:42vh;overflow:auto}header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}strong{color:#fbbc04;font-size:12px}button{font:11px Arial,sans-serif;color:#e8eaed;background:#3c4043;border:1px solid #5f6368;border-radius:5px;padding:4px 7px;cursor:pointer}button:hover{background:#4b5055}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.45 Consolas,monospace;user-select:text}";
       const panel = document.createElement("section");
       const header = document.createElement("header");
       const title = document.createElement("strong");
       title.textContent = "AI Chat Organizer — диагностика";
       const actions = document.createElement("div");
       actions.style.cssText = "display:flex;gap:5px";
-      const copyButton = document.createElement("button");
-      copyButton.type = "button";
-      copyButton.textContent = "Копировать";
-      copyButton.addEventListener("click", async () => {
-        const text = diagnosticInfo ? diagnosticInfo.textContent : "";
-        try {
-          await navigator.clipboard.writeText(text);
-          copyButton.textContent = "Скопировано";
-        } catch (_error) {
-          const temporary = document.createElement("textarea");
-          temporary.value = text;
-          temporary.style.cssText = "position:fixed;left:-10000px;top:0";
-          document.body.appendChild(temporary);
-          temporary.select();
-          const copied = document.execCommand("copy");
-          temporary.remove();
-          copyButton.textContent = copied ? "Скопировано" : "Выделите текст";
-        }
-      });
-      const closeButton = document.createElement("button");
-      closeButton.type = "button";
-      closeButton.textContent = "Скрыть";
-      closeButton.addEventListener("click", () => {
-        diagnosticDismissed = true;
-        removeDetectionDiagnostic();
-      });
-      actions.append(copyButton, closeButton);
+      const makeButton = (label, handler) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.textContent = label; b.dataset.label = label;
+        b.addEventListener("click", () => handler(b));
+        return b;
+      };
+      actions.append(
+        makeButton("Копировать", (b) => copyText(diagnosticInfo ? diagnosticInfo.textContent : "", b)),
+        makeButton("Снимок DOM", (b) => copyText((diagnosticInfo ? diagnosticInfo.textContent : "") + "\n\n" + diagnosticSnapshot(), b)),
+        makeButton("Скрыть", () => { uiPrefs.diagHidden = true; saveUiPrefs(); removeDetectionDiagnostic(); })
+      );
       header.append(title, actions);
       diagnosticInfo = document.createElement("pre");
       panel.append(header, diagnosticInfo);
       root.append(style, panel);
       document.documentElement.appendChild(diagnosticHost);
     }
-
-    const labels = Array.from(document.querySelectorAll("h1,h2,h3,button,[role='heading'],[role='button']"))
-      .filter(isRecentLabel);
-    const allLinks = countSearchLinks(document);
-    const width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-    const lines = [
-      "Скрипт расширения: ЗАГРУЖЕН",
-      "Страница: " + pageUrl.pathname + " · " + pageUrl.hostname,
-      "Ширина viewport: " + Math.round(width) + " CSS px",
-      "Ссылок Google Search с q: " + allLinks.length,
-      "Видимых заголовков Recent / Недавнее: " + labels.length
-    ];
-
-    if (section) {
-      const rect = section.container.getBoundingClientRect();
-      const headingRect = section.heading.getBoundingClientRect();
-      lines.push("Кандидат панели истории: НАЙДЕН");
-      lines.push("Контейнер: " + section.container.tagName.toLowerCase() +
-        " x=" + Math.round(rect.left) +
-        " w=" + Math.round(rect.width) +
-        " h=" + Math.round(rect.height) +
-        " links=" + section.links.length);
-      lines.push("Заголовок: «" + (section.heading.textContent || "").replace(/\s+/g, " ").trim().slice(0, 45) +
-        "» x=" + Math.round(headingRect.left) + " y=" + Math.round(headingRect.top));
-      const hostRect = host && host.getBoundingClientRect();
-      lines.push("Органайзер: " + (host && host.isConnected ? "ВСТАВЛЕН В DOM" : "НЕ ВСТАВЛЕН"));
-      if (host && host.isConnected && hostRect) {
-        lines.push("Позиция органайзера: x=" + Math.round(hostRect.left) +
-          " y=" + Math.round(hostRect.top) +
-          " w=" + Math.round(hostRect.width) +
-          " h=" + Math.round(hostRect.height));
-        lines.push("Родитель органайзера: " + host.parentElement.tagName.toLowerCase() +
-          " id=" + (host.parentElement.id || "—"));
-        lines.push("Точка вставки: " + (host.dataset.gsacoMountTarget || "не определена"));
-      }
-    } else {
-      lines.push("Кандидат панели истории: НЕ НАЙДЕН");
-    }
-
-    labels.slice(0, 5).forEach((label, index) => {
-      const labelRect = label.getBoundingClientRect();
-      const labelText = (label.textContent || label.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim().slice(0, 45);
-      lines.push("");
-      lines.push("Видимый заголовок " + (index + 1) + ": «" + labelText + "» x=" + Math.round(labelRect.left) +
-        " y=" + Math.round(labelRect.top) + " w=" + Math.round(labelRect.width) +
-        " h=" + Math.round(labelRect.height));
-      let ancestor = label.parentElement;
-      let depth = 0;
-      while (ancestor && ancestor !== document.body && depth < 10) {
-        const rect = ancestor.getBoundingClientRect();
-        const links = countSearchLinks(ancestor);
-        if (links.length || depth < 2) {
-          lines.push("  " + ancestor.tagName.toLowerCase() +
-            " x=" + Math.round(rect.left) +
-            " w=" + Math.round(rect.width) +
-            " h=" + Math.round(rect.height) +
-            " links=" + links.length);
-        }
-        ancestor = ancestor.parentElement;
-        depth += 1;
-      }
-    });
-
-    if (!labels.length && allLinks.length) {
-      lines.push("");
-      lines.push("Примеры ссылок:");
-      allLinks.slice(0, 5).forEach((entry) => {
-        const rect = entry.anchor.getBoundingClientRect();
-        lines.push("  x=" + Math.round(rect.left) + " y=" + Math.round(rect.top) +
-          " · " + (entry.anchor.textContent || "").replace(/\s+/g, " ").trim().slice(0, 35));
-      });
-    }
-
-
-    const localEntries = Object.entries(state.chats);
-    const titleGroups = new Map();
-    localEntries.forEach(([url, item]) => {
-      const title = (item.title || titleForUrl(url)).replace(/\s+/g, " ").trim();
-      const key = title.toLocaleLowerCase();
-      if (!titleGroups.has(key)) titleGroups.set(key, { title, urls: [] });
-      titleGroups.get(key).urls.push(url);
-    });
-    const repeatedTitles = Array.from(titleGroups.values()).filter((group) => group.urls.length > 1);
-    const indexedCount = localEntries.filter(([, item]) => item.text).length;
-    lines.push("");
-    lines.push("Локальная база: " + localEntries.length + " URL · " + indexedCount + " проиндексировано");
-    lines.push("Повторяющиеся названия: " + repeatedTitles.length + " групп (записи не объединялись)");
-    repeatedTitles.slice(0, 6).forEach((group) => {
-      const queries = new Set();
-      let aiMode = 0;
-      let withVsrid = 0;
-      group.urls.forEach((url) => {
-        try {
-          const parsed = new URL(url);
-          queries.add((parsed.searchParams.get("q") || "").trim().toLocaleLowerCase());
-          if (isLikelyAiUrl(url)) aiMode += 1;
-          if (parsed.searchParams.has("vsrid")) withVsrid += 1;
-        } catch (_error) {}
-      });
-      lines.push("  «" + group.title.slice(0, 42) + "» ×" + group.urls.length +
-        "; разных q=" + queries.size +
-        "; AI-признак=" + aiMode + "/" + group.urls.length +
-        "; vsrid=" + withVsrid + "/" + group.urls.length);
-    });
-
-    const diagnosticText = lines.join("\n");
-    if (diagnosticInfo.textContent !== diagnosticText) diagnosticInfo.textContent = diagnosticText;
+    diagnosticSnapshot = () => buildSnapshot(lastScan);
+    const text = buildDiagnosticText(scan);
+    if (diagnosticInfo.textContent !== text) diagnosticInfo.textContent = text;
   }
 
-  function recordDiscoveredChat(url, title) {
-    if (!state.chats[url]) {
-      state.chats[url] = { title: title || titleForUrl(url), text: "", updatedAt: Date.now() };
-      return true;
-    }
-    const item = state.chats[url];
-    if (title && title.length > 1 && title.length < 180 &&
-        (!item.title || item.title === titleForUrl(url) || item.title.length > title.length)) {
-      if (item.title !== title) { item.title = title; return true; }
-    }
-    return false;
+  // ===================== Capturing the open chat =====================
+
+  function pageTitle() {
+    return (document.title || "").replace(/\s*-\s*Google (Search|Поиск)\s*$/i, "").trim();
   }
 
-  function bindNativeAnchorDrag(anchor, url) {
-    if (dragBoundAnchors.has(anchor)) return;
-    dragBoundAnchors.add(anchor);
-    anchor.addEventListener("dragstart", (event) => {
-      event.dataTransfer.effectAllowed = "copy";
-      event.dataTransfer.setData("text/x-google-ai-chat-url", url);
-      event.dataTransfer.setData("text/uri-list", url);
-      event.dataTransfer.setData("text/plain", url);
-    });
+  function currentThreadId() {
+    const node = document.querySelector("[data-session-thread-id]");
+    return node ? node.getAttribute("data-session-thread-id") || "" : "";
   }
 
-  function findHistoryScrollContainer(section) {
-    const firstAnchor = section.links[0] && section.links[0].anchor;
-    if (!firstAnchor) return null;
-    let node = firstAnchor.parentElement;
-    for (let depth = 0; depth < 14 && node; depth += 1) {
-      const style = window.getComputedStyle(node);
-      const scrollable = /(auto|scroll|overlay)/.test(style.overflowY || "") &&
-        node.scrollHeight > node.clientHeight + 60;
-      if (scrollable) return node;
-      if (node === section.container) break;
-      node = node.parentElement;
-    }
-    return null;
+  function isCurrentRow(el) {
+    if (el.getAttribute("aria-current") || el.getAttribute("aria-selected") === "true") return true;
+    if (el.querySelector("[aria-current],[aria-selected='true']")) return true;
+    const anchor = el.matches("a[href]") ? el : el.querySelector("a[href]");
+    return !!(anchor && anchor.href === location.href);
   }
 
-  function finishHistoryPriming(scroller, initialScrollTop) {
-    if (scroller && scroller.isConnected) scroller.scrollTop = initialScrollTop;
-    activeHistoryPriming = null;
-    scheduleScan();
-  }
-
-  function advanceHistoryPriming(scroller, sectionContainer, progress) {
-    if (!scroller || !scroller.isConnected || !sectionContainer || !sectionContainer.isConnected) {
-      finishHistoryPriming(scroller, progress.initialScrollTop);
-      return;
+  function resolveCurrentKey() {
+    const threadId = currentThreadId();
+    if (threadId) {
+      const byThread = Object.keys(state.chats).find((k) => state.chats[k].threadId === threadId);
+      if (byThread) return byThread;
     }
-
-    scroller.scrollTop = scroller.scrollHeight;
-    progress.steps += 1;
-    window.setTimeout(() => {
-      const count = countSearchLinks(sectionContainer).length;
-      if (count > progress.previousCount) {
-        progress.previousCount = count;
-        progress.stableSteps = 0;
-      } else {
-        progress.stableSteps += 1;
-      }
-
-      // Stop after the end of the currently available list or a safety cap.
-      if (progress.stableSteps >= 3 || progress.steps >= 16) {
-        finishHistoryPriming(scroller, progress.initialScrollTop);
-        return;
-      }
-      advanceHistoryPriming(scroller, sectionContainer, progress);
-    }, 260);
-  }
-
-  function startHistoryPriming(section) {
-    const scroller = findHistoryScrollContainer(section);
-    if (!scroller || primedHistoryScrollers.has(scroller) || activeHistoryPriming) return;
-    primedHistoryScrollers.add(scroller);
-
-    const progress = {
-      initialScrollTop: scroller.scrollTop,
-      previousCount: countSearchLinks(section.container).length,
-      stableSteps: 0,
-      steps: 0
-    };
-    activeHistoryPriming = scroller;
-    advanceHistoryPriming(scroller, section.container, progress);
-  }
-
-  function scanForChats() {
-    const section = findRecentSection();
-    let changed = false;
-    if (!section && currentContainer) {
-      // If Google collapses/replaces the history rail, remove the organizer
-      // rather than leaving it floating over the conversation/results pane.
-      restoreHiddenRows();
-      if (host) host.remove();
-      currentContainer = null;
-      host = null;
-      shadow = null;
-      ui = null;
+    if (lastScan) {
+      const row = lastScan.rows.find((r) => isCurrentRow(r.el));
+      if (row && state.chats[row.key]) return row.key;
     }
-    if (section) {
-      mountInterface(section);
-      section.links.forEach((entry) => {
-        if (recordDiscoveredChat(entry.url, titleFromAnchor(entry.anchor, entry.url))) changed = true;
-        bindNativeAnchorDrag(entry.anchor, entry.url);
-      });
-
-      // Let Google's own lazy-loaded history finish populating before hiding
-      // its rows. This imports older sidebar links without opening each chat.
-      if (!activeHistoryPriming) startHistoryPriming(section);
-      if (!activeHistoryPriming) hideNativeLinks(section);
+    const urlKey = toKey(location.href);
+    if (urlKey && state.chats[urlKey]) return urlKey;
+    const title = normTitle(pageTitle());
+    if (title) {
+      const same = Object.keys(state.chats).filter((k) => normTitle(state.chats[k].title) === title);
+      if (same.length === 1) return same[0];
     }
-    updateDetectionDiagnostic(section);
-    const currentUrl = normalizeUrl(location.href);
-    if (currentUrl && isCurrentAiPage()) {
-      const title = (document.title || "").replace(/\s*-\s*Google Search\s*$/i, "").trim() || titleForUrl(currentUrl);
-      if (recordDiscoveredChat(currentUrl, title)) changed = true;
-      scheduleCapture();
-    }
-    if (changed) { persist(); render(); }
-    else if (ui && !ui.tree.childElementCount) render();
+    return urlKey;
   }
 
   function extractPageText() {
-    const main = document.querySelector("main,[role='main']");
-    const source = main || document.body;
+    const source = document.querySelector("main,[role='main']") || document.body;
     if (!source) return "";
     const clone = source.cloneNode(true);
     clone.querySelectorAll("#google-search-ai-chat-organizer,script,style,noscript,nav,header,footer").forEach((node) => node.remove());
@@ -1038,17 +1173,50 @@
   }
 
   function captureCurrentPage() {
-    const url = normalizeUrl(location.href);
-    if (!url || !isCurrentAiPage()) return;
+    if (!isCurrentAiPage()) return;
+    const key = resolveCurrentKey();
+    if (!key) return;
     const text = extractPageText();
-    const previous = state.chats[url] || { title: titleForUrl(url), text: "", updatedAt: 0 };
-    if (text.length < 40 || text === previous.text) return;
-    const title = (document.title || "").replace(/\s*-\s*Google Search\s*$/i, "").trim();
-    state.chats[url] = { title: title || previous.title || titleForUrl(url), text: text, updatedAt: Date.now() };
-    const urls = Object.keys(state.chats).sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
-    urls.slice(MAX_INDEXED_CHATS).forEach((oldUrl) => { if (oldUrl !== url) state.chats[oldUrl].text = ""; });
+    const threadId = currentThreadId();
+    const previous = state.chats[key] || { title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "", threadId: "", order: null, missing: false };
+    if (text.length < 40 || (text === previous.text && (!threadId || previous.threadId === threadId))) return;
+    state.chats[key] = Object.assign({}, previous, {
+      text: text, updatedAt: Date.now(), threadId: threadId || previous.threadId,
+      url: previous.url || location.href
+    });
+    const keys = Object.keys(state.chats).sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
+    keys.slice(MAX_INDEXED_CHATS).forEach((oldKey) => { if (oldKey !== key) state.chats[oldKey].text = ""; });
     persist();
     render();
+  }
+
+  // ===================== Main loop =====================
+
+  function scanForChats() {
+    scanTimer = null;
+    let changed = false;
+    const scan = scanHistory();
+    if (!scan) {
+      missCount += 1;
+      if (missCount >= 3) teardown();
+    } else {
+      missCount = 0;
+      lastScan = scan;
+      region = scan.region;
+      ensureInterface();
+      if (applyScan(scan)) changed = true;
+      if (!activePriming) startPriming(scan);
+      const positioned = positionHost();
+      setNativeHidden(uiPrefs.open && scan.complete && positioned);
+    }
+    updateDetectionDiagnostic(scan);
+    if (isCurrentAiPage()) {
+      const key = resolveCurrentKey();
+      if (key !== currentKey) { currentKey = key; changed = true; }
+      scheduleCapture();
+    }
+    if (changed) { persist(); render(); }
+    else if (ui && !ui.tree.childElementCount) render();
   }
 
   function scheduleScan() {
@@ -1062,22 +1230,31 @@
     scanForChats();
     if (document.documentElement) {
       observer = new MutationObserver((mutations) => {
-        if (mutations.every(isDiagnosticMutation)) return;
+        if (mutations.every(isOwnMutation)) return;
+        // Streaming answer text mutates constantly; it cannot change the sidebar, so only re-index it.
+        if (lastScan && mutations.every((m) => isOwnMutation(m) || (m.target.closest && m.target.closest("main,[role='main']")))) {
+          if (isCurrentAiPage()) scheduleCapture();
+          return;
+        }
         scheduleScan();
-        if (isCurrentAiPage()) scheduleCapture();
       });
-      observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["href"]
-      });
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
     }
     window.addEventListener("popstate", scheduleScan);
     window.addEventListener("hashchange", scheduleScan);
     window.addEventListener("pageshow", scheduleScan);
+    window.addEventListener("resize", positionHost);
+    window.setInterval(positionHost, 400);      // sidebar collapse/expand animations
+    window.setInterval(scheduleScan, 2500);     // class-only changes are not observed
     window.setTimeout(scheduleScan, 900);
   }
 
-  init();
+  if (typeof window.__GSACO_TEST__ === "object") {
+    Object.assign(window.__GSACO_TEST__, {
+      state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, buildSnapshot: buildSnapshot,
+      getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
+    });
+  } else {
+    init();
+  }
 })();
