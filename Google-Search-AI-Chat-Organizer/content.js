@@ -786,17 +786,25 @@
       if (!item) {
         const candidates = Object.keys(entries).filter((key) => !scanKeys.has(key));
         const wantedTitle = normTitle(row.title);
-        const byThread = row.threadId
-          ? candidates.find((key) => entries[key].threadId && entries[key].threadId === row.threadId)
-          : null;
-        const byUrl = row.urlKey
-          ? candidates.find((key) => {
+        const matchingThread = row.threadId
+          ? candidates.filter((key) => entries[key].threadId && entries[key].threadId === row.threadId)
+          : [];
+        const matchingUrl = row.urlKey
+          ? candidates.filter((key) => {
               const oldUrl = entries[key].url;
               return oldUrl && toKey(oldUrl) === row.urlKey && normTitle(entries[key].title) === wantedTitle;
             })
-          : null;
-        const byTitle = candidates.find((key) => normTitle(entries[key].title) === wantedTitle);
-        const oldKey = byThread || byUrl || byTitle;
+          : [];
+        const matchingTitle = candidates.filter((key) => normTitle(entries[key].title) === wantedTitle);
+
+        // Rebind only on an unambiguous identity. If several old records share
+        // the same title/query and expose no stable thread ID, preserve them as
+        // missing and create a fresh row instead of guessing which text/folder
+        // belongs to the newly observed conversation.
+        const uniqueMatch = (matches) => matches.length === 1 ? matches[0] : null;
+        const oldKey = uniqueMatch(matchingThread) ||
+          uniqueMatch(matchingUrl) ||
+          uniqueMatch(matchingTitle);
 
         if (oldKey) {
           item = entries[oldKey];
