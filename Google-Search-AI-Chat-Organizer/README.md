@@ -2,7 +2,7 @@
 
 Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).
 
-Adds nested folders, local full-text search over captured conversations, and Markdown/TXT export to Google AI Mode history.
+Adds nested folders, local full-text search over captured conversations, and Markdown export to Google AI Mode history.
 
 ## User-facing behaviour
 
@@ -71,4 +71,4 @@ These tests use synthetic DOM geometry. They verify the logic but do not replace
 4. Reload twice; the active row count must not grow.
 5. Create folders and nested folders up to four levels.
 6. Drag a chat into a folder and reload.
-7. Open chats from the organizer, then test local search and Markdown/TXT export.
+7. Open chats from the organizer, then test local search and Markdown export.

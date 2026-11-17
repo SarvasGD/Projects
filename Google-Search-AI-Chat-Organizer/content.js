@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.1";
+  const VERSION = "0.3.2";
   const FOLDERS_KEY = "google_ai_folders";
   const CHATS_KEY = "google_ai_chats";
   const UI_KEY = "google_ai_ui";
@@ -334,22 +334,21 @@
     return Array.from(urls);
   }
 
-  function exportChat(url, format) {
+  function exportChat(url) {
     const item = state.chats[url];
     if (!item || !item.text) {
       window.alert("Текст этой сессии ещё не проиндексирован. Откройте чат в Google AI Mode, чтобы расширение сохранило его текст, затем повторите экспорт.");
       return;
     }
     const title = item.title || titleForUrl(url);
-    const output = format === "md"
-      ? "# " + title + "\n\nИсточник: " + (item.url || (/^https:/.test(url) ? url : "")) + "\n\n" + item.text + "\n"
-      : title + "\n" + (item.url || (/^https:/.test(url) ? url : "")) + "\n\n" + item.text + "\n";
-    const blob = new Blob(["\uFEFF", output], { type: format === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8" });
+    const output = "# " + title + "\n\nИсточник: " +
+      (item.url || (/^https:/.test(url) ? url : "")) + "\n\n" + item.text + "\n";
+    const blob = new Blob(["\uFEFF", output], { type: "text/markdown;charset=utf-8" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const safeName = title.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 70) || "google-ai-chat";
     link.href = objectUrl;
-    link.download = safeName + "." + format;
+    link.download = safeName + ".md";
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
@@ -379,8 +378,7 @@
     });
     row.appendChild(link);
     const actions = createElement("div", "chat-actions");
-    actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(key, "md"), "export-button"));
-    actions.appendChild(createButton("TXT", "Экспортировать в TXT", () => exportChat(key, "txt"), "export-button"));
+    actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(key), "export-button"));
     row.appendChild(actions);
     return row;
   }
@@ -587,7 +585,7 @@
     const headerActions = createElement("div", "header-actions");
     headerActions.append(
       createButton("+ Папка", "Создать папку верхнего уровня", () => addFolder(), "primary"),
-      createButton("⇄", "Свернуть органайзер и показать родной список Google", () => setOpen(false))
+      createButton("⌃", "Свернуть органайзер и показать родной список Google", () => setOpen(false))
     );
     header.append(brand, headerActions);
 
@@ -603,7 +601,7 @@
     const tree = createElement("div", "tree");
     const status = createElement("div", "status");
     panel.append(header, searchWrap, tree, status);
-    const bar = createButton("📁 Папки AI-чатов — открыть органайзер", "Показать органайзер вместо списка Google", () => setOpen(true), "bar");
+    const bar = createButton("⌄ Папки AI-чатов — открыть органайзер", "Развернуть органайзер вместо списка Google", () => setOpen(true), "bar");
     bar.hidden = true;
     wrap.append(panel, bar);
     shadow.appendChild(wrap);
@@ -1109,13 +1107,14 @@
       const makeButton = (label, handler) => {
         const b = document.createElement("button");
         b.type = "button"; b.textContent = label; b.dataset.label = label;
+        b.title = label === "×" ? "Скрыть диагностику" : label;
         b.addEventListener("click", () => handler(b));
         return b;
       };
       actions.append(
         makeButton("Копировать", (b) => copyText(diagnosticInfo ? diagnosticInfo.textContent : "", b)),
         makeButton("Снимок DOM", (b) => copyText((diagnosticInfo ? diagnosticInfo.textContent : "") + "\n\n" + diagnosticSnapshot(), b)),
-        makeButton("Скрыть", () => { uiPrefs.diagHidden = true; saveUiPrefs(); removeDetectionDiagnostic(); })
+        makeButton("×", () => { uiPrefs.diagHidden = true; saveUiPrefs(); removeDetectionDiagnostic(); })
       );
       header.append(title, actions);
       diagnosticInfo = document.createElement("pre");
