@@ -83,3 +83,10 @@ Do not ask the user to test individual CSS changes, controls, commits or pull re
 - [Инструментарий и автоматизированная проверка](Документация/Инструментарий-и-автоматизированная-проверка.md)
 - [План реализации и контрольные вехи](Документация/План-реализации-и-контрольные-вехи.md)
 - [Реестр наработок диалога](Meta/Наработки-диалога.md)
+
+
+## v0.4.0 prototype behaviour
+
+The v0.4.0 development branch requires a stable thread/session identity before treating a history row as an active chat. Rows without a confirmed identity remain unclassified. If no row has a stable identity, the extension fails open and leaves Google's native history visible.
+
+Automated checks include 21 jsdom smoke tests and 3 Playwright Chromium MV3 integration tests. These use synthetic Google-like fixtures and do not replace the real Google DOM Prototype Gate.
