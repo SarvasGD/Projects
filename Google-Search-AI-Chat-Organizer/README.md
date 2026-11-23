@@ -1,6 +1,8 @@
 # Google Search AI Chat Organizer
 
-Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).\n\n**Main:** v0.3.2 · **Development:** v0.4.0 (Prototype Gate in progress).
+Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).
+
+**Main:** v0.3.2 · **Development:** v0.4.0 (Prototype Gate in progress).
 
 Adds nested folders, local full-text search over captured conversations, and Markdown export to Google AI Mode history.
 
