@@ -63,16 +63,15 @@ npm test
 
 These tests use synthetic DOM geometry. They verify the logic but do not replace a real-browser visual check.
 
-## Manual smoke test
+## Milestone browser acceptance
 
-1. Open a Google AI Mode search page and confirm the overlay covers the native Recent history box.
-2. Wait for lazy loading; diagnostics must report `Список загружен полностью: да`.
-3. Compare organizer rows with Google's native list after pressing `⇄`.
-4. Reload twice; the active row count must not grow.
-5. Create folders and nested folders up to four levels.
-6. Drag a chat into a folder and reload.
-7. Open chats from the organizer, then test local search and Markdown export.
+The developer runs automated and fixture-based checks for every change. A real-account browser check is requested from the user only at consolidated milestones:
 
+- **Prototype gate:** identity/classification, user-message count, full history loading, and overlay/native-list fallback.
+- **MVP gate:** one end-to-end pass covering sync, folders/moves, search and Markdown export.
+- **Closed Beta gate:** native Google deletion, recovery, and supported-browser compatibility.
+
+Do not ask the user to test individual CSS changes, controls, commits or pull requests.
 
 ## Документация проекта
 
