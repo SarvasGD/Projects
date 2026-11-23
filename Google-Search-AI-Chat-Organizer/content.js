@@ -958,7 +958,10 @@
       return false;
     }
 
-    const open = uiPrefs.open;
+    // Fail open until at least one real conversation has a stable identity.
+    // Unknown-only history must remain usable through Google's own controls.
+    const canReplaceNative = !!(lastScan && lastScan.listLoaded && lastScan.rows.some((row) => row.key));
+    const open = uiPrefs.open && canReplaceNative;
     const height = open ? r.height : 34;
     host.style.display = "block";
     host.style.left = Math.round(r.left) + "px";
@@ -972,6 +975,10 @@
     host.style.background = open && bg ? bg.css : "transparent";
     ui.panel.hidden = !open;
     ui.bar.hidden = open;
+    if (!canReplaceNative) {
+      ui.bar.title = "Google не предоставил стабильный ID диалога. Штатная история оставлена доступной.";
+      ui.bar.setAttribute("aria-label", "Органайзер ожидает подтверждённую идентичность диалогов");
+    }
     return true;
   }
 
@@ -992,10 +999,11 @@
   }
 
   function setOpen(value) {
-    uiPrefs.open = !!value;
+    const canReplaceNative = !!(lastScan && lastScan.listLoaded && lastScan.rows.some((row) => row.key));
+    uiPrefs.open = !!value && canReplaceNative;
     saveUiPrefs();
     const positioned = positionHost();
-    setNativeHidden(uiPrefs.open && !!(lastScan && lastScan.complete) && positioned);
+    setNativeHidden(uiPrefs.open && canReplaceNative && positioned);
   }
 
   function teardown() {
@@ -1384,7 +1392,7 @@
       if (applyScan(scan)) changed = true;
       if (!scan.listLoaded && !activePriming) startPriming(scan);
       const positioned = positionHost();
-      setNativeHidden(uiPrefs.open && scan.listLoaded && positioned);
+      setNativeHidden(uiPrefs.open && scan.listLoaded && scan.rows.some((row) => row.key) && positioned);
     }
     updateDetectionDiagnostic(scan);
     const key = resolveCurrentKey();
