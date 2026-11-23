@@ -1423,7 +1423,7 @@
   if (typeof window.__GSACO_TEST__ === "object") {
     Object.assign(window.__GSACO_TEST__, {
       state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, toThreadKey: toThreadKey,
-      isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages, buildSnapshot: buildSnapshot,
+      isVerifiedChatKey: isVerifiedChatKey, isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages, buildSnapshot: buildSnapshot,
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
     });
   } else {
