@@ -291,6 +291,33 @@ test("conversation inspector counts user role markers and excludes assistant rep
   assert.ok(!/PRIVATE USER TEXT|PRIVATE ASSISTANT TEXT/.test(snap), "snapshot does not include message text");
 });
 
+test("capture persists only explicit user-turn counts for the matching thread", async () => {
+  const conversationHTML = [
+    '<div data-message-author-role="user">USER TURN ONE</div>',
+    '<div data-message-author-role="assistant">ASSISTANT REPLY ONE</div>',
+    '<div data-message-author-role="user">USER TURN TWO</div>',
+    '<div data-message-author-role="assistant">ASSISTANT REPLY TWO</div>'
+  ].join("");
+  const { T, w } = await boot({
+    kind: "anchor-id",
+    titles: ["Проверяемый диалог"],
+    conversationHTML
+  });
+  T.captureCurrentPage();
+  let item = T.state.chats["id:thread-0"];
+  assert.strictEqual(item.userTurns, 2);
+  assert.strictEqual(item.userTurnsSource, "explicit-role-markers");
+  assert.ok(item.userTurnsUpdatedAt > 0);
+
+  w.document.querySelector("main").insertAdjacentHTML(
+    "beforeend",
+    '<div data-message-author-role="user">USER TURN THREE</div>'
+  );
+  T.captureCurrentPage();
+  item = T.state.chats["id:thread-0"];
+  assert.strictEqual(item.userTurns, 3);
+});
+
 test("complete verified Google history automatically removes deleted stable chats and folder bindings", async () => {
   const removed = "https://www.google.com/search?udm=50&mtid=OLD";
   const stored = {
