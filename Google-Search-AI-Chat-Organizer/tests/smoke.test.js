@@ -107,20 +107,26 @@ test("explicit thread IDs take precedence over identical q/udm URLs", async () =
   assert.ok(scan.rows.every((r) => r.hasId && !r.hasUrl));
 });
 
-test("overlay is laid exactly over Google's Recent box; native list hidden only when complete", async () => {
-  const { w, T } = await boot({ kind: "div", titles: ["A чат", "B чат", "C чат"] });
+test("overlay waits for full loading, then covers the native history and restores it when collapsed", async () => {
+  const { w, T } = await boot({ kind: "anchor", titles: ["A чат", "B чат", "C чат"] });
   T.scanForChats();
   const host = T.getHost();
   assert.ok(host && host.isConnected, "host mounted");
   assert.strictEqual(host.style.position, "fixed");
-  assert.strictEqual(host.style.left, "8px"); assert.strictEqual(host.style.top, "166px");
-  assert.strictEqual(host.style.width, "241px"); assert.strictEqual(host.style.height, "780px");
-  assert.strictEqual(T.getNativeHidden(), null, "not hidden before the lazy list is fully loaded");
-  await sleep(2600);   // priming: 4 stable steps * 300ms
+  assert.strictEqual(host.style.left, "8px");
+  assert.strictEqual(host.style.width, "241px");
+  assert.strictEqual(T.getNativeHidden(), null, "native list remains visible while lazy loading");
+  assert.strictEqual(host.style.height, "34px", "organizer stays collapsed while the list is incomplete");
+
+  await sleep(2600); // priming: 4 stable steps * 300ms
   T.scanForChats();
-  assert.ok(T.getNativeHidden(), "hidden once complete");
+  assert.strictEqual(host.style.top, "166px");
+  assert.strictEqual(host.style.height, "780px");
+  assert.ok(T.getNativeHidden(), "native history is hidden after complete loading with stable identities");
   assert.strictEqual(w.document.getElementById("scroller").style.getPropertyValue("visibility"), "hidden");
-  T.uiPrefs.open = false; T.scanForChats();
+
+  T.uiPrefs.open = false;
+  T.scanForChats();
   assert.strictEqual(w.document.getElementById("scroller").style.getPropertyValue("visibility"), "", "native list restored when collapsed");
 });
 
@@ -215,7 +221,7 @@ test("ambiguous title does not steal an old chat's index or folder", async () =>
 test("clicking an organizer row proxies the click to the native row", async () => {
   const { w, T } = await boot({ kind: "anchor", titles: ["Первый чат", "Второй чат"] });
   let clicked = 0;
-  w.document.querySelectorAll("#scroller a[href]")[1].addEventListener("click", () => { clicked += 1; });
+  w.document.querySelectorAll("#scroller a[href]")[1].addEventListener("click", (event) => { event.preventDefault(); clicked += 1; });
   T.scanForChats();
   const link = [...T.getHost().shadowRoot.querySelectorAll(".chat-link")].find((a) => a.textContent === "Второй чат");
   assert.ok(link, "row rendered in organizer");
