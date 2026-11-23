@@ -250,6 +250,15 @@ test("thread identity rejects q/udm-only URLs and accepts a stable thread parame
   assert.ok(T.toThreadKey("https://www.google.com/search?q=x&udm=50&mtid=thread-x"));
 });
 
+
+test("thread identity is stable when Google changes the query text", async () => {
+  const { T } = await boot({ kind: "div", titles: ["Обычный запрос"] });
+  const first = T.toThreadKey("https://www.google.com/search?q=first&udm=50&mtid=stable-123");
+  const second = T.toThreadKey("https://www.google.com/search?q=follow-up&udm=50&mtid=stable-123");
+  assert.strictEqual(first, second);
+  assert.notStrictEqual(first, T.toThreadKey("https://www.google.com/search?q=first&udm=50&mtid=stable-456"));
+});
+
 test("conversation inspector counts user role markers and excludes assistant replies", async () => {
   const conversationHTML = [
     '<div data-message-author-role="user"><p>PRIVATE USER TEXT A</p></div>',
