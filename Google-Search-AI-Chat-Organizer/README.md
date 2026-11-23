@@ -90,3 +90,6 @@ Do not ask the user to test individual CSS changes, controls, commits or pull re
 The v0.4.0 development branch requires a stable thread/session identity before treating a history row as an active chat. Rows without a confirmed identity remain unclassified. If no row has a stable identity, the extension fails open and leaves Google's native history visible.
 
 Automated checks include 21 jsdom smoke tests and 3 Playwright Chromium MV3 integration tests. These use synthetic Google-like fixtures and do not replace the real Google DOM Prototype Gate.
+
+
+The development build stores an explicit user-turn count for an opened thread when the page exposes recognized user/assistant role markers. A missing marker set remains unknown; it is not guessed. Full-history counts depend on the future resumable importer.
