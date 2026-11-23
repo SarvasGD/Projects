@@ -7,11 +7,11 @@ Adds nested folders, local full-text search over captured conversations, and Mar
 ## User-facing behaviour
 
 - Replaces Google's Recent history box with an overlay occupying the same measured area.
-- Detects clickable history rows even when they do not expose an ordinary `<a href>`.
+- Imports confirmed AI Mode chat rows only when a stable thread/session identity is available; other rows remain unclassified.
 - Scrolls Google's own history scroller to the end before replacing the native list.
-- Keeps Google's original list available through the `⇄` collapse control.
-- Supports four folder levels, rename, color, delete, drag-and-drop, local search and export.
-- Clicking an organizer row proxies the click to the live Google row; a saved URL is used as fallback when the row is no longer present.
+- Restores Google's original list through the collapse/expand controls (`⌃` and `⌄`).
+- Supports four folder levels, folder rename/color/removal, drag-and-drop, local search and Markdown export.
+- Clicking a confirmed organizer row proxies the click to the exact Google history row; title-only matching is not used.
 - Uses only `chrome.storage.local`; no background fetching or external service.
 
 ## Detection and identity
