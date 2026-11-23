@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.4.0",
   "scripts": {
-    "test": "node tests/smoke.test.js"
+    "test": "node tests/smoke.test.js",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "jsdom": "26.1.0"
   }
 }
