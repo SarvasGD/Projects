@@ -22,12 +22,13 @@ function rows(kind, titles, y0 = 254) {
     const r = `data-rect="8,${y0 + i * 40},241,40"`;
     if (kind === "anchor") return `<a ${r} href="/search?udm=50&mtid=ID${i}&ei=rnd${Math.random()}&ved=x"><span>chat_bubble</span><span>${t}</span></a>`;
     if (kind === "anchor-id") return `<a ${r} data-session-thread-id="thread-${i}" href="/search?q=shared&udm=50"><span>${t}</span></a>`;
+    if (kind === "anchor-query") return `<a ${r} href="/search?q=query-${i}&udm=50"><span>${t}</span></a>`;
     return `<div ${r} role="button" tabindex="0"><span>${t}</span></div>`;
   }).join("");
 }
 
-function sidebar(kind, titles) {
-  return `<main>Основной контент ответа, достаточно длинный чтобы пройти порог индексации.</main>
+function sidebar(kind, titles, conversationHTML = "") {
+  return `<main>${conversationHTML || "Основной контент ответа, достаточно длинный чтобы пройти порог индексации."}</main>
   <nav data-rect="0,0,261,995">
     <a data-rect="-9999,0,1,1" href="/search?q=x&udm=50#settings">Skip to settings</a>
     <a data-rect="8,64,241,40" href="/">Новый чат</a>
@@ -42,8 +43,8 @@ function sidebar(kind, titles) {
   </nav>`;
 }
 
-async function boot({ kind, titles, stored = {}, url = "https://www.google.com/search?q=test" }) {
-  const dom = new JSDOM(`<!doctype html><body>${sidebar(kind, titles)}</body>`, { url, runScripts: "outside-only", pretendToBeVisual: true });
+async function boot({ kind, titles, stored = {}, url = "https://www.google.com/search?q=test&udm=50", conversationHTML = "" }) {
+  const dom = new JSDOM(`<!doctype html><body>${sidebar(kind, titles, conversationHTML)}</body>`, { url, runScripts: "outside-only", pretendToBeVisual: true });
   const w = dom.window;
   const saved = Object.assign({}, stored);
   w.chrome = { runtime: {}, storage: { local: {
@@ -71,16 +72,19 @@ test("rows without q-parameter links are detected, skip-links and nav are not", 
   assert.ok(scan.rows[0].title === "Табличный топ решений", "icon ligature line is dropped from title");
 });
 
-test("rows without any link get title keys; same titles stay separate rows", async () => {
+test("rows without stable IDs or thread URLs stay unclassified and are not saved as chats", async () => {
   const titles = ["Бесплатные ИИ", "Бесплатные ИИ", "Сказка о людоеде"];
   const { T } = await boot({ kind: "div", titles });
   const scan = T.scanHistory();
   assert.strictEqual(scan.rows.length, 3);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(scan.rows.map((r) => r.key))), ["t:бесплатные ии", "t:бесплатные ии|2", "t:сказка о людоеде"]);
+  assert.ok(scan.rows.every((row) => row.key === null));
+  assert.strictEqual(scan.unclassifiedRows.length, 3);
+  assert.ok(!Object.keys(T.state.chats).some((key) => key.startsWith("t:")));
+  assert.strictEqual(T.getHost().shadowRoot.querySelectorAll(".folder.unclassified").length, 1);
 });
 
 test("chat rows expose Markdown export only", async () => {
-  const { T } = await boot({ kind: "div", titles: ["Чат для экспорта"] });
+  const { T } = await boot({ kind: "anchor", titles: ["Чат для экспорта"] });
   const buttons = [...T.getHost().shadowRoot.querySelectorAll(".chat-row .export-button")];
   assert.deepStrictEqual(buttons.map((button) => button.textContent), ["MD"]);
 });
@@ -90,7 +94,7 @@ test("explicit thread IDs take precedence over identical q/udm URLs", async () =
   const scan = T.scanHistory();
   assert.strictEqual(scan.rows.length, 2);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(scan.rows.map((r) => r.key))), ["id:thread-0", "id:thread-1"]);
-  assert.ok(scan.rows.every((r) => r.hasId && r.hasUrl));
+  assert.ok(scan.rows.every((r) => r.hasId && !r.hasUrl));
 });
 
 test("overlay is laid exactly over Google's Recent box; native list hidden only when complete", async () => {
@@ -122,7 +126,8 @@ test("priming loads lazy rows and the organizer lists all of them", async () => 
   T.scanForChats();
   await sleep(2600);
   T.scanForChats();
-  assert.strictEqual(Object.keys(T.state.chats).length, 60);
+  assert.strictEqual(T.scanHistory().unclassifiedRows.length, 60);
+  assert.strictEqual(Object.keys(T.state.chats).filter(T.isVerifiedChatKey).length, 0);
 });
 
 test("migration preserves colliding old URLs and keeps folder assignment mapped", async () => {
@@ -145,33 +150,33 @@ test("migration preserves colliding old URLs and keeps folder assignment mapped"
   assert.ok(!Object.values(T.state.chats).some((item) => /skip|перейти/i.test(item.title)));
 });
 
-test("stale entries are retained and marked missing after a complete scan", async () => {
-  const old = Date.now() - 3600e3;
+test("legacy title-only records are retained locally but excluded from active chats", async () => {
   const stored = {
     google_ai_chats: {
-      "t:живой": { title: "Живой", updatedAt: old },
-      "t:мёртвый": { title: "Мёртвый", updatedAt: old },
-      "t:в папке": { title: "В папке", updatedAt: old }
+      "t:живой": { title: "Живой", updatedAt: 10 },
+      "t:мёртвый": { title: "Мёртвый", updatedAt: 20 },
+      "t:в папке": { title: "В папке", updatedAt: 30 }
     },
     google_ai_folders: [{ id: "f1", name: "ГД", color: "#4285F4", children: [], chat_urls: ["t:в папке"] }]
   };
   const { T } = await boot({ kind: "div", titles: ["Живой", "Новый"], stored });
-  await sleep(2700); T.scanForChats();
-  assert.ok(T.state.chats["t:живой"]); assert.ok(T.state.chats["t:новый"]);
-  assert.ok(T.state.chats["t:мёртвый"] && T.state.chats["t:мёртвый"].missing, "unassigned old record retained as missing");
-  assert.ok(T.state.chats["t:в папке"] && T.state.chats["t:в папке"].missing, "assigned old record retained as missing");
+  assert.ok(T.state.chats["t:живой"] && T.state.chats["t:мёртвый"] && T.state.chats["t:в папке"]);
+  assert.strictEqual(T.getHost().shadowRoot.querySelector(".folder.unassigned .folder-count").textContent, "0");
+  assert.strictEqual(T.scanHistory().unclassifiedRows.length, 2);
 });
 
-test("renamed key keeps folder membership (re-bind by title)", async () => {
-  const old = Date.now() - 3600e3;
+test("a stable thread identity preserves folder and index after a title change", async () => {
+  const stableUrl = "https://www.google.com/search?udm=50&mtid=ID0";
   const stored = {
-    google_ai_chats: { "https://www.google.com/search?q=a&udm=50": { title: "Чат А", text: "индекс ".repeat(10), updatedAt: old } },
-    google_ai_folders: [{ id: "f1", name: "ГД", color: "#4285F4", children: [], chat_urls: ["https://www.google.com/search?q=a&udm=50"] }]
+    google_ai_chats: { [stableUrl]: { title: "Старое название", text: "индекс ".repeat(10), updatedAt: 100 } },
+    google_ai_folders: [{ id: "f1", name: "ГД", color: "#4285F4", children: [], chat_urls: [stableUrl] }]
   };
-  const { T } = await boot({ kind: "div", titles: ["Чат А"], stored });
+  const { T } = await boot({ kind: "anchor", titles: ["Новое название"], stored });
   T.scanForChats();
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(T.state.folders[0].chat_urls)), ["t:чат а"]);
-  assert.ok(T.state.chats["t:чат а"].text.startsWith("индекс"), "indexed text preserved");
+  const key = T.toThreadKey(stableUrl);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(T.state.folders[0].chat_urls)), [key]);
+  assert.strictEqual(T.state.chats[key].title, "Новое название");
+  assert.ok(T.state.chats[key].text.startsWith("индекс"), "indexed text preserved");
 });
 
 test("ambiguous title does not steal an old chat's index or folder", async () => {
@@ -187,7 +192,7 @@ test("ambiguous title does not steal an old chat's index or folder", async () =>
   const { T } = await boot({ kind: "div", titles: ["Общий заголовок"], stored });
   assert.ok(T.state.chats["id:thread-old-a"]);
   assert.ok(T.state.chats["id:thread-old-b"]);
-  assert.ok(T.state.chats["t:общий заголовок"], "new ambiguous row gets its own record");
+  assert.ok(!T.state.chats["t:общий заголовок"], "ambiguous title is not persisted as a chat");
   assert.ok(T.state.chats["id:thread-old-a"].text.includes("старого чата A"));
   assert.ok(T.state.chats["id:thread-old-b"].text.includes("старого чата B"));
   assert.deepStrictEqual(
@@ -198,9 +203,9 @@ test("ambiguous title does not steal an old chat's index or folder", async () =>
 });
 
 test("clicking an organizer row proxies the click to the native row", async () => {
-  const { w, T } = await boot({ kind: "div", titles: ["Первый чат", "Второй чат"] });
+  const { w, T } = await boot({ kind: "anchor", titles: ["Первый чат", "Второй чат"] });
   let clicked = 0;
-  w.document.querySelectorAll("#scroller [role=button]")[2].addEventListener("click", () => { clicked += 1; });
+  w.document.querySelectorAll("#scroller a[href]")[1].addEventListener("click", () => { clicked += 1; });
   T.scanForChats();
   const link = [...T.getHost().shadowRoot.querySelectorAll(".chat-link")].find((a) => a.textContent === "Второй чат");
   assert.ok(link, "row rendered in organizer");
@@ -229,6 +234,67 @@ test("DOM snapshot is anonymised and describes rows", async () => {
   const snap = T.buildSnapshot(T.scanHistory());
   assert.ok(/Строка 1: a /.test(snap) && /params=udm,mtid,ei,ved/.test(snap), snap);
   assert.ok(!/Секретное|ID0|rnd/.test(snap), "no titles or query values leak into the snapshot");
+});
+
+
+test("ordinary Google Search does not mount the organizer or save a chat", async () => {
+  const { T } = await boot({ kind: "anchor", titles: ["Обычный запрос"], url: "https://www.google.com/search?q=ordinary" });
+  assert.strictEqual(T.isCurrentAiPage(), false);
+  assert.strictEqual(T.getHost(), null);
+  assert.strictEqual(Object.keys(T.state.chats).length, 0);
+});
+
+test("thread identity rejects q/udm-only URLs and accepts a stable thread parameter", async () => {
+  const { T } = await boot({ kind: "div", titles: ["Обычный запрос"] });
+  assert.strictEqual(T.toThreadKey("https://www.google.com/search?q=x&udm=50"), null);
+  assert.ok(T.toThreadKey("https://www.google.com/search?q=x&udm=50&mtid=thread-x"));
+});
+
+test("conversation inspector counts user role markers and excludes assistant replies", async () => {
+  const conversationHTML = [
+    '<div data-message-author-role="user"><p>PRIVATE USER TEXT A</p></div>',
+    '<div data-message-author-role="assistant"><p>PRIVATE ASSISTANT TEXT A</p></div>',
+    '<div data-message-author-role="user"><p>PRIVATE USER TEXT B</p></div>',
+    '<div data-message-author-role="assistant"><p>PRIVATE ASSISTANT TEXT B</p></div>'
+  ].join("");
+  const { T } = await boot({ kind: "anchor", titles: ["Тестовый диалог"], conversationHTML });
+  const inspected = T.inspectConversationMessages();
+  assert.strictEqual(inspected.userTurns, 2);
+  assert.strictEqual(inspected.assistantMessages.length, 2);
+  const snap = T.buildSnapshot(T.scanHistory());
+  assert.ok(snap.includes("реплики пользователя по явным role markers: 2"));
+  assert.ok(!/PRIVATE USER TEXT|PRIVATE ASSISTANT TEXT/.test(snap), "snapshot does not include message text");
+});
+
+test("complete verified Google history automatically removes deleted stable chats and folder bindings", async () => {
+  const removed = "https://www.google.com/search?udm=50&mtid=OLD";
+  const stored = {
+    google_ai_chats: { [removed]: { title: "Удалённый чат", text: "old index", updatedAt: 1 } },
+    google_ai_folders: [{ id: "f1", name: "Folder", color: "#4285F4", children: [], chat_urls: [removed] }]
+  };
+  const { T } = await boot({ kind: "anchor", titles: ["Оставшийся чат"], stored });
+  await sleep(2700);
+  T.scanForChats();
+  const scan = T.scanHistory();
+  assert.ok(scan.complete && scan.identityComplete);
+  assert.strictEqual(T.state.chats[T.toThreadKey(removed)], undefined);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(T.state.folders[0].chat_urls)), []);
+});
+
+test("unclassified rows prevent destructive synchronization", async () => {
+  const oldKey = "id:thread-old";
+  const stored = {
+    google_ai_chats: { [oldKey]: { title: "Сохранённый", text: "preserve me", updatedAt: 1 } },
+    google_ai_folders: [{ id: "f1", name: "Folder", color: "#4285F4", children: [], chat_urls: [oldKey] }]
+  };
+  const { T } = await boot({ kind: "div", titles: ["Неизвестная строка"], stored });
+  await sleep(2700);
+  T.scanForChats();
+  const scan = T.scanHistory();
+  assert.ok(scan.complete);
+  assert.strictEqual(scan.identityComplete, false);
+  assert.ok(T.state.chats[oldKey], "old chat remains during ambiguous scan");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(T.state.folders[0].chat_urls)), [oldKey]);
 });
 
 (async () => {
