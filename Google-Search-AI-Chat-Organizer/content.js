@@ -749,11 +749,11 @@
     }
 
     const id = attributeId(el);
-    const urlKey = href ? toKey(href) : null;
-    const base = id ? "id:" + id : (urlKey || "t:" + normTitle(title));
+    const urlKey = href ? toThreadKey(href) : null;
+    const base = id ? "id:" + id : urlKey;
     return {
       el: el, title: title, href: href, urlKey: urlKey, threadId: id,
-      base: base, hasUrl: !!urlKey, hasId: !!id, key: base
+      base: base, hasUrl: !!urlKey, hasLink: !!href, hasId: !!id, key: base
     };
   }
 
@@ -761,16 +761,38 @@
     const heading = findRecentLabel();
     if (!heading) return null;
     const found = findHistoryRegion(heading);
-    const rows = detectRows(found.region, heading).map(describeRow);
-    const seen = new Map();
-    rows.forEach((row) => {
-      const n = seen.get(row.base) || 0;
-      seen.set(row.base, n + 1);
-      row.key = n ? row.base + "|" + (n + 1) : row.base;
+    const detected = detectRows(found.region, heading).map(describeRow);
+    const rows = [];
+    const seen = new Set();
+    let duplicateIdentityCount = 0;
+
+    detected.forEach((row) => {
+      if (!row.base) {
+        row.key = null;
+        rows.push(row);
+        return;
+      }
+      if (seen.has(row.base)) {
+        duplicateIdentityCount += 1;
+        return;
+      }
+      seen.add(row.base);
+      row.key = row.base;
+      rows.push(row);
     });
+
+    const listLoaded = !found.scroller || completeScrollers.has(found.scroller);
+    const unclassifiedRows = rows.filter((row) => !row.key);
     return {
-      heading: heading, region: found.region, scroller: found.scroller, rows: rows,
-      complete: !found.scroller || completeScrollers.has(found.scroller)
+      heading: heading,
+      region: found.region,
+      scroller: found.scroller,
+      rows: rows,
+      unclassifiedRows: unclassifiedRows,
+      duplicateIdentityCount: duplicateIdentityCount,
+      listLoaded: listLoaded,
+      identityComplete: unclassifiedRows.length === 0,
+      complete: listLoaded
     };
   }
 
