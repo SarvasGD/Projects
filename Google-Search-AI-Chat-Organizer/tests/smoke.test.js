@@ -83,6 +83,16 @@ test("rows without stable IDs or thread URLs stay unclassified and are not saved
   assert.strictEqual(T.getHost().shadowRoot.querySelectorAll(".folder.unclassified").length, 1);
 });
 
+test("unknown-only history keeps Google's native list visible", async () => {
+  const { w, T } = await boot({ kind: "div", titles: ["Одиночный AI-запрос"] });
+  const host = T.getHost();
+  assert.ok(host && host.isConnected);
+  assert.strictEqual(T.getNativeHidden(), null);
+  assert.strictEqual(w.document.getElementById("scroller").style.visibility, "");
+  assert.strictEqual(host.shadowRoot.querySelector(".panel").hidden, true);
+  assert.strictEqual(host.shadowRoot.querySelector(".bar").hidden, false);
+});
+
 test("chat rows expose Markdown export only", async () => {
   const { T } = await boot({ kind: "anchor", titles: ["Чат для экспорта"] });
   const buttons = [...T.getHost().shadowRoot.querySelectorAll(".chat-row .export-button")];
