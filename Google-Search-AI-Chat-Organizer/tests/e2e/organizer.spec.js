@@ -180,6 +180,14 @@ test("AI Mode with only unclassified rows never creates active chat records", as
       el.shadowRoot.querySelectorAll(".folder.unassigned .chat-row").length
     );
     expect(activeCount).toBe(0);
+
+    const fallback = await host.evaluate((el) => ({
+      panelHidden: el.shadowRoot.querySelector(".panel").hidden,
+      barHidden: el.shadowRoot.querySelector(".bar").hidden
+    }));
+    expect(fallback.panelHidden).toBe(true);
+    expect(fallback.barHidden).toBe(false);
+    await expect(page.locator("#scroller")).toHaveCSS("visibility", "visible");
   } finally {
     await launched.cleanup();
   }
