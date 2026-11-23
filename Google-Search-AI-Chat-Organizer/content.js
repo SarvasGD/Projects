@@ -96,7 +96,7 @@
     if (typeof raw !== "string" || !raw) return null;
     const suffix = raw.match(/^(.*)\|(\d+)$/);
     const base = suffix ? suffix[1] : raw;
-    const clean = /^(t|id):/.test(base) ? base.slice(0, 300) : toKey(base);
+    const clean = /^(t|id):/.test(base) ? base.slice(0, 300) : (toThreadKey(base) || toKey(base));
     return clean ? clean + (suffix ? "|" + suffix[2] : "") : null;
   }
 
@@ -121,11 +121,15 @@
   }
 
   function toThreadKey(value) {
-    const key = toKey(value);
-    if (!key) return null;
     try {
       const url = new URL(value, location.href);
-      return IDENTITY_PARAMS.some((name) => url.searchParams.has(name)) ? key : null;
+      if (!toKey(url.href)) return null;
+      const identity = IDENTITY_PARAMS
+        .map((name) => [name, url.searchParams.get(name)])
+        .filter(([, value]) => !!value)
+        .map(([name, value]) => name + "=" + encodeURIComponent(value));
+      if (!identity.length) return null;
+      return "https://" + url.hostname.toLowerCase() + url.pathname + "?" + identity.join("&");
     } catch (_error) { return null; }
   }
 
