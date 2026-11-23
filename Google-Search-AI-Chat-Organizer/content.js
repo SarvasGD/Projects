@@ -21,7 +21,7 @@
   const CLICKABLE = "a[href],[role='link'],[role='button'],[role='option'],[role='menuitem'],[role='listitem'],li,[tabindex],[jsaction],[data-href]";
 
   const state = { folders: [], chats: {} };
-  const uiPrefs = { open: true, diagHidden: false };
+  const uiPrefs = { open: true, diagHidden: false, turnFilter: "all" };
   const openFolders = new Set();
   const primedScrollers = new WeakSet();
   const completeScrollers = new WeakSet();
@@ -197,6 +197,7 @@
     if (stored[UI_KEY] && typeof stored[UI_KEY] === "object") {
       uiPrefs.open = stored[UI_KEY].open !== false;
       uiPrefs.diagHidden = !!stored[UI_KEY].diagHidden;
+      uiPrefs.turnFilter = ["all", "one", "twoPlus", "threePlus", "unknown"].includes(stored[UI_KEY].turnFilter) ? stored[UI_KEY].turnFilter : "all";
     }
 
     const chats = stored[CHATS_KEY] && typeof stored[CHATS_KEY] === "object" ? stored[CHATS_KEY] : {};
@@ -341,6 +342,18 @@
     return Array.from(urls);
   }
 
+  function matchesTurnFilter(url) {
+    const item = state.chats[url] || {};
+    const count = Number.isInteger(item.userTurns) && item.userTurns >= 0 ? item.userTurns : null;
+    switch (uiPrefs.turnFilter) {
+      case "one": return count === 1;
+      case "twoPlus": return count !== null && count >= 2;
+      case "threePlus": return count !== null && count >= 3;
+      case "unknown": return count === null;
+      default: return true;
+    }
+  }
+
   function exportChat(url) {
     const item = state.chats[url];
     if (!item || !item.text) {
@@ -385,6 +398,11 @@
     });
     row.appendChild(link);
     const actions = createElement("div", "chat-actions");
+    if (Number.isInteger(item.userTurns)) {
+      const turnCount = createElement("span", "turn-count", String(item.userTurns));
+      turnCount.title = item.userTurns + " реплик пользователя";
+      actions.appendChild(turnCount);
+    }
     actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(key), "export-button"));
     row.appendChild(actions);
     return row;
@@ -417,7 +435,7 @@
   function countNestedChats(folders) {
     let count = 0;
     (folders || []).forEach((folder) => {
-      count += (folder.chat_urls || []).filter(isVerifiedChatKey).length + countNestedChats(folder.children || []);
+      count += (folder.chat_urls || []).filter(isVerifiedChatKey).filter((url) => matchesTurnFilter(url)).length + countNestedChats(folder.children || []);
     });
     return count;
   }
@@ -435,7 +453,7 @@
     const marker = createElement("span", "folder-marker");
     marker.style.backgroundColor = folder.color || FOLDER_COLORS[0];
     const name = createElement("span", "folder-name", folder.name);
-    const count = (folder.chat_urls || []).filter(isVerifiedChatKey).length + countNestedChats(folder.children || []);
+    const count = (folder.chat_urls || []).filter(isVerifiedChatKey).filter((url) => matchesTurnFilter(url)).length + countNestedChats(folder.children || []);
     const badge = createElement("span", "folder-count", String(count));
     const actions = createElement("span", "folder-actions");
 
@@ -462,7 +480,7 @@
     details.appendChild(summary);
 
     const children = createElement("div", "folder-contents");
-    (folder.chat_urls || []).filter(isVerifiedChatKey).forEach((url) => children.appendChild(createChatRow(url)));
+    (folder.chat_urls || []).filter(isVerifiedChatKey).filter((url) => matchesTurnFilter(url)).forEach((url) => children.appendChild(createChatRow(url)));
     (folder.children || []).forEach((nested) => children.appendChild(renderFolder(nested, depth + 1)));
     if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Перетащите сюда ссылку на чат"));
     details.appendChild(children);
@@ -475,7 +493,7 @@
       const item = state.chats[url] || { title: titleForUrl(url), text: "" };
       const source = (item.title + "\n" + item.text + "\n" + url).toLocaleLowerCase();
       return { url: url, item: item, matched: source.includes(normalized) };
-    }).filter((entry) => entry.matched);
+    }).filter((entry) => entry.matched && matchesTurnFilter(entry.url));
     ui.tree.appendChild(createElement("div", "search-caption", "Найдено: " + matching.length));
     if (!matching.length) {
       ui.tree.appendChild(createElement("div", "empty-note", "Совпадений нет. Индекс пополняется при открытии AI-чатов."));
@@ -511,10 +529,10 @@
       state.folders.forEach((folder) => ui.tree.appendChild(renderFolder(folder, 1)));
       const assigned = new Set(collectAssignedUrls(state.folders).filter(isVerifiedChatKey));
       const unassigned = getAllChatUrls().filter((url) =>
-        !assigned.has(url) && !(state.chats[url] && state.chats[url].missing)
+        !assigned.has(url) && !(state.chats[url] && state.chats[url].missing) && matchesTurnFilter(url)
       );
       const missing = getAllChatUrls().filter((url) =>
-        !assigned.has(url) && state.chats[url] && state.chats[url].missing
+        !assigned.has(url) && state.chats[url] && state.chats[url].missing && matchesTurnFilter(url)
       );
 
       const recent = createElement("details", "folder unassigned");
@@ -597,7 +615,8 @@
       ".brand { min-width:0; } .brand strong { display:block; font-size:13px; font-weight:700; } .brand small { display:block; color:var(--gsaco-muted); font-size:10px; }",
       ".header-actions { display:flex; align-items:center; gap:4px; }",
       "button { font:inherit; cursor:pointer; } .primary { border:0; border-radius:8px; padding:6px 9px; background:#1a73e8; color:white; font-weight:600; white-space:nowrap; } .primary:hover { background:#1765cc; }",
-      ".search-wrap { flex:0 0 auto; display:flex; align-items:center; gap:7px; border:1px solid var(--gsaco-border); border-radius:8px; padding:0 8px; margin:0 0 8px; background:var(--gsaco-input); }",
+      ".search-wrap { flex:0 0 auto; display:flex; align-items:center; gap:7px; border:1px solid var(--gsaco-border); border-radius:8px; padding:0 8px; margin:0 0 6px; background:var(--gsaco-input); }",
+      ".turn-filter-wrap { flex:0 0 auto; display:flex; align-items:center; gap:7px; margin:0 0 8px; color:var(--gsaco-muted); font-size:10px; } .turn-filter { flex:1; min-width:0; height:27px; border:1px solid var(--gsaco-border); border-radius:6px; background:var(--gsaco-input); color:var(--gsaco-text); padding:0 6px; font:11px Arial,sans-serif; }",
       ".search-icon { color:var(--gsaco-muted); font-size:16px; } input { min-width:0; width:100%; height:32px; border:0; outline:0; background:transparent; color:inherit; font:inherit; }",
       ".tree { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; } details { min-width:0; } .folder { margin:2px 0; border-radius:7px; }",
       ".folder-summary { list-style:none; display:flex; align-items:center; gap:6px; min-height:31px; padding:4px 5px; border-radius:7px; cursor:pointer; user-select:none; } .folder-summary::-webkit-details-marker { display:none; }",
@@ -608,7 +627,7 @@
       ".mini-button:hover,.export-button:hover { background:var(--gsaco-hover); color:var(--gsaco-text); } .folder-contents { margin-left:13px; padding-left:8px; border-left:1px solid var(--gsaco-border); }",
       ".chat-row { display:flex; align-items:center; gap:4px; min-width:0; padding:4px 3px 4px 5px; border-radius:6px; } .chat-row:hover { background:var(--gsaco-hover); } .chat-row.current { background:var(--gsaco-hover); box-shadow:inset 2px 0 0 #1a73e8; }",
       ".chat-link { flex:1; min-width:0; color:var(--gsaco-link); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; } .chat-link:hover { text-decoration:underline; } .chat-link.not-indexed { color:var(--gsaco-text); } .chat-link.missing { opacity:.55; font-style:italic; }",
-      ".chat-actions { display:flex; gap:2px; flex:0 0 auto; } .export-button { border:1px solid transparent; border-radius:4px; background:transparent; color:var(--gsaco-muted); padding:2px 3px; font-size:9px; }",
+      ".chat-actions { display:flex; gap:2px; flex:0 0 auto; align-items:center; } .export-button { border:1px solid transparent; border-radius:4px; background:transparent; color:var(--gsaco-muted); padding:2px 3px; font-size:9px; } .turn-count { color:var(--gsaco-muted); font-size:9px; min-width:10px; text-align:center; }",
       ".empty-note,.search-caption { color:var(--gsaco-muted); font-size:11px; padding:7px 6px; } .search-caption { font-weight:600; }",
       ".status { flex:0 0 auto; border-top:1px solid var(--gsaco-border); margin-top:8px; padding-top:7px; font-size:10px; color:var(--gsaco-muted); }",
       ".drop-target > .folder-summary,.drop-target { background:rgba(26,115,232,.10); outline:1px dashed #1a73e8; outline-offset:-1px; }"
@@ -637,14 +656,34 @@
     search.addEventListener("input", render);
     searchWrap.appendChild(search);
 
+    const filterWrap = createElement("label", "turn-filter-wrap");
+    filterWrap.appendChild(createElement("span", "", "Реплики пользователя"));
+    const turnFilter = createElement("select", "turn-filter");
+    [
+      ["all", "Все"], ["one", "1 реплика"], ["twoPlus", "2+"],
+      ["threePlus", "3+"], ["unknown", "Не посчитано"]
+    ].forEach(([value, label]) => {
+      const option = createElement("option", "", label);
+      option.value = value;
+      turnFilter.appendChild(option);
+    });
+    turnFilter.value = uiPrefs.turnFilter;
+    turnFilter.setAttribute("aria-label", "Фильтр по количеству реплик пользователя");
+    turnFilter.addEventListener("change", () => {
+      uiPrefs.turnFilter = turnFilter.value;
+      saveUiPrefs();
+      render();
+    });
+    filterWrap.appendChild(turnFilter);
+
     const tree = createElement("div", "tree");
     const status = createElement("div", "status");
-    panel.append(header, searchWrap, tree, status);
+    panel.append(header, searchWrap, filterWrap, tree, status);
     const bar = createButton("⌄ Папки AI-чатов — открыть органайзер", "Развернуть органайзер вместо списка Google", () => setOpen(true), "bar");
     bar.hidden = true;
     wrap.append(panel, bar);
     shadow.appendChild(wrap);
-    ui = { wrap: wrap, panel: panel, bar: bar, tree: tree, status: status, search: search };
+    ui = { wrap: wrap, panel: panel, bar: bar, tree: tree, status: status, search: search, turnFilter: turnFilter };
     render();
   }
 
@@ -1041,7 +1080,7 @@
 
   function saveUiPrefs() {
     const value = {};
-    value[UI_KEY] = { open: uiPrefs.open, diagHidden: uiPrefs.diagHidden };
+    value[UI_KEY] = { open: uiPrefs.open, diagHidden: uiPrefs.diagHidden, turnFilter: uiPrefs.turnFilter };
     storageQueue = storageQueue.then(() => storageSet(value)).catch(() => {});
   }
 
@@ -1447,8 +1486,8 @@
   if (typeof window.__GSACO_TEST__ === "object") {
     Object.assign(window.__GSACO_TEST__, {
       state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, toThreadKey: toThreadKey,
-      isVerifiedChatKey: isVerifiedChatKey, isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages,
-      captureCurrentPage: captureCurrentPage, buildSnapshot: buildSnapshot,
+      isVerifiedChatKey: isVerifiedChatKey, matchesTurnFilter: matchesTurnFilter, isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages,
+      captureCurrentPage: captureCurrentPage, render: render, buildSnapshot: buildSnapshot,
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
     });
   } else {
