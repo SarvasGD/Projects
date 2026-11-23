@@ -177,6 +177,7 @@
 
   function cleanChatItem(item, key, rawKey) {
     const src = item && typeof item === "object" ? item : {};
+    const userTurns = Number.isInteger(src.userTurns) && src.userTurns >= 0 ? src.userTurns : null;
     return {
       title: typeof src.title === "string" && src.title.trim() ? src.title : titleForUrl(key),
       text: typeof src.text === "string" ? src.text.slice(0, MAX_INDEX_TEXT) : "",
@@ -184,19 +185,11 @@
       url: typeof src.url === "string" && src.url ? src.url : (/^https:/.test(rawKey) ? rawKey : ""),
       threadId: typeof src.threadId === "string" ? src.threadId : "",
       order: Number.isFinite(src.order) ? src.order : null,
+      userTurns: userTurns,
+      userTurnsUpdatedAt: Number(src.userTurnsUpdatedAt) || 0,
+      userTurnsSource: typeof src.userTurnsSource === "string" ? src.userTurnsSource : "",
       missing: !!src.missing
     };
-  }
-
-  function mergeChatItems(a, b) {
-    const first = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a;
-    const other = first === a ? b : a;
-    return Object.assign({}, other, first, {
-      text: first.text || other.text,
-      url: first.url || other.url,
-      threadId: first.threadId || other.threadId,
-      order: first.order !== null ? first.order : other.order
-    });
   }
 
   async function loadState() {
@@ -1353,14 +1346,32 @@
     if (!isCurrentAiPage()) return;
     const key = resolveCurrentKey();
     if (!key || !isVerifiedChatKey(key)) return;
+
     const text = extractPageText();
     const threadId = currentThreadId();
-    const previous = state.chats[key] || { title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "", threadId: "", order: null, missing: false };
-    if (text.length < 40 || (text === previous.text && (!threadId || previous.threadId === threadId))) return;
+    const conversation = inspectConversationMessages();
+    const detectedTurns = Number.isInteger(conversation.userTurns) ? conversation.userTurns : null;
+    const previous = state.chats[key] || {
+      title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "",
+      threadId: "", order: null, userTurns: null, missing: false
+    };
+
+    const textChanged = text.length >= 40 && text !== previous.text;
+    const countChanged = detectedTurns !== null && detectedTurns !== previous.userTurns;
+    const threadChanged = !!threadId && previous.threadId !== threadId;
+    if (!textChanged && !countChanged && !threadChanged) return;
+
+    const now = Date.now();
     state.chats[key] = Object.assign({}, previous, {
-      text: text, updatedAt: Date.now(), threadId: threadId || previous.threadId,
-      url: previous.url || location.href
+      text: textChanged ? text : previous.text,
+      updatedAt: textChanged ? now : previous.updatedAt,
+      threadId: threadId || previous.threadId,
+      url: previous.url || location.href,
+      userTurns: detectedTurns !== null ? detectedTurns : previous.userTurns,
+      userTurnsUpdatedAt: detectedTurns !== null ? now : previous.userTurnsUpdatedAt,
+      userTurnsSource: detectedTurns !== null ? "explicit-role-markers" : previous.userTurnsSource
     });
+
     const keys = Object.keys(state.chats).sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
     keys.slice(MAX_INDEXED_CHATS).forEach((oldKey) => { if (oldKey !== key) state.chats[oldKey].text = ""; });
     persist();
@@ -1436,7 +1447,8 @@
   if (typeof window.__GSACO_TEST__ === "object") {
     Object.assign(window.__GSACO_TEST__, {
       state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, toThreadKey: toThreadKey,
-      isVerifiedChatKey: isVerifiedChatKey, isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages, buildSnapshot: buildSnapshot,
+      isVerifiedChatKey: isVerifiedChatKey, isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages,
+      captureCurrentPage: captureCurrentPage, buildSnapshot: buildSnapshot,
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
     });
   } else {
