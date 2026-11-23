@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate extension and smoke tests
+    name: Validate extension, DOM tests and Chromium integration
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,10 +54,20 @@ jobs:
           '
 
       - name: Check JavaScript syntax
-        run: node --check content.js
+        run: |
+          node --check content.js
+          node --check tests/smoke.test.js
+          node --check tests/e2e/organizer.spec.js
+          node --check playwright.config.js
 
       - name: Install test dependencies
         run: npm install --no-package-lock
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Run DOM smoke tests
         run: npm test
+
+      - name: Run Chromium extension integration tests
+        run: npm run test:e2e
