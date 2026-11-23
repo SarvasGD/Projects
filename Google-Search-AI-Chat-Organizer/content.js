@@ -420,7 +420,7 @@
   function countNestedChats(folders) {
     let count = 0;
     (folders || []).forEach((folder) => {
-      count += (folder.chat_urls || []).length + countNestedChats(folder.children || []);
+      count += (folder.chat_urls || []).filter(isVerifiedChatKey).length + countNestedChats(folder.children || []);
     });
     return count;
   }
@@ -488,6 +488,22 @@
     matching.forEach((entry) => ui.tree.appendChild(createChatRow(entry.url)));
   }
 
+  function createUnclassifiedRow(candidate) {
+    const row = createElement("div", "chat-row unclassified");
+    const link = createElement("a", "chat-link", candidate.title || "Запись истории Google");
+    link.href = "#";
+    link.title = "Элемент истории найден, но его идентичность пока не подтверждена";
+    link.draggable = false;
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      event.preventDefault();
+      if (candidate.el && candidate.el.isConnected) clickNative(candidate.el);
+    });
+    row.appendChild(link);
+    row.appendChild(createElement("span", "unclassified-badge", "ID не определён"));
+    return row;
+  }
+
   function render() {
     if (!ui || !ui.tree) return;
     ui.tree.replaceChildren();
@@ -496,7 +512,7 @@
       renderSearchResults(query);
     } else {
       state.folders.forEach((folder) => ui.tree.appendChild(renderFolder(folder, 1)));
-      const assigned = new Set(collectAssignedUrls(state.folders));
+      const assigned = new Set(collectAssignedUrls(state.folders).filter(isVerifiedChatKey));
       const unassigned = getAllChatUrls().filter((url) =>
         !assigned.has(url) && !(state.chats[url] && state.chats[url].missing)
       );
@@ -521,10 +537,25 @@
         });
         unassigned.forEach((url) => contents.appendChild(createChatRow(url)));
       } else {
-        contents.appendChild(createElement("div", "empty-note", "Новые найденные AI-чаты появятся здесь."));
+        contents.appendChild(createElement("div", "empty-note", "Новые подтверждённые диалоги появятся здесь."));
       }
       recent.appendChild(contents);
       ui.tree.appendChild(recent);
+
+      const unclassified = (lastScan && lastScan.unclassifiedRows) || [];
+      if (unclassified.length) {
+        const review = createElement("details", "folder unclassified");
+        review.open = true;
+        const reviewSummary = createElement("summary", "folder-summary");
+        reviewSummary.append(createElement("span", "folder-marker neutral-marker"));
+        reviewSummary.append(createElement("span", "folder-name", "Не классифицировано"));
+        reviewSummary.append(createElement("span", "folder-count", String(unclassified.length)));
+        review.appendChild(reviewSummary);
+        const reviewContents = createElement("div", "folder-contents");
+        unclassified.forEach((candidate) => reviewContents.appendChild(createUnclassifiedRow(candidate)));
+        review.appendChild(reviewContents);
+        ui.tree.appendChild(review);
+      }
 
       if (missing.length) {
         const archive = createElement("details", "folder archived");
@@ -544,8 +575,9 @@
     const all = getAllChatUrls();
     const indexed = all.filter((url) => state.chats[url] && state.chats[url].text).length;
     const missingCount = all.filter((url) => state.chats[url] && state.chats[url].missing).length;
-    setStatus(all.length + " сохранено · " + (all.length - missingCount) +
-      " в истории · " + missingCount + " вне истории · " + indexed + " проиндексировано");
+    const unknownCount = lastScan ? lastScan.unclassifiedRows.length : 0;
+    setStatus(all.length + " подтверждено · " + unknownCount + " требуют идентификации · " +
+      indexed + " проиндексировано" + (missingCount ? " · " + missingCount + " вне истории" : ""));
   }
 
   function createInterface() {
@@ -1123,7 +1155,7 @@
   }
 
   function updateDetectionDiagnostic(scan) {
-    if (!isGoogleHost(location.hostname) || location.pathname !== "/search" || uiPrefs.diagHidden) { removeDetectionDiagnostic(); return; }
+    if (!isCurrentAiPage() || uiPrefs.diagHidden) { removeDetectionDiagnostic(); return; }
     if (!diagnosticHost || !diagnosticHost.isConnected) {
       diagnosticHost = document.createElement("div");
       diagnosticHost.id = "gsaco-detection-diagnostic";
@@ -1180,21 +1212,13 @@
 
   function resolveCurrentKey() {
     const threadId = currentThreadId();
-    if (threadId) {
-      const byThread = Object.keys(state.chats).find((k) => state.chats[k].threadId === threadId);
-      if (byThread) return byThread;
-    }
+    if (threadId) return "id:" + threadId;
     if (lastScan) {
-      const row = lastScan.rows.find((r) => isCurrentRow(r.el));
+      const row = lastScan.rows.find((item) => item.key && isCurrentRow(item.el));
       if (row && state.chats[row.key]) return row.key;
     }
-    const urlKey = toKey(location.href);
+    const urlKey = toThreadKey(location.href);
     if (urlKey && state.chats[urlKey]) return urlKey;
-    const title = normTitle(pageTitle());
-    if (title) {
-      const same = Object.keys(state.chats).filter((k) => normTitle(state.chats[k].title) === title);
-      if (same.length === 1) return same[0];
-    }
     return urlKey;
   }
 
@@ -1215,7 +1239,7 @@
   function captureCurrentPage() {
     if (!isCurrentAiPage()) return;
     const key = resolveCurrentKey();
-    if (!key) return;
+    if (!key || !isVerifiedChatKey(key)) return;
     const text = extractPageText();
     const threadId = currentThreadId();
     const previous = state.chats[key] || { title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "", threadId: "", order: null, missing: false };
@@ -1234,6 +1258,14 @@
 
   function scanForChats() {
     scanTimer = null;
+    if (!isCurrentAiPage()) {
+      teardown();
+      removeDetectionDiagnostic();
+      currentKey = null;
+      missCount = 0;
+      return;
+    }
+
     let changed = false;
     const scan = scanHistory();
     if (!scan) {
@@ -1245,16 +1277,14 @@
       region = scan.region;
       ensureInterface();
       if (applyScan(scan)) changed = true;
-      if (!activePriming) startPriming(scan);
+      if (!scan.listLoaded && !activePriming) startPriming(scan);
       const positioned = positionHost();
-      setNativeHidden(uiPrefs.open && scan.complete && positioned);
+      setNativeHidden(uiPrefs.open && scan.listLoaded && positioned);
     }
     updateDetectionDiagnostic(scan);
-    if (isCurrentAiPage()) {
-      const key = resolveCurrentKey();
-      if (key !== currentKey) { currentKey = key; changed = true; }
-      scheduleCapture();
-    }
+    const key = resolveCurrentKey();
+    if (key !== currentKey) { currentKey = key; changed = true; }
+    scheduleCapture();
     if (changed) { persist(); render(); }
     else if (ui && !ui.tree.childElementCount) render();
   }
