@@ -339,8 +339,8 @@
   }
 
   function getAllChatUrls() {
-    const urls = new Set(Object.keys(state.chats));
-    collectAssignedUrls(state.folders).forEach((url) => urls.add(url));
+    const urls = new Set(Object.keys(state.chats).filter(isVerifiedChatKey));
+    collectAssignedUrls(state.folders).filter(isVerifiedChatKey).forEach((url) => urls.add(url));
     return Array.from(urls);
   }
 
@@ -438,7 +438,7 @@
     const marker = createElement("span", "folder-marker");
     marker.style.backgroundColor = folder.color || FOLDER_COLORS[0];
     const name = createElement("span", "folder-name", folder.name);
-    const count = (folder.chat_urls || []).length + countNestedChats(folder.children || []);
+    const count = (folder.chat_urls || []).filter(isVerifiedChatKey).length + countNestedChats(folder.children || []);
     const badge = createElement("span", "folder-count", String(count));
     const actions = createElement("span", "folder-actions");
 
@@ -465,7 +465,7 @@
     details.appendChild(summary);
 
     const children = createElement("div", "folder-contents");
-    (folder.chat_urls || []).forEach((url) => children.appendChild(createChatRow(url)));
+    (folder.chat_urls || []).filter(isVerifiedChatKey).forEach((url) => children.appendChild(createChatRow(url)));
     (folder.children || []).forEach((nested) => children.appendChild(renderFolder(nested, depth + 1)));
     if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Перетащите сюда ссылку на чат"));
     details.appendChild(children);
@@ -805,36 +805,32 @@
     });
   }
 
+  function removeKeyFromFolders(folders, key) {
+    (folders || []).forEach((folder) => {
+      folder.chat_urls = (folder.chat_urls || []).filter((value) => value !== key);
+      removeKeyFromFolders(folder.children || [], key);
+    });
+  }
+
   function applyScan(scan) {
     const now = Date.now();
     const entries = state.chats;
-    const scanKeys = new Set(scan.rows.map((row) => row.key));
+    const confirmedRows = scan.rows.filter((row) => row.key);
+    const scanKeys = new Set(confirmedRows.map((row) => row.key));
     let changed = false;
 
-    scan.rows.forEach((row, index) => {
+    confirmedRows.forEach((row, index) => {
       let item = entries[row.key];
       if (!item) {
         const candidates = Object.keys(entries).filter((key) => !scanKeys.has(key));
-        const wantedTitle = normTitle(row.title);
         const matchingThread = row.threadId
-          ? candidates.filter((key) => entries[key].threadId && entries[key].threadId === row.threadId)
+          ? candidates.filter((key) => entries[key].threadId === row.threadId || key === "id:" + row.threadId)
           : [];
         const matchingUrl = row.urlKey
-          ? candidates.filter((key) => {
-              const oldUrl = entries[key].url;
-              return oldUrl && toKey(oldUrl) === row.urlKey && normTitle(entries[key].title) === wantedTitle;
-            })
+          ? candidates.filter((key) => entries[key].url && toThreadKey(entries[key].url) === row.urlKey)
           : [];
-        const matchingTitle = candidates.filter((key) => normTitle(entries[key].title) === wantedTitle);
-
-        // Rebind only on an unambiguous identity. If several old records share
-        // the same title/query and expose no stable thread ID, preserve them as
-        // missing and create a fresh row instead of guessing which text/folder
-        // belongs to the newly observed conversation.
         const uniqueMatch = (matches) => matches.length === 1 ? matches[0] : null;
-        const oldKey = uniqueMatch(matchingThread) ||
-          uniqueMatch(matchingUrl) ||
-          uniqueMatch(matchingTitle);
+        const oldKey = uniqueMatch(matchingThread) || uniqueMatch(matchingUrl);
 
         if (oldKey) {
           item = entries[oldKey];
@@ -842,8 +838,10 @@
           entries[row.key] = item;
           renameKeyInFolders(state.folders, oldKey, row.key);
         } else {
-          item = { title: row.title, text: "", updatedAt: now, url: row.href,
-            threadId: row.threadId || "", order: index, missing: false };
+          item = {
+            title: row.title, text: "", updatedAt: now, url: row.href,
+            threadId: row.threadId || "", order: index, missing: false
+          };
           entries[row.key] = item;
         }
         changed = true;
@@ -858,11 +856,14 @@
       if (row.threadId) item.threadId = row.threadId;
     });
 
-    // Keep records absent from the completed Google list; never auto-delete user data.
-    if (scan.complete && scan.rows.length) {
+    // A complete list is authoritative only when every detected row has a
+    // verified identity. Unknown rows make reconciliation non-destructive.
+    if (scan.complete && scan.identityComplete && confirmedRows.length) {
       Object.keys(entries).forEach((key) => {
-        if (scanKeys.has(key)) return;
-        if (!entries[key].missing) { entries[key].missing = true; changed = true; }
+        if (!isVerifiedChatKey(key) || scanKeys.has(key)) return;
+        delete entries[key];
+        removeKeyFromFolders(state.folders, key);
+        changed = true;
       });
     }
     return changed;
@@ -873,7 +874,7 @@
     if (live) return live.el;
     const fresh = scanHistory();
     if (!fresh) return null;
-    const match = fresh.rows.find((row) => row.key === key) || fresh.rows.find((row) => normTitle(row.title) === normTitle(title));
+    const match = fresh.rows.find((row) => row.key && row.key === key);
     return match ? match.el : null;
   }
 
