@@ -1409,6 +1409,7 @@
         // Streaming answer text mutates constantly; it cannot change the sidebar, so only re-index it.
         if (lastScan && mutations.every((m) => isOwnMutation(m) || (m.target.closest && m.target.closest("main,[role='main']")))) {
           if (isCurrentAiPage()) scheduleCapture();
+          else scheduleScan();
           return;
         }
         scheduleScan();
