@@ -1060,6 +1060,81 @@
     return false;
   }
 
+  const USER_ROLE_VALUES = new Set(["user", "human"]);
+  const ASSISTANT_ROLE_VALUES = new Set(["assistant", "model", "ai"]);
+  const ROLE_ATTRIBUTE_NAMES = [
+    "data-message-author-role", "data-message-role", "data-role",
+    "data-author", "data-sender", "role", "data-testid"
+  ];
+  const MESSAGE_CANDIDATE_SELECTOR =
+    "article,[role='article'],[data-message-author-role],[data-message-role],[data-role],[data-author],[data-sender],[data-testid]";
+
+  function explicitMessageRole(el) {
+    for (const name of ROLE_ATTRIBUTE_NAMES) {
+      const value = cleanText(el.getAttribute(name)).toLowerCase();
+      if (USER_ROLE_VALUES.has(value) || value === "user-message" || value === "user-query" || value === "user-turn") return "user";
+      if (ASSISTANT_ROLE_VALUES.has(value) || value === "assistant-message" || value === "ai-response") return "assistant";
+    }
+    return "";
+  }
+
+  function outermostNodes(nodes) {
+    const set = new Set(nodes);
+    return nodes.filter((node) => {
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        if (set.has(parent)) return false;
+      }
+      return true;
+    });
+  }
+
+  function inspectConversationMessages() {
+    const root = document.querySelector("main,[role='main']");
+    if (!root) return { root: null, userMessages: [], assistantMessages: [], candidates: [], userTurns: null, source: "no-main" };
+
+    const marked = Array.from(root.querySelectorAll(
+      "[data-message-author-role],[data-message-role],[data-role],[data-author],[data-sender],[role],[data-testid]"
+    ));
+    const users = outermostNodes(marked.filter((el) => explicitMessageRole(el) === "user"));
+    const assistants = outermostNodes(marked.filter((el) => explicitMessageRole(el) === "assistant"));
+    const candidates = Array.from(root.querySelectorAll(MESSAGE_CANDIDATE_SELECTOR))
+      .filter((el) => {
+        const textLength = cleanText(el.textContent).length;
+        return textLength > 0 && textLength <= 20000;
+      })
+      .slice(0, 60);
+
+    return {
+      root: root,
+      userMessages: users,
+      assistantMessages: assistants,
+      candidates: candidates,
+      userTurns: users.length || assistants.length ? users.length : null,
+      source: users.length || assistants.length ? "explicit-role-markers" : "no-recognized-role-markers"
+    };
+  }
+
+  function semanticNodeSummary(el) {
+    const rect = el.getBoundingClientRect();
+    const attrs = Array.from(el.attributes).map((attr) => attr.name);
+    const role = explicitMessageRole(el) || "unknown";
+    const testId = (el.getAttribute("data-testid") || "").toLowerCase();
+    const testIdHint = /^(message|user-message|user-query|user-turn|assistant-message|ai-response|turn|response|question|answer|prompt|conversation)$/.test(testId)
+      ? testId : "";
+    const classHints = String(el.className && typeof el.className === "string" ? el.className : "")
+      .toLowerCase().split(/\s+/)
+      .filter((token) => /^(user|human|assistant|model|message|turn|response|question|answer|prompt)$/.test(token))
+      .slice(0, 6);
+    return el.tagName.toLowerCase() +
+      " role=" + role +
+      " attrs=" + attrs.filter((name) => name !== "class" && name !== "style" && name !== "id").slice(0, 16).join(",") +
+      (testIdHint ? " testid=" + testIdHint : "") +
+      (classHints.length ? " semanticClasses=" + classHints.join(",") : "") +
+      " children=" + el.children.length +
+      " textLen=" + cleanText(el.textContent).length +
+      " rect=" + Math.round(rect.left) + "," + Math.round(rect.top) + "," + Math.round(rect.width) + "," + Math.round(rect.height);
+  }
+
   function describeNode(el) {
     const r = el.getBoundingClientRect();
     const cs = window.getComputedStyle(el);
@@ -1070,17 +1145,24 @@
       " overflowY=" + cs.overflowY + " textLen=" + cleanText(el.textContent).length;
   }
 
-  // Anonymised outline (no titles, no query values) to send back for debugging.
+  // The snapshot reports only structure and attribute names, never user or assistant text.
   function buildSnapshot(scan) {
     const lines = ["--- DOM snapshot (v" + VERSION + ") ---"];
     if (scan) {
       lines.push("Цепочка предков заголовка:");
       let node = scan.heading;
-      for (let i = 0; i < 9 && node && node !== document.body; i += 1, node = node.parentElement) lines.push("  " + describeNode(node));
-      scan.rows.slice(0, 3).forEach((row, index) => {
-        lines.push("Строка " + (index + 1) + ": " + describeNode(row.el) + " titleLen=" + row.title.length +
-          " key=" + (row.hasUrl ? "url" : row.hasId ? "id" : "title"));
-        Array.from(row.el.querySelectorAll("*")).slice(0, 6).forEach((child) => lines.push("    " + describeNode(child)));
+      for (let i = 0; i < 9 && node && node !== document.body; i += 1, node = node.parentElement) {
+        lines.push("  " + describeNode(node));
+      }
+      lines.push("Строки истории: " + scan.rows.length +
+        " · с подтверждённым ID/URL: " + scan.rows.filter((row) => row.key).length +
+        " · без подтверждённого ID/URL: " + scan.unclassifiedRows.length +
+        " · дубли identity: " + scan.duplicateIdentityCount);
+      scan.rows.slice(0, 5).forEach((row, index) => {
+        lines.push("Строка " + (index + 1) + ": " + describeNode(row.el) +
+          " titleLen=" + row.title.length +
+          " identity=" + (row.hasId ? "data-id" : row.hasUrl ? "thread-url" : "unknown"));
+        Array.from(row.el.querySelectorAll("*")).slice(0, 8).forEach((child) => lines.push("    " + describeNode(child)));
         const anchor = row.el.matches("a[href]") ? row.el : row.el.querySelector("a[href]");
         if (anchor) {
           try {
@@ -1090,9 +1172,21 @@
         }
       });
     }
-    const thread = document.querySelector("[data-session-thread-id]");
-    lines.push("data-session-thread-id на странице: " + (thread ? "да, длина " + (thread.getAttribute("data-session-thread-id") || "").length : "нет"));
-    const railLinks = Array.from(document.querySelectorAll("a[href]")).filter((a) => a.getBoundingClientRect().left < 300).slice(0, 8);
+
+    const conversation = inspectConversationMessages();
+    lines.push("Структура открытой AI Mode-сессии:");
+    lines.push("  main: " + (conversation.root ? "найден" : "не найден"));
+    lines.push("  реплики пользователя по явным role markers: " +
+      (conversation.userTurns === null ? "не определено" : conversation.userTurns));
+    lines.push("  сообщения AI по явным role markers: " + conversation.assistantMessages.length);
+    lines.push("  источник счётчика: " + conversation.source);
+    lines.push("  кандидатных структурных узлов: " + conversation.candidates.length);
+    conversation.candidates.slice(0, 32).forEach((el, index) => {
+      lines.push("  M" + (index + 1) + " " + semanticNodeSummary(el));
+    });
+
+    const railLinks = Array.from(document.querySelectorAll("a[href]"))
+      .filter((a) => a.getBoundingClientRect().left < 300).slice(0, 8);
     lines.push("Ссылки у левого края (первые " + railLinks.length + "):");
     railLinks.forEach((a) => {
       try {
@@ -1112,6 +1206,7 @@
     const titles = new Map();
     rows.forEach((r) => titles.set(normTitle(r.title), (titles.get(normTitle(r.title)) || 0) + 1));
     const repeated = Array.from(titles.values()).filter((n) => n > 1).length;
+    const conversation = inspectConversationMessages();
     const lines = [
       "Версия " + VERSION + " · скрипт ЗАГРУЖЕН",
       "Страница: " + location.pathname + " · " + location.hostname + " · AI-страница: " + (isCurrentAiPage() ? "да" : "нет"),
@@ -1123,20 +1218,26 @@
       lines.push("Заголовок «Недавнее»: НАЙДЕН x=" + Math.round(hr.left) + " y=" + Math.round(hr.top));
       lines.push("Область истории: " + scan.region.tagName.toLowerCase() + " x=" + Math.round(rr.left) + " w=" + Math.round(rr.width) +
         " h=" + Math.round(rr.height) + (scan.scroller ? " · прокрутка " + scan.scroller.scrollHeight + "/" + scan.scroller.clientHeight : " · без прокрутки"));
-      lines.push("Строк в истории Google: " + rows.length + " (по URL " + url + " · по id " + id + " · по названию " + (rows.length - url - id) + ")");
-      lines.push("Список загружен полностью: " + (scan.complete ? "да" : "нет") + (activePriming ? " · идёт подгрузка…" : ""));
-      lines.push("Повторяющихся названий: " + repeated + " (ключи различаются суффиксом, записи не склеиваются)");
+      lines.push("Строк в истории: " + rows.length + " (подтверждённый URL " + url + " · ID " + id +
+        " · без подтверждённой identity " + scan.unclassifiedRows.length + ")");
+      lines.push("Список подгружен: " + (scan.listLoaded ? "да" : "нет") +
+        " · identity всех строк подтверждён: " + (scan.identityComplete ? "да" : "нет") +
+        (activePriming ? " · идёт подгрузка…" : ""));
+      lines.push("Дубли по одинаковому ID/URL: " + scan.duplicateIdentityCount);
+      lines.push("Повторяющихся названий: " + repeated + " (название само по себе не считается ID)");
     } else {
       lines.push("Заголовок «Недавнее»: НЕ НАЙДЕН");
     }
     const missingCount = keys.filter((k) => state.chats[k].missing).length;
-    lines.push("В базе: " + keys.length + " · в папках " + assigned.size + " · вне текущей истории " + missingCount + " · проиндексировано " + keys.filter((k) => state.chats[k].text).length);
+    const verifiedCount = keys.filter(isVerifiedChatKey).length;
+    lines.push("Локальная база: " + keys.length + " · подтверждённые записи " + verifiedCount +
+      " · в папках " + assigned.size + " · вне текущей истории " + missingCount +
+      " · проиндексировано " + keys.filter((k) => state.chats[k].text).length);
+    lines.push("Открытая сессия: реплик пользователя " +
+      (conversation.userTurns === null ? "не определено" : conversation.userTurns) +
+      " · сообщений AI с role marker " + conversation.assistantMessages.length);
     lines.push("Органайзер: " + (host && host.isConnected ? (uiPrefs.open ? "заменяет список" : "свёрнут") : "НЕ ВСТАВЛЕН") +
       " · родной список скрыт: " + (nativeHidden ? "да" : "нет"));
-    rows.slice(0, 3).forEach((row, i) => {
-      lines.push("  #" + (i + 1) + " <" + row.el.tagName.toLowerCase() + (row.el.getAttribute("role") ? " role=" + row.el.getAttribute("role") : "") +
-        "> ключ: " + (row.hasUrl ? "URL" : row.hasId ? "id" : "название") + " · название " + row.title.length + " симв.");
-    });
     return lines.join("\n");
   }
 
@@ -1321,7 +1422,8 @@
 
   if (typeof window.__GSACO_TEST__ === "object") {
     Object.assign(window.__GSACO_TEST__, {
-      state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, buildSnapshot: buildSnapshot,
+      state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, toThreadKey: toThreadKey,
+      isCurrentAiPage: isCurrentAiPage, inspectConversationMessages: inspectConversationMessages, buildSnapshot: buildSnapshot,
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
     });
   } else {
