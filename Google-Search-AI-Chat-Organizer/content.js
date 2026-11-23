@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.2";
+  const VERSION = "0.4.0";
   const FOLDERS_KEY = "google_ai_folders";
   const CHATS_KEY = "google_ai_chats";
   const UI_KEY = "google_ai_ui";
@@ -112,18 +112,28 @@
   function isLikelyAiUrl(value) {
     try {
       const url = new URL(value, location.href);
-      return url.searchParams.get("udm") === "50" || url.searchParams.has("aep") || url.searchParams.has("vsrid");
+      return url.pathname === "/search" && url.searchParams.get("udm") === "50";
     } catch (_error) { return false; }
   }
 
   function isCurrentAiPage() {
-    if (!isGoogleHost(location.hostname)) return false;
-    if (isLikelyAiUrl(location.href)) return true;
-    const title = (document.title || "").toLowerCase();
-    if (title.includes("ai mode") || title.includes("режим ии") || title.includes("режим искусственного интеллекта")) return true;
-    const activeMode = document.querySelector('[aria-current="page"],[aria-selected="true"]');
-    const activeLabel = activeMode ? (activeMode.getAttribute("aria-label") || activeMode.innerText || activeMode.textContent || "").toLowerCase() : "";
-    return activeLabel.includes("ai mode") || activeLabel.includes("режим ии");
+    return isGoogleHost(location.hostname) && isLikelyAiUrl(location.href);
+  }
+
+  function toThreadKey(value) {
+    const key = toKey(value);
+    if (!key) return null;
+    try {
+      const url = new URL(value, location.href);
+      return IDENTITY_PARAMS.some((name) => url.searchParams.has(name)) ? key : null;
+    } catch (_error) { return null; }
+  }
+
+  function isVerifiedChatKey(rawKey) {
+    if (typeof rawKey !== "string" || !rawKey) return false;
+    const base = rawKey.replace(/\|\d+$/, "");
+    if (/^id:[A-Za-z0-9._:-]{4,200}$/.test(base)) return true;
+    return toThreadKey(base) === base;
   }
 
   function normalizeFolderList(list, depth, rawKeyToMigratedKey) {
