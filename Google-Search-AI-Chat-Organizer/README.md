@@ -1,83 +1,45 @@
 # Google Search AI Chat Organizer
 
-Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).
+Chromium Manifest V3 extension for organizing **actual Google AI Mode conversations**, not arbitrary search-history entries.
 
-Adds nested folders, local full-text search over captured conversations, and Markdown export to Google AI Mode history.
+**Candidate build:** v0.4.0  
+**Project stage:** Prototype in progress — Prototype Gate not passed.  
+**main:** v0.3.2 until v0.4.0 PR is merged.
 
-## User-facing behaviour
+## What v0.4.0 changes
+- Requires stable thread/session identity (explicit Google data ID or URL with thread identity).
+- q-only URLs and generic clickable rows are not treated as chats.
+- Title-only identity fallback is removed.
+- Counts user turns from explicit user-role markers or transcript markers inside AI Mode Conversation.
+- Adds filters: All, 2+ user turns, 1 user turn, Not calculated.
+- Saves the selected filter mode.
+- Keeps old title-only local records without deleting text, but hides them from the confirmed active list.
+- Does not hide native Google history while rows are unclassified or scan is incomplete.
+- Persists message count/classification for opened sessions.
+- Markdown remains the only export format.
 
-- Replaces Google's Recent history box with an overlay occupying the same measured area.
-- Detects clickable history rows even when they do not expose an ordinary `<a href>`.
-- Scrolls Google's own history scroller to the end before replacing the native list.
-- Keeps Google's original list available through the `⌃` collapse control.
-- Supports four folder levels, rename, color, delete, drag-and-drop, local search and export.
-- Clicking an organizer row proxies the click to the live Google row; a saved URL is used as fallback when the row is no longer present.
-- Uses only `chrome.storage.local`; no background fetching or external service.
+## Current limitations
+- User-turn count is available after a session is opened/read. Full history importer with progress, Resume and retry is not implemented.
+- Exact thread identity and message markers must be confirmed against the live Google AI Mode DOM. CI uses fixtures and cannot prove current account DOM.
+- Full external synchronization of Google additions, renames and deletions remains in progress.
+- Playwright browser harness is planned but not implemented.
+- This is a technical prototype candidate, not an MVP.
 
-## Detection and identity
+## Project documentation
+- [Functional product roadmap](Документация/Функциональная%20дорожная%20карта%20продукта.md)
+- [Task definition and acceptance criteria](Документация/Постановка-задачи-и-критерии-приёмки.md)
+- [Data architecture and automatic synchronization](Документация/Архитектура-данных-и-автоматической-синхронизации.md)
+- [Tooling and automated testing](Документация/Инструментарий-и-автоматизированная-проверка.md)
+- [Implementation plan and milestones](Документация/План-реализации-и-контрольные-вехи.md)
+- [Conversation work register](Meta/Наработки-диалога.md)
 
-The visible `Recent / Недавнее` heading identifies the history area. The overlay is positioned over a bounded history region, not inserted into Google's navigation layout. The nearest bounded scroll container is used for lazy loading; a larger enclosing box is selected only when it remains within the left rail and does not contain New chat, Search threads or Settings.
+## Automated checks
+From this directory:
 
-Rows are detected from clickable elements and row geometry, not only from `q` links. Identity priority is:
+    node --check content.js
+    npm test
 
-1. Explicit row data ID (`data-session-thread-id`, `data-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id`, `data-mtid`).
-2. Canonical Google URL identity: host, path, `q`, `udm` and known thread ID query parameters.
-3. Normalised title as a fallback.
+CI validates Manifest V3, referenced scripts, JS syntax and DOM smoke tests. Synthetic tests do not replace live Google DOM validation.
 
-When multiple rows share a base key, they remain separate with an order suffix. Their order can change if Google reorders rows that expose no unique ID or URL identity.
-
-## Reconciliation and data safety
-
-- Existing 0.2.x records are migrated with an exact old-URL-to-new-key map; collisions are preserved as separate suffixed records rather than merged.
-- Folder assignments follow the same migration map.
-- Obvious accessibility skip-links such as `Skip to settings` are excluded.
-- Once Google confirms that its history list is fully loaded, records absent from the current list are marked missing and placed in a collapsed `Нет в текущей истории` group (or remain in their assigned folder).
-- Old records are not automatically deleted. This avoids losing conversations that are archived, temporarily unavailable or not currently shown by Google.
-
-## Full-text index and export
-
-Text is captured only while an AI Mode chat is open in the active tab. There are no background requests for old sessions. Up to 100 most recently indexed chats retain up to 10,000 characters each. Export contains a text snapshot, title and source URL.
-
-## Diagnostics
-
-The top-right diagnostic card reports the detected heading, history region, row count and key types, lazy-load completion, overlay visibility, native-list visibility and retained missing records. It provides **Копировать**, **Снимок DOM** (an anonymised DOM outline without titles/query values), and **Скрыть**.
-
-## Permissions
-
-Only the `storage` permission is requested. Folder structure and captured text remain in browser-local extension storage.
-
-## Supported Google domains
-
-`google.com`, `google.ru`, `google.se`, `google.co.uk`, `google.de`, `google.fr`, `google.es`, `google.ca`, `google.com.au`, `google.co.in`.
-
-## Automated tests
-
-The jsdom smoke suite covers row discovery without q-links, explicit row IDs, duplicate titles, overlay geometry, lazy loading, non-destructive migration, folder assignment preservation, click proxying, teardown and anonymised diagnostics.
-
-Run from this directory:
-
-```bash
-npm install --no-save --package-lock=false
-npm test
-```
-
-These tests use synthetic DOM geometry. They verify the logic but do not replace a real-browser visual check.
-
-## Milestone browser acceptance
-
-The developer runs automated and fixture-based checks for every change. A real-account browser check is requested from the user only at consolidated milestones:
-
-- **Prototype gate:** identity/classification, user-message count, full history loading, and overlay/native-list fallback.
-- **MVP gate:** one end-to-end pass covering sync, folders/moves, search and Markdown export.
-- **Closed Beta gate:** native Google deletion, recovery, and supported-browser compatibility.
-
-Do not ask the user to test individual CSS changes, controls, commits or pull requests.
-
-## Документация проекта
-
-- [Функциональная дорожная карта продукта](Документация/Функциональная%20дорожная%20карта%20продукта.md)
-- [Постановка задачи и критерии приёмки](Документация/Постановка-задачи-и-критерии-приёмки.md)
-- [Архитектура данных и автоматическая синхронизация](Документация/Архитектура-данных-и-автоматической-синхронизации.md)
-- [Инструментарий и автоматизированная проверка](Документация/Инструментарий-и-автоматизированная-проверка.md)
-- [План реализации и контрольные вехи](Документация/План-реализации-и-контрольные-вехи.md)
-- [Реестр наработок диалога](Meta/Наработки-диалога.md)
+## User testing policy
+The developer performs all routine checks first. User participation is reserved for consolidated Prototype Gate, MVP Gate and Closed Beta acceptance — not individual UI patches, buttons or PRs.
