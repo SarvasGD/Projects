@@ -46,7 +46,7 @@ async function waitForOrganizer(page, expectedDisplay) {
 
     // Stable-ID history plus a real-looking open multi-turn AI Mode conversation.
     await routeFixture(page, stableHtml);
-    await page.goto("https://www.google.com/search?udm=50&q=fixture#thread=thread-0", { waitUntil: "domcontentloaded" });
+    await page.goto("https://www.google.com/search?udm=50&q=fixture#thread=thread-101", { waitUntil: "domcontentloaded" });
     await waitForOrganizer(page, "block");
 
     try {
@@ -77,8 +77,8 @@ async function waitForOrganizer(page, expectedDisplay) {
       }))
     );
     assert.deepEqual(initial, [
-      { title: "Многоходовой диалог", key: "id:thread-0" },
-      { title: "Ещё один диалог", key: "id:thread-1" }
+      { title: "Многоходовой диалог", key: "id:thread-101" },
+      { title: "Ещё один диалог", key: "id:thread-102" }
     ], "opened session must update the existing history row, not create a duplicate");
 
 
