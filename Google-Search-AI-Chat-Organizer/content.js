@@ -161,8 +161,11 @@
     if (outermost.length) return { count: outermost.length, source: "dom-role" };
 
     const text = String(root.innerText || root.textContent || "").replace(/\u00a0/g, " ");
-    const markers = text.match(/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/gi) || [];
-    if (markers.length) return { count: markers.length, source: "conversation-markers" };
+    const hasConversationHeader = /(?:AI Mode Conversation:|Разговор в режиме ИИ:)/i.test(text);
+    if (hasConversationHeader) {
+      const markers = text.match(/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/gi) || [];
+      if (markers.length) return { count: markers.length, source: "conversation-markers" };
+    }
     return { count: null, source: "unknown" };
   }
 
@@ -1030,8 +1033,16 @@
     if (!host.isConnected) (document.body || document.documentElement).appendChild(host);
   }
 
+  function canReplaceNativeHistory(scan) {
+    return !!(scan && scan.complete && scan.rows.length > 0 && scan.unclassifiedCount === 0);
+  }
+
   function positionHost() {
     if (!host || !ui || !region || !region.isConnected) return false;
+    if (!canReplaceNativeHistory(lastScan)) {
+      host.style.display = "none";
+      return false;
+    }
     const r = region.getBoundingClientRect();
     if (r.width < 150 || r.height < 100 || r.width > 460 || r.left > 360) {
       host.style.display = "none";
@@ -1075,7 +1086,7 @@
     uiPrefs.open = !!value;
     saveUiPrefs();
     const positioned = positionHost();
-    setNativeHidden(uiPrefs.open && !!(lastScan && lastScan.complete && lastScan.rows.length > 0 && lastScan.unclassifiedCount === 0) && positioned);
+    setNativeHidden(uiPrefs.open && canReplaceNativeHistory(lastScan) && positioned);
   }
 
   function teardown() {
@@ -1387,7 +1398,7 @@
       if (applyScan(scan)) changed = true;
       if (!activePriming && scan.rows.length > 0) startPriming(scan);
       const positioned = positionHost();
-      setNativeHidden(uiPrefs.open && scan.complete && scan.rows.length > 0 && scan.unclassifiedCount === 0 && positioned);
+      setNativeHidden(uiPrefs.open && canReplaceNativeHistory(scan) && positioned);
     }
     updateDetectionDiagnostic(scan);
     if (isCurrentAiPage()) {
