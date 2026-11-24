@@ -1435,7 +1435,7 @@
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init(),
       countUserTurns: countUserTurns, toStableThreadKey: toStableThreadKey,
       isStableChatKey: isStableChatKey, currentMessageStats: currentMessageStats,
-      getAllChatUrls: getAllChatUrls, assignChat: assignChat, applyScan: applyScan, render: render
+      getAllChatUrls: getAllChatUrls, assignChat: assignChat, captureCurrentPage: captureCurrentPage, applyScan: applyScan, render: render
     });
   } else {
     init();
