@@ -502,58 +502,6 @@
     return count;
   }
 
-  function renderFolder(folder, depth) {
-    const direct = (folder.chat_urls || []).filter((url) =>
-      isStableChatKey(url) && state.chats[url] && isChatVisibleForFilter(url)
-    );
-    const nested = (folder.children || []).map((child) => renderFolder(child, depth + 1)).filter(Boolean);
-    if (uiPrefs.messageFilter !== "all" && direct.length === 0 && nested.length === 0) return null;
-
-    const details = createElement("details", "folder");
-    details.open = openFolders.has(folder.id);
-    details.addEventListener("toggle", () => {
-      if (details.open) openFolders.add(folder.id);
-      else openFolders.delete(folder.id);
-    });
-    addDropTarget(details, folder);
-
-    const summary = createElement("summary", "folder-summary");
-    const marker = createElement("span", "folder-marker");
-    marker.style.backgroundColor = folder.color || FOLDER_COLORS[0];
-    const name = createElement("span", "folder-name", folder.name);
-    const count = direct.length + nested.reduce((sum, node) => sum + Number(node.dataset.visibleCount || 0), 0);
-    const badge = createElement("span", "folder-count", String(count));
-    const actions = createElement("span", "folder-actions");
-
-    if (depth < MAX_DEPTH) actions.appendChild(createButton("+", "Создать подпапку", () => addFolder(folder.id)));
-    actions.appendChild(createButton("✎", "Переименовать папку", () => {
-      const next = window.prompt("Название папки:", folder.name);
-      if (next && next.trim()) { folder.name = next.trim(); persist(); render(); }
-    }));
-    actions.appendChild(createButton("●", "Изменить цвет папки", () => {
-      const next = window.prompt("Цвет в формате HEX:", folder.color || FOLDER_COLORS[0]);
-      if (next && /^#[0-9a-f]{6}$/i.test(next.trim())) { folder.color = next.trim(); persist(); render(); }
-      else if (next) window.alert("Укажите цвет в формате #4285F4.");
-    }));
-    actions.appendChild(createButton("×", "Удалить папку", () => {
-      if (!window.confirm("Удалить папку «" + folder.name + "»? Вложенные папки будут подняты на уровень выше.")) return;
-      removeFolderFromList(state.folders, folder.id, null);
-      openFolders.delete(folder.id);
-      persist();
-      render();
-    }));
-    summary.append(marker, name, badge, actions);
-    details.appendChild(summary);
-
-    const children = createElement("div", "folder-contents");
-    direct.forEach((url) => children.appendChild(createChatRow(url)));
-    nested.forEach((node) => children.appendChild(node));
-    if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Пока нет подтверждённых диалогов."));
-    details.appendChild(children);
-    details.dataset.visibleCount = String(count);
-    return details;
-  }
-
   function renderSearchResults(query) {
     const normalized = query.toLocaleLowerCase();
     const matching = getAllChatUrls().map((url) => {
@@ -1172,7 +1120,7 @@
 
   function saveUiPrefs() {
     const value = {};
-    value[UI_KEY] = { open: uiPrefs.open, diagHidden: uiPrefs.diagHidden };
+    value[UI_KEY] = { open: uiPrefs.open, diagHidden: uiPrefs.diagHidden, messageFilter: uiPrefs.messageFilter };
     storageQueue = storageQueue.then(() => storageSet(value)).catch(() => {});
   }
 
