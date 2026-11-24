@@ -63,13 +63,13 @@ function test(name, fn){tests.push([name,fn]);}
 
 test("imports rows by explicit thread ID", async()=>{
   const {T}=await boot({titles:["Первый","Второй"]});
-  assert.deepEqual(T.scanHistory().rows.map(r=>r.key),["id:thread-0","id:thread-1"]);
+  assert.deepEqual(Array.from(T.scanHistory().rows, r => r.key),["id:thread-0","id:thread-1"]);
   assert.equal(Object.keys(T.state.chats).filter(T.isStableChatKey).length,2);
 });
 test("supports session ID, mtid and hash thread URLs", async()=>{
-  assert.equal((await boot({kind:"session",titles:["A"]})).T.scanHistory().rows[0].key,"id:session-0");
-  assert.equal((await boot({kind:"mtid",titles:["B"]})).T.scanHistory().rows[0].key,"id:mtid-0");
-  assert.equal((await boot({kind:"hash",titles:["C"]})).T.scanHistory().rows[0].key,"id:hash-0");
+  assert.equal((await boot({kind:"session",titles:["Session record"]})).T.scanHistory().rows[0].key,"id:session-0");
+  assert.equal((await boot({kind:"mtid",titles:["Mtid record"]})).T.scanHistory().rows[0].key,"id:mtid-0");
+  assert.equal((await boot({kind:"hash",titles:["Hash record"]})).T.scanHistory().rows[0].key,"id:hash-0");
 });
 test("q plus udm and generic clickable rows are never treated as conversations", async()=>{
   for (const kind of ["q","div"]) {
@@ -87,7 +87,7 @@ test("counts explicit user message roles and excludes assistant messages", async
     '<div data-message-author-role="user">U2</div>',
     '<div data-message-author-role="assistant">A2</div>'
   ].join("");
-  assert.deepEqual(T.countUserTurns(w.document.querySelector("main")),{count:2,source:"dom-role"});
+  const result=T.countUserTurns(w.document.querySelector("main")); assert.equal(result.count,2); assert.equal(result.source,"dom-role");
 });
 test("counts You said markers and does not count AI replies", async()=>{
   const {w,T}=await boot();
@@ -95,7 +95,7 @@ test("counts You said markers and does not count AI replies", async()=>{
     "AI Mode Conversation:","You said: first","AI Mode reply for first","answer",
     "You said: second","AI Mode reply for second","answer"
   ].join("\n");
-  assert.deepEqual(T.countUserTurns(w.document.querySelector("main")),{count:2,source:"conversation-markers"});
+  const result=T.countUserTurns(w.document.querySelector("main")); assert.equal(result.count,2); assert.equal(result.source,"conversation-markers");
 });
 test("one-turn, multi-turn and unknown states are distinct", async()=>{
   const {w,T}=await boot();
@@ -124,7 +124,7 @@ test("filter control persists selection",async()=>{
   const control=T.getHost().shadowRoot.querySelector("select[aria-label='Фильтр по количеству реплик пользователя']");
   assert.ok(control);
   control.value="multi";
-  control.dispatchEvent(new T.getHost().ownerDocument.defaultView.Event("change",{bubbles:true}));
+  control.dispatchEvent(new w.Event("change",{bubbles:true}));
   await sleep(0);
   assert.equal(saved.google_ai_ui.messageFilter,"multi");
 });
@@ -172,7 +172,7 @@ test("migration maps legacy URL to matching stable ID and preserves folder/index
   const {T}=await boot({titles:["Renamed title"],stored});
   assert.ok(T.state.chats["id:thread-0"]);
   assert.equal(T.state.chats["id:thread-0"].text,"Indexed content");
-  assert.deepEqual(T.state.folders[0].chat_urls,["id:thread-0"]);
+  assert.deepEqual(Array.from(T.state.folders[0].chat_urls),["id:thread-0"]);
 });
 test("same title never rebinds legacy data to a new thread",async()=>{
   const stored={
@@ -183,7 +183,7 @@ test("same title never rebinds legacy data to a new thread",async()=>{
   assert.ok(T.state.chats["t:same title"]);
   assert.ok(T.state.chats["id:thread-0"]);
   assert.equal(T.state.chats["id:thread-0"].text,"");
-  assert.deepEqual(T.state.folders[0].chat_urls,["t:same title"]);
+  assert.deepEqual(Array.from(T.state.folders[0].chat_urls),["t:same title"]);
 });
 test("organizer click proxies to exact native row by ID",async()=>{
   const {w,T}=await boot({titles:["First chat","Second chat"]});
