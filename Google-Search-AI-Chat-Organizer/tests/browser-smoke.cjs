@@ -71,9 +71,16 @@ async function waitForOrganizer(page, expectedDisplay) {
     }
 
     const initial = await page.locator("#google-search-ai-chat-organizer").evaluate((host) =>
-      Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((link) => link.textContent)
+      Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((link) => ({
+        title: link.textContent,
+        key: link.dataset.chatKey
+      }))
     );
-    assert.deepEqual(initial, ["Многоходовой диалог", "Ещё один диалог"]);
+    assert.deepEqual(initial, [
+      { title: "Многоходовой диалог", key: "id:thread-0" },
+      { title: "Ещё один диалог", key: "id:thread-1" }
+    ], "opened session must update the existing history row, not create a duplicate");
+
 
     const nativeVisibility = await page.locator("#history-region").evaluate((node) => getComputedStyle(node).visibility);
     assert.equal(nativeVisibility, "hidden", "native history is hidden only after the stable-ID scan");
