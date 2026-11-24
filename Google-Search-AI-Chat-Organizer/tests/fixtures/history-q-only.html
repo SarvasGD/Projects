@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Режим ИИ — тестовая страница с одноразовым запросом</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100vh; font: 14px Arial, sans-serif; background: #202124; color: #e8eaed; }
+    #left-rail { position: fixed; inset: 0 auto 0 0; width: 261px; padding: 8px; background: #25272c; }
+    #history-region { position: absolute; left: 8px; top: 166px; width: 241px; height: 174px; padding: 0; overflow: visible; }
+    #history-region button, #history-region a { display: block; width: 241px; height: 40px; line-height: 40px; margin: 0; padding: 0 10px; border: 0; text-align: left; white-space: nowrap; overflow: hidden; color: #e8eaed; background: transparent; text-decoration: none; }
+    #main-content { margin-left: 300px; padding: 60px; }
+  </style>
+</head>
+<body>
+  <nav id="left-rail" aria-label="Google AI sidebar">
+    <div>Google</div>
+    <a href="/">Новый чат</a>
+    <div role="button">Поиск цепочек</div>
+    <div id="history-region">
+      <button type="button" role="button">Недавнее</button>
+      <a href="/search?q=single%20prompt&udm=50">Одиночный поисковый запрос</a>
+    </div>
+  </nav>
+  <main id="main-content">
+    <div>Search result and one-shot AI answer without a conversation identity.</div>
+  </main>
+</body>
+</html>
