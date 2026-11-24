@@ -292,7 +292,22 @@ test("Google add, rename and delete changes synchronize automatically",async()=>
   deleteScan2.complete=true;
   deleteScan2.unclassifiedCount=0;
   T.applyScan(deleteScan2);
-  assert.equal(T.state.chats["id:thread-1"],undefined,"second consecutive complete scan confirms removal");
+  assert.ok(T.state.chats["id:thread-1"],"two nearly simultaneous scans do not trigger deletion");
+  assert.deepEqual(Array.from(folder.chat_urls),["id:thread-1"]);
+
+  T.applyScan({ rows: [], complete: false, unclassifiedCount: 1 });
+  assert.equal(T.state.chats["id:thread-1"].missingSince,0,"partial scan resets deletion confirmation");
+  const deleteScan3=T.scanHistory();
+  deleteScan3.complete=true;
+  deleteScan3.unclassifiedCount=0;
+  T.applyScan(deleteScan3);
+  assert.ok(T.state.chats["id:thread-1"].missing,"first stable complete scan starts confirmation again");
+  T.state.chats["id:thread-1"].missingSince=Date.now()-2300;
+  const deleteScan4=T.scanHistory();
+  deleteScan4.complete=true;
+  deleteScan4.unclassifiedCount=0;
+  T.applyScan(deleteScan4);
+  assert.equal(T.state.chats["id:thread-1"],undefined,"separated complete scan confirms removal");
   assert.deepEqual(Array.from(folder.chat_urls),[],"folder binding is cleaned automatically");
 });
 test("organizer teardown restores native history when sidebar disappears",async()=>{
