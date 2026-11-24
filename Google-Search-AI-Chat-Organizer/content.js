@@ -449,6 +449,7 @@
     const link = createElement("a", "chat-link", item.title || titleForUrl(key));
     link.href = item.url || "#";
     link.title = item.title || key;
+    link.dataset.chatKey = key;
     link.draggable = true;
     if (!item.text) link.classList.add("not-indexed");
     if (item.missing) link.classList.add("missing");
@@ -1245,6 +1246,8 @@
     }
     const stats = currentMessageStats();
     lines.push("Текущая сессия: " + (stats.count === null ? "реплики не определены" : stats.count + " репл. пользователя") + " · источник: " + stats.source);
+    lines.push("Текущий thread ID: " + (currentThreadId() || "не найден"));
+    lines.push("Ключ текущей сессии: " + (resolveCurrentKey() || "не определён"));
     lines.push("В базе: " + keys.length + " подтверждённых · 1 реплика: " + oneTurn + " · 2+: " + multiTurn + " · не рассчитано: " + unknownCount);
     lines.push("Скрыто неподтверждённых локальных записей: " + unverified);
     lines.push("Органайзер: " + (host && host.isConnected ? (uiPrefs.open ? "заменяет список" : "свёрнут") : "НЕ ВСТАВЛЕН") +
