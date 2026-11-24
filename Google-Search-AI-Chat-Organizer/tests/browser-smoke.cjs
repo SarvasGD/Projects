@@ -49,11 +49,26 @@ async function waitForOrganizer(page, expectedDisplay) {
     await page.goto("https://www.google.com/search?udm=50&q=fixture#thread=thread-0", { waitUntil: "domcontentloaded" });
     await waitForOrganizer(page, "block");
 
-    await page.waitForFunction(() => {
-      const host = document.querySelector("#google-search-ai-chat-organizer");
-      const count = host && host.shadowRoot && host.shadowRoot.querySelector(".chat-row .message-count");
-      return count && count.textContent === "2";
-    }, { timeout: 10000 });
+    try {
+      await page.waitForFunction(() => {
+        const host = document.querySelector("#google-search-ai-chat-organizer");
+        const counts = host && host.shadowRoot && Array.from(host.shadowRoot.querySelectorAll(".chat-row .message-count")).map((node) => node.textContent);
+        return counts && counts.includes("2");
+      }, { timeout: 10000 });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => {
+        const host = document.querySelector("#google-search-ai-chat-organizer");
+        const diag = document.querySelector("#gsaco-detection-diagnostic");
+        return {
+          href: location.href,
+          title: document.title,
+          host: host ? { display: host.style.display, links: Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((node) => node.textContent), counts: Array.from(host.shadowRoot.querySelectorAll(".message-count")).map((node) => node.textContent) } : null,
+          diagnostic: diag ? diag.shadowRoot.textContent : null,
+          mainRoles: Array.from(document.querySelectorAll("main [data-message-author-role]")).map((node) => node.getAttribute("data-message-author-role"))
+        };
+      });
+      throw new Error("Conversation capture diagnostics: " + JSON.stringify(diagnostic) + " ; " + error.message);
+    }
 
     const initial = await page.locator("#google-search-ai-chat-organizer").evaluate((host) =>
       Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((link) => link.textContent)
