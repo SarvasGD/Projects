@@ -980,6 +980,17 @@
           changed = true;
         }
       });
+    } else {
+      // A partial/unknown/empty scan breaks the deletion-confirmation sequence.
+      Object.keys(entries).forEach((key) => {
+        const item = entries[key];
+        if (!isStableChatKey(key) || !item.missing) return;
+        if (item.missingScanCount || item.missingSince) {
+          item.missingScanCount = 0;
+          item.missingSince = 0;
+          changed = true;
+        }
+      });
     }
     return changed;
   }
