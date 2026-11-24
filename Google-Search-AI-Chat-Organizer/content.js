@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.2";
+  const VERSION = "0.4.0";
   const FOLDERS_KEY = "google_ai_folders";
   const CHATS_KEY = "google_ai_chats";
   const UI_KEY = "google_ai_ui";
@@ -21,7 +21,7 @@
   const CLICKABLE = "a[href],[role='link'],[role='button'],[role='option'],[role='menuitem'],[role='listitem'],li,[tabindex],[jsaction],[data-href]";
 
   const state = { folders: [], chats: {} };
-  const uiPrefs = { open: true, diagHidden: false };
+  const uiPrefs = { open: true, diagHidden: false, messageFilter: "all" };
   const openFolders = new Set();
   const primedScrollers = new WeakSet();
   const completeScrollers = new WeakSet();
@@ -100,6 +100,77 @@
     return clean ? clean + (suffix ? "|" + suffix[2] : "") : null;
   }
 
+  function extractThreadIdFromUrl(value) {
+    try {
+      const url = new URL(value, location.href);
+      if (url.protocol !== "https:" || !isGoogleHost(url.hostname)) return "";
+      for (const name of IDENTITY_PARAMS) {
+        const value = url.searchParams.get(name);
+        if (value && value.length >= 4 && value.length <= 200) return value;
+      }
+      const hash = (url.hash || "").replace(/^#/, "");
+      const params = new URLSearchParams(hash);
+      for (const name of ["thread", "thread_id", "threadId", "mtid"]) {
+        const value = params.get(name);
+        if (value && value.length >= 4 && value.length <= 200) return value;
+      }
+      const match = hash.match(/(?:^|[&?])(?:thread|thread_id|threadId|mtid)=([A-Za-z0-9._:-]{4,200})(?:&|$)/);
+      return match ? decodeURIComponent(match[1]) : "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  // A history row is a conversation only when Google exposes a stable thread/session identity.
+  // Search query URLs (q + udm=50) alone are not sufficient.
+  function toStableThreadKey(value) {
+    const threadId = extractThreadIdFromUrl(value);
+    return threadId ? "id:" + threadId : null;
+  }
+
+  function isStableChatKey(value) {
+    if (typeof value !== "string") return false;
+    if (/^id:[A-Za-z0-9._:-]{4,200}$/.test(value)) return true;
+    return !!toStableThreadKey(value);
+  }
+
+  function isChatVisibleForFilter(key) {
+    const item = state.chats[key] || {};
+    const count = Number.isInteger(item.userMessageCount) ? item.userMessageCount : null;
+    switch (uiPrefs.messageFilter) {
+      case "single": return count === 1;
+      case "multi": return count !== null && count >= 2;
+      case "unknown": return count === null;
+      default: return true;
+    }
+  }
+
+  function countUserTurns(root) {
+    if (!root) return { count: null, source: "unknown" };
+    const selectors = [
+      '[data-message-author-role="user"]',
+      '[data-message-author="user"]',
+      '[data-role="user"]',
+      "user-query"
+    ];
+    const selector = selectors.join(",");
+    const candidates = Array.from(root.querySelectorAll(selector)).filter((node) =>
+      cleanText(node.innerText || node.textContent).length > 0
+    );
+    const outermost = candidates.filter((node) => !candidates.some((other) => other !== node && other.contains(node)));
+    if (outermost.length) return { count: outermost.length, source: "dom-role" };
+
+    const text = String(root.innerText || root.textContent || "").replace(/\u00a0/g, " ");
+    const markers = text.match(/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/gi) || [];
+    if (markers.length) return { count: markers.length, source: "conversation-markers" };
+    return { count: null, source: "unknown" };
+  }
+
+  function currentMessageStats() {
+    const root = document.querySelector("main,[role='main']") || document.body;
+    return countUserTurns(root);
+  }
+
   function cleanText(value) { return String(value || "").replace(/\s+/g, " ").trim(); }
   function normTitle(value) { return cleanText(value).toLocaleLowerCase(); }
   function isJunkTitle(title) { return /^(skip to |перейти к )/i.test(cleanText(title)); }
@@ -170,7 +241,10 @@
       url: typeof src.url === "string" && src.url ? src.url : (/^https:/.test(rawKey) ? rawKey : ""),
       threadId: typeof src.threadId === "string" ? src.threadId : "",
       order: Number.isFinite(src.order) ? src.order : null,
-      missing: !!src.missing
+      missing: !!src.missing,
+      userMessageCount: Number.isInteger(src.userMessageCount) && src.userMessageCount >= 0 ? src.userMessageCount : null,
+      countSource: typeof src.countSource === "string" ? src.countSource : "unknown",
+      classification: src.classification === "single-turn" || src.classification === "multi-turn" ? src.classification : "unknown"
     };
   }
 
@@ -190,6 +264,8 @@
     if (stored[UI_KEY] && typeof stored[UI_KEY] === "object") {
       uiPrefs.open = stored[UI_KEY].open !== false;
       uiPrefs.diagHidden = !!stored[UI_KEY].diagHidden;
+      uiPrefs.messageFilter = ["all", "single", "multi", "unknown"].includes(stored[UI_KEY].messageFilter)
+        ? stored[UI_KEY].messageFilter : "all";
     }
 
     const chats = stored[CHATS_KEY] && typeof stored[CHATS_KEY] === "object" ? stored[CHATS_KEY] : {};
@@ -329,8 +405,12 @@
   }
 
   function getAllChatUrls() {
-    const urls = new Set(Object.keys(state.chats));
-    collectAssignedUrls(state.folders).forEach((url) => urls.add(url));
+    const urls = new Set(
+      Object.keys(state.chats).filter((key) => isStableChatKey(key) && !isJunkTitle(state.chats[key].title))
+    );
+    collectAssignedUrls(state.folders).forEach((url) => {
+      if (isStableChatKey(url) && state.chats[url]) urls.add(url);
+    });
     return Array.from(urls);
   }
 
@@ -357,8 +437,9 @@
   }
 
   function createChatRow(url) {
+    if (!isStableChatKey(url) || !state.chats[url]) return createElement("div", "empty-note", "Диалог пока не идентифицирован.");
     const key = url;
-    const item = state.chats[key] || { title: titleForUrl(key), text: "", updatedAt: 0, url: "" };
+    const item = state.chats[key];
     const row = createElement("div", key === currentKey ? "chat-row current" : "chat-row");
     const link = createElement("a", "chat-link", item.title || titleForUrl(key));
     link.href = item.url || "#";
@@ -378,6 +459,12 @@
     });
     row.appendChild(link);
     const actions = createElement("div", "chat-actions");
+    const count = Number.isInteger(item.userMessageCount) ? item.userMessageCount : null;
+    const countBadge = createElement("span", "message-count", count === null ? "?" : String(count));
+    countBadge.title = count === null
+      ? "Количество реплик ещё не определено"
+      : count + (count === 1 ? " реплика пользователя" : " реплик пользователя");
+    row.appendChild(countBadge);
     actions.appendChild(createButton("MD", "Экспортировать в Markdown", () => exportChat(key), "export-button"));
     row.appendChild(actions);
     return row;
@@ -416,6 +503,12 @@
   }
 
   function renderFolder(folder, depth) {
+    const direct = (folder.chat_urls || []).filter((url) =>
+      isStableChatKey(url) && state.chats[url] && isChatVisibleForFilter(url)
+    );
+    const nested = (folder.children || []).map((child) => renderFolder(child, depth + 1)).filter(Boolean);
+    if (uiPrefs.messageFilter !== "all" && direct.length === 0 && nested.length === 0) return null;
+
     const details = createElement("details", "folder");
     details.open = openFolders.has(folder.id);
     details.addEventListener("toggle", () => {
@@ -428,13 +521,11 @@
     const marker = createElement("span", "folder-marker");
     marker.style.backgroundColor = folder.color || FOLDER_COLORS[0];
     const name = createElement("span", "folder-name", folder.name);
-    const count = (folder.chat_urls || []).length + countNestedChats(folder.children || []);
+    const count = direct.length + nested.reduce((sum, node) => sum + Number(node.dataset.visibleCount || 0), 0);
     const badge = createElement("span", "folder-count", String(count));
     const actions = createElement("span", "folder-actions");
 
-    if (depth < MAX_DEPTH) {
-      actions.appendChild(createButton("+", "Создать подпапку", () => addFolder(folder.id)));
-    }
+    if (depth < MAX_DEPTH) actions.appendChild(createButton("+", "Создать подпапку", () => addFolder(folder.id)));
     actions.appendChild(createButton("✎", "Переименовать папку", () => {
       const next = window.prompt("Название папки:", folder.name);
       if (next && next.trim()) { folder.name = next.trim(); persist(); render(); }
@@ -455,10 +546,11 @@
     details.appendChild(summary);
 
     const children = createElement("div", "folder-contents");
-    (folder.chat_urls || []).forEach((url) => children.appendChild(createChatRow(url)));
-    (folder.children || []).forEach((nested) => children.appendChild(renderFolder(nested, depth + 1)));
-    if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Перетащите сюда ссылку на чат"));
+    direct.forEach((url) => children.appendChild(createChatRow(url)));
+    nested.forEach((node) => children.appendChild(node));
+    if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Пока нет подтверждённых диалогов."));
     details.appendChild(children);
+    details.dataset.visibleCount = String(count);
     return details;
   }
 
@@ -467,15 +559,70 @@
     const matching = getAllChatUrls().map((url) => {
       const item = state.chats[url] || { title: titleForUrl(url), text: "" };
       const source = (item.title + "\n" + item.text + "\n" + url).toLocaleLowerCase();
-      return { url: url, item: item, matched: source.includes(normalized) };
+      return { url: url, item: item, matched: source.includes(normalized) && isChatVisibleForFilter(url) };
     }).filter((entry) => entry.matched);
     ui.tree.appendChild(createElement("div", "search-caption", "Найдено: " + matching.length));
     if (!matching.length) {
-      ui.tree.appendChild(createElement("div", "empty-note", "Совпадений нет. Индекс пополняется при открытии AI-чатов."));
+      ui.tree.appendChild(createElement("div", "empty-note", "Совпадений нет или реплики ещё не рассчитаны."));
       return;
     }
     matching.sort((a, b) => (b.item.updatedAt || 0) - (a.item.updatedAt || 0));
     matching.forEach((entry) => ui.tree.appendChild(createChatRow(entry.url)));
+  }
+
+  function renderFolder(folder, depth) {
+    const direct = (folder.chat_urls || []).filter((url) =>
+      isStableChatKey(url) && state.chats[url] && isChatVisibleForFilter(url)
+    );
+    const nested = (folder.children || []).map((child) => renderFolder(child, depth + 1)).filter(Boolean);
+    if (uiPrefs.messageFilter !== "all" && direct.length === 0 && nested.length === 0) return null;
+
+    const details = createElement("details", "folder");
+    details.open = openFolders.has(folder.id);
+    details.addEventListener("toggle", () => {
+      if (details.open) openFolders.add(folder.id);
+      else openFolders.delete(folder.id);
+    });
+    addDropTarget(details, folder);
+
+    const summary = createElement("summary", "folder-summary");
+    const marker = createElement("span", "folder-marker");
+    marker.style.backgroundColor = folder.color || FOLDER_COLORS[0];
+    const name = createElement("span", "folder-name", folder.name);
+    const count = direct.length + nested.reduce((sum, node) => sum + Number(node.dataset.visibleCount || 0), 0);
+    const badge = createElement("span", "folder-count", String(count));
+    const actions = createElement("span", "folder-actions");
+
+    if (depth < MAX_DEPTH) actions.appendChild(createButton("+", "Создать подпапку", () => addFolder(folder.id)));
+    actions.appendChild(createButton("✎", "Переименовать папку", () => {
+      const next = window.prompt("Название папки:", folder.name);
+      if (next && next.trim()) { folder.name = next.trim(); persist(); render(); }
+    }));
+    actions.appendChild(createButton("●", "Изменить цвет папки", () => {
+      const next = window.prompt("Цвет в формате HEX:", folder.color || FOLDER_COLORS[0]);
+      if (next && /^#[0-9a-f]{6}$/i.test(next.trim())) { folder.color = next.trim(); persist(); render(); }
+      else if (next) window.alert("Укажите цвет в формате #4285F4.");
+    }));
+    actions.appendChild(createButton("×", "Удалить папку", () => {
+      if (!window.confirm("Удалить папку «" + folder.name + "»? Вложенные папки будут подняты на уровень выше.")) return;
+      removeFolderFromList(state.folders, folder.id, null);
+      openFolders.delete(folder.id);
+      persist();
+      render();
+    }));
+    summary.append(marker, name, badge, actions);
+    details.appendChild(summary);
+
+    const children = createElement("div", "folder-contents");
+    direct.forEach((url) => {
+      const row = createChatRow(url);
+      if (row) children.appendChild(row);
+    });
+    nested.forEach((node) => children.appendChild(node));
+    if (!children.childElementCount) children.appendChild(createElement("div", "empty-note", "Пока нет подтверждённых диалогов."));
+    details.appendChild(children);
+    details.dataset.visibleCount = String(count);
+    return details;
   }
 
   function render() {
@@ -485,13 +632,16 @@
     if (query) {
       renderSearchResults(query);
     } else {
-      state.folders.forEach((folder) => ui.tree.appendChild(renderFolder(folder, 1)));
-      const assigned = new Set(collectAssignedUrls(state.folders));
+      state.folders.forEach((folder) => {
+        const node = renderFolder(folder, 1);
+        if (node) ui.tree.appendChild(node);
+      });
+      const assigned = new Set(collectAssignedUrls(state.folders).filter(isStableChatKey));
       const unassigned = getAllChatUrls().filter((url) =>
-        !assigned.has(url) && !(state.chats[url] && state.chats[url].missing)
+        !assigned.has(url) && !state.chats[url].missing && isChatVisibleForFilter(url)
       );
       const missing = getAllChatUrls().filter((url) =>
-        !assigned.has(url) && state.chats[url] && state.chats[url].missing
+        !assigned.has(url) && state.chats[url].missing && isChatVisibleForFilter(url)
       );
 
       const recent = createElement("details", "folder unassigned");
@@ -502,17 +652,14 @@
       summary.append(createElement("span", "folder-count", String(unassigned.length)));
       recent.appendChild(summary);
       const contents = createElement("div", "folder-contents");
-      if (unassigned.length) {
-        unassigned.sort((a, b) => {
-          const ia = state.chats[a] || {}; const ib = state.chats[b] || {};
-          const oa = Number.isFinite(ia.order) ? ia.order : 1e9;
-          const ob = Number.isFinite(ib.order) ? ib.order : 1e9;
-          return oa - ob || (ib.updatedAt || 0) - (ia.updatedAt || 0);
-        });
-        unassigned.forEach((url) => contents.appendChild(createChatRow(url)));
-      } else {
-        contents.appendChild(createElement("div", "empty-note", "Новые найденные AI-чаты появятся здесь."));
-      }
+      unassigned.sort((a, b) => {
+        const ia = state.chats[a] || {}; const ib = state.chats[b] || {};
+        const oa = Number.isFinite(ia.order) ? ia.order : 1e9;
+        const ob = Number.isFinite(ib.order) ? ib.order : 1e9;
+        return oa - ob || (ib.updatedAt || 0) - (ia.updatedAt || 0);
+      });
+      unassigned.forEach((url) => contents.appendChild(createChatRow(url)));
+      if (!unassigned.length) contents.appendChild(createElement("div", "empty-note", "Нет диалогов для выбранного фильтра."));
       recent.appendChild(contents);
       ui.tree.appendChild(recent);
 
@@ -533,9 +680,12 @@
 
     const all = getAllChatUrls();
     const indexed = all.filter((url) => state.chats[url] && state.chats[url].text).length;
-    const missingCount = all.filter((url) => state.chats[url] && state.chats[url].missing).length;
-    setStatus(all.length + " сохранено · " + (all.length - missingCount) +
-      " в истории · " + missingCount + " вне истории · " + indexed + " проиндексировано");
+    const oneTurn = all.filter((url) => state.chats[url].userMessageCount === 1).length;
+    const multiTurn = all.filter((url) => Number.isInteger(state.chats[url].userMessageCount) && state.chats[url].userMessageCount >= 2).length;
+    const unknown = all.filter((url) => !Number.isInteger(state.chats[url].userMessageCount)).length;
+    const unverified = Object.keys(state.chats).filter((key) => !isStableChatKey(key)).length;
+    setStatus(all.length + " диалогов · 1 реплика: " + oneTurn + " · 2+: " + multiTurn +
+      " · не рассчитано: " + unknown + " · без ID скрыто: " + unverified + " · проиндексировано: " + indexed);
   }
 
   function createInterface() {
@@ -560,6 +710,8 @@
       "button { font:inherit; cursor:pointer; } .primary { border:0; border-radius:8px; padding:6px 9px; background:#1a73e8; color:white; font-weight:600; white-space:nowrap; } .primary:hover { background:#1765cc; }",
       ".search-wrap { flex:0 0 auto; display:flex; align-items:center; gap:7px; border:1px solid var(--gsaco-border); border-radius:8px; padding:0 8px; margin:0 0 8px; background:var(--gsaco-input); }",
       ".search-icon { color:var(--gsaco-muted); font-size:16px; } input { min-width:0; width:100%; height:32px; border:0; outline:0; background:transparent; color:inherit; font:inherit; }",
+      ".filter-wrap { display:flex; align-items:center; gap:6px; margin:0 0 8px; color:var(--gsaco-muted); font-size:10px; } .filter-wrap select { flex:1; min-width:0; height:29px; border:1px solid var(--gsaco-border); border-radius:7px; padding:0 6px; color:var(--gsaco-text); background:var(--gsaco-input); font:11px Arial,sans-serif; }",
+      ".message-count { flex:0 0 auto; color:var(--gsaco-muted); font-size:9px; min-width:13px; text-align:center; }",
       ".tree { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; } details { min-width:0; } .folder { margin:2px 0; border-radius:7px; }",
       ".folder-summary { list-style:none; display:flex; align-items:center; gap:6px; min-height:31px; padding:4px 5px; border-radius:7px; cursor:pointer; user-select:none; } .folder-summary::-webkit-details-marker { display:none; }",
       ".folder-summary::before { content:'›'; display:inline-block; width:9px; color:var(--gsaco-muted); transition:transform .12s ease; } details[open] > .folder-summary::before { transform:rotate(90deg); }",
@@ -598,14 +750,36 @@
     search.addEventListener("input", render);
     searchWrap.appendChild(search);
 
+    const filterWrap = createElement("label", "filter-wrap");
+    filterWrap.appendChild(createElement("span", "", "Реплики"));
+    const filter = createElement("select");
+    filter.setAttribute("aria-label", "Фильтр по количеству реплик пользователя");
+    [
+      ["all", "Все диалоги"],
+      ["multi", "2+ реплики"],
+      ["single", "1 реплика"],
+      ["unknown", "Не рассчитано"]
+    ].forEach(([value, label]) => {
+      const option = createElement("option", "", label);
+      option.value = value;
+      filter.appendChild(option);
+    });
+    filter.value = uiPrefs.messageFilter;
+    filter.addEventListener("change", () => {
+      uiPrefs.messageFilter = filter.value;
+      saveUiPrefs();
+      render();
+    });
+    filterWrap.appendChild(filter);
+
     const tree = createElement("div", "tree");
     const status = createElement("div", "status");
-    panel.append(header, searchWrap, tree, status);
+    panel.append(header, searchWrap, filterWrap, tree, status);
     const bar = createButton("⌄ Папки AI-чатов — открыть органайзер", "Развернуть органайзер вместо списка Google", () => setOpen(true), "bar");
     bar.hidden = true;
     wrap.append(panel, bar);
     shadow.appendChild(wrap);
-    ui = { wrap: wrap, panel: panel, bar: bar, tree: tree, status: status, search: search };
+    ui = { wrap: wrap, panel: panel, bar: bar, tree: tree, status: status, search: search, filter: filter };
     render();
   }
 
@@ -670,7 +844,6 @@
   }
 
   function rowTitle(el) {
-    // Icon-font ligatures ("chat_bubble") may be separate lines or glued to the title.
     let lines = String(el.innerText || el.textContent || "").split(/\n+/)
       .map((line) => cleanText(line).replace(/^[a-z][a-z_]{2,39}(?=[^a-z_\s])/, ""))
       .filter(Boolean);
@@ -681,29 +854,61 @@
     return (lines[0] || cleanText(el.getAttribute("aria-label"))).slice(0, 180);
   }
 
-  // Rows are NOT required to be <a href="...q=...">: any outermost clickable,
-  // row-sized element inside the history region counts.
+  // Only explicit Google conversation IDs or URLs containing a thread identity are eligible.
   function detectRows(root, heading) {
-    const rows = [];
-    let last = null;
-    const all = root.querySelectorAll("*");
-    for (let i = 0; i < all.length; i += 1) {
-      const el = all[i];
-      if (last && last.contains(el)) continue;
-      if (el === heading || el.contains(heading) || heading.contains(el)) continue;
-      if (/^(svg|path|script|style|img)$/i.test(el.tagName)) continue;
-      const len = (el.textContent || "").length;
-      if (len < 1 || len > 220) continue;
-      if (!el.matches(CLICKABLE) && window.getComputedStyle(el).cursor !== "pointer") continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.width < 100 || rect.height < 20 || rect.height > 90) continue;
-      const title = rowTitle(el);
+    if (!root) return [];
+    const selector = [
+      "button[data-thread-id]",
+      "button[data-session-thread-id]",
+      "button[data-conversation-id]",
+      "button[data-chat-id]",
+      "button[data-session-id]",
+      "[role='button'][data-thread-id]",
+      "[role='button'][data-session-thread-id]",
+      "[role='button'][data-conversation-id]",
+      "[data-session-thread-id]",
+      "[data-thread-id]",
+      "[data-conversation-id]",
+      "a[href]"
+    ].join(",");
+    const nodes = Array.from(root.querySelectorAll(selector));
+    const accepted = [];
+    nodes.forEach((node) => {
+      if (node === heading || node.contains(heading) || heading.contains(node)) return;
+      let candidate = node;
+      if (!candidate.matches("button,a,[role='button'],[role='link']")) {
+        candidate = node.closest("button,a,[role='button'],[role='link']") || node;
+      }
+      if (!root.contains(candidate) || candidate === heading || candidate.contains(heading)) return;
+      if (accepted.some((existing) => existing === candidate || existing.contains(candidate))) return;
+      const rect = candidate.getBoundingClientRect();
+      if (rect.width < 100 || rect.width > 460 || rect.height < 20 || rect.height > 90) return;
+      const title = rowTitle(candidate);
       if (!title || title.length < 2 || NAV_LABELS.has(normTitle(title)) || NOISE_ROW.test(title) ||
-          RECENT_LABEL.test(title) || isJunkTitle(title)) continue;
-      rows.push(el);
-      last = el;
-    }
-    return rows;
+          RECENT_LABEL.test(title) || isJunkTitle(title)) return;
+      const row = describeRow(candidate);
+      if (row.key) accepted.push(candidate);
+    });
+    return accepted;
+  }
+
+  function countUnclassifiedRows(root, heading) {
+    if (!root) return 0;
+    const candidates = Array.from(root.querySelectorAll(CLICKABLE));
+    let count = 0;
+    const counted = [];
+    candidates.forEach((node) => {
+      if (node === heading || node.contains(heading) || heading.contains(node)) return;
+      if (counted.some((existing) => existing === node || existing.contains(node))) return;
+      const rect = node.getBoundingClientRect();
+      if (rect.width < 100 || rect.width > 460 || rect.height < 20 || rect.height > 90) return;
+      const title = rowTitle(node);
+      if (!title || title.length < 2 || NAV_LABELS.has(normTitle(title)) || NOISE_ROW.test(title) ||
+          RECENT_LABEL.test(title) || isJunkTitle(title)) return;
+      const row = describeRow(node);
+      if (!row.key) { counted.push(node); count += 1; }
+    });
+    return count;
   }
 
   function attributeId(el) {
@@ -731,18 +936,25 @@
     const title = rowTitle(el);
     const anchor = el.matches("a[href]") ? el : el.querySelector("a[href]");
     let href = "";
+    let urlKey = null;
     if (anchor) {
       try {
         const url = new URL(anchor.getAttribute("href"), location.href);
-        if (!url.hash && url.protocol === "https:" && isGoogleHost(url.hostname) && toKey(url.href)) href = url.href;
+        if (!url.hash && url.protocol === "https:" && isGoogleHost(url.hostname)) {
+          urlKey = toStableThreadKey(url.href);
+          if (urlKey) href = url.href;
+        } else {
+          urlKey = toStableThreadKey(url.href);
+          if (urlKey) href = url.href;
+        }
       } catch (_error) {}
     }
 
     const id = attributeId(el);
-    const urlKey = href ? toKey(href) : null;
-    const base = id ? "id:" + id : (urlKey || "t:" + normTitle(title));
+    const threadId = id || (urlKey ? urlKey.slice(3) : "");
+    const base = id ? "id:" + id : urlKey;
     return {
-      el: el, title: title, href: href, urlKey: urlKey, threadId: id,
+      el: el, title: title, href: href, urlKey: urlKey, threadId: threadId,
       base: base, hasUrl: !!urlKey, hasId: !!id, key: base
     };
   }
@@ -751,20 +963,20 @@
     const heading = findRecentLabel();
     if (!heading) return null;
     const found = findHistoryRegion(heading);
-    const rows = detectRows(found.region, heading).map(describeRow);
-    const seen = new Map();
-    rows.forEach((row) => {
-      const n = seen.get(row.base) || 0;
-      seen.set(row.base, n + 1);
-      row.key = n ? row.base + "|" + (n + 1) : row.base;
+    const elements = detectRows(found.region, heading);
+    const rows = elements.map(describeRow).filter((row) => row.key && isStableChatKey(row.key));
+    const seen = new Set();
+    const uniqueRows = rows.filter((row) => {
+      if (seen.has(row.key)) return false;
+      seen.add(row.key);
+      return true;
     });
     return {
-      heading: heading, region: found.region, scroller: found.scroller, rows: rows,
+      heading: heading, region: found.region, scroller: found.scroller,
+      rows: uniqueRows, unclassifiedCount: countUnclassifiedRows(found.region, heading),
       complete: !found.scroller || completeScrollers.has(found.scroller)
     };
   }
-
-  // ===================== Reconciling Google's list with local state =====================
 
   function renameKeyInFolders(folders, from, to) {
     (folders || []).forEach((folder) => {
@@ -780,38 +992,26 @@
     let changed = false;
 
     scan.rows.forEach((row, index) => {
+      if (!isStableChatKey(row.key)) return;
       let item = entries[row.key];
       if (!item) {
-        const candidates = Object.keys(entries).filter((key) => !scanKeys.has(key));
-        const wantedTitle = normTitle(row.title);
-        const matchingThread = row.threadId
-          ? candidates.filter((key) => entries[key].threadId && entries[key].threadId === row.threadId)
-          : [];
-        const matchingUrl = row.urlKey
-          ? candidates.filter((key) => {
-              const oldUrl = entries[key].url;
-              return oldUrl && toKey(oldUrl) === row.urlKey && normTitle(entries[key].title) === wantedTitle;
-            })
-          : [];
-        const matchingTitle = candidates.filter((key) => normTitle(entries[key].title) === wantedTitle);
-
-        // Rebind only on an unambiguous identity. If several old records share
-        // the same title/query and expose no stable thread ID, preserve them as
-        // missing and create a fresh row instead of guessing which text/folder
-        // belongs to the newly observed conversation.
-        const uniqueMatch = (matches) => matches.length === 1 ? matches[0] : null;
-        const oldKey = uniqueMatch(matchingThread) ||
-          uniqueMatch(matchingUrl) ||
-          uniqueMatch(matchingTitle);
-
+        const candidates = Object.keys(entries).filter((key) => key !== row.key && isStableChatKey(key));
+        const matchingThread = candidates.filter((key) =>
+          (entries[key].threadId && entries[key].threadId === row.threadId) ||
+          toStableThreadKey(entries[key].url || key) === row.key
+        );
+        const oldKey = matchingThread.length === 1 ? matchingThread[0] : null;
         if (oldKey) {
           item = entries[oldKey];
           delete entries[oldKey];
           entries[row.key] = item;
           renameKeyInFolders(state.folders, oldKey, row.key);
         } else {
-          item = { title: row.title, text: "", updatedAt: now, url: row.href,
-            threadId: row.threadId || "", order: index, missing: false };
+          item = {
+            title: row.title, text: "", updatedAt: now, url: row.href,
+            threadId: row.threadId || "", order: index, missing: false,
+            userMessageCount: null, countSource: "unknown", classification: "unknown"
+          };
           entries[row.key] = item;
         }
         changed = true;
@@ -826,22 +1026,23 @@
       if (row.threadId) item.threadId = row.threadId;
     });
 
-    // Keep records absent from the completed Google list; never auto-delete user data.
-    if (scan.complete && scan.rows.length) {
+    // A missing row is meaningful only after a complete scan with no unclassified history rows.
+    if (scan.complete && scan.rows.length && scan.unclassifiedCount === 0) {
       Object.keys(entries).forEach((key) => {
-        if (scanKeys.has(key)) return;
+        if (!isStableChatKey(key) || scanKeys.has(key)) return;
         if (!entries[key].missing) { entries[key].missing = true; changed = true; }
       });
     }
     return changed;
   }
 
-  function findNativeRow(key, title) {
+  function findNativeRow(key) {
+    if (!isStableChatKey(key)) return null;
     const live = lastScan && lastScan.rows.find((row) => row.key === key && row.el.isConnected);
     if (live) return live.el;
     const fresh = scanHistory();
     if (!fresh) return null;
-    const match = fresh.rows.find((row) => row.key === key) || fresh.rows.find((row) => normTitle(row.title) === normTitle(title));
+    const match = fresh.rows.find((row) => row.key === key);
     return match ? match.el : null;
   }
 
@@ -855,7 +1056,7 @@
 
   function openChat(key) {
     const item = state.chats[key] || {};
-    const row = findNativeRow(key, item.title);
+    const row = findNativeRow(key);
     if (row) { clickNative(row); return; }
     if (item.url) { location.assign(item.url); return; }
     setStatus("Этого чата сейчас нет в списке «Недавнее» Google. Раскройте «Недавнее» и повторите.");
@@ -926,7 +1127,7 @@
     uiPrefs.open = !!value;
     saveUiPrefs();
     const positioned = positionHost();
-    setNativeHidden(uiPrefs.open && !!(lastScan && lastScan.complete) && positioned);
+    setNativeHidden(uiPrefs.open && !!(lastScan && lastScan.complete && lastScan.rows.length > 0 && lastScan.unclassifiedCount === 0) && positioned);
   }
 
   function teardown() {
@@ -1011,42 +1212,53 @@
     if (scan) {
       lines.push("Цепочка предков заголовка:");
       let node = scan.heading;
-      for (let i = 0; i < 9 && node && node !== document.body; i += 1, node = node.parentElement) lines.push("  " + describeNode(node));
-      scan.rows.slice(0, 3).forEach((row, index) => {
-        lines.push("Строка " + (index + 1) + ": " + describeNode(row.el) + " titleLen=" + row.title.length +
-          " key=" + (row.hasUrl ? "url" : row.hasId ? "id" : "title"));
-        Array.from(row.el.querySelectorAll("*")).slice(0, 6).forEach((child) => lines.push("    " + describeNode(child)));
-        const anchor = row.el.matches("a[href]") ? row.el : row.el.querySelector("a[href]");
-        if (anchor) {
-          try {
-            const u = new URL(anchor.getAttribute("href"), location.href);
-            lines.push("    href: " + u.pathname + " params=" + Array.from(u.searchParams.keys()).join(",") + " hash=" + (u.hash ? "да" : "нет"));
-          } catch (_error) { lines.push("    href: не разобран"); }
-        }
+      for (let i = 0; i < 9 && node && node !== document.body; i += 1, node = node.parentElement) {
+        lines.push("  " + describeNode(node));
+      }
+      lines.push("Подтверждённые строки: " + scan.rows.length + " · не классифицировано: " + scan.unclassifiedCount);
+      scan.rows.slice(0, 5).forEach((row, index) => {
+        lines.push("Строка " + (index + 1) + ": " + describeNode(row.el) +
+          " identity=" + (row.hasId ? "data-id" : "thread-url") + " · titleLen=" + row.title.length);
       });
     }
-    const thread = document.querySelector("[data-session-thread-id]");
-    lines.push("data-session-thread-id на странице: " + (thread ? "да, длина " + (thread.getAttribute("data-session-thread-id") || "").length : "нет"));
-    const railLinks = Array.from(document.querySelectorAll("a[href]")).filter((a) => a.getBoundingClientRect().left < 300).slice(0, 8);
-    lines.push("Ссылки у левого края (первые " + railLinks.length + "):");
-    railLinks.forEach((a) => {
-      try {
-        const u = new URL(a.href);
-        lines.push("  " + u.hostname + u.pathname + " params=" + Array.from(u.searchParams.keys()).join(",") + " hash=" + (u.hash ? "да" : "нет"));
-      } catch (_error) {}
-    });
+    const main = document.querySelector("main,[role='main']");
+    if (main) {
+      lines.push("Структура открытой сессии (без текста):");
+      const selector = [
+        "[data-message-author-role]",
+        "[data-message-author]",
+        "[data-role]",
+        "user-query",
+        "model-response",
+        "response-container"
+      ].join(",");
+      const messages = Array.from(main.querySelectorAll(selector)).slice(0, 80);
+      lines.push("Найдено узлов с признаками роли: " + messages.length);
+      messages.forEach((el, index) => {
+        const role = el.getAttribute("data-message-author-role") ||
+          el.getAttribute("data-message-author") || el.getAttribute("data-role") || el.tagName.toLowerCase();
+        lines.push("  #" + (index + 1) + " role=" + role + " " + describeNode(el));
+      });
+      const stats = countUserTurns(main);
+      lines.push("Реплик пользователя: " + (stats.count === null ? "не определено" : stats.count) + " · источник: " + stats.source);
+      const text = String(main.innerText || main.textContent || "");
+      lines.push("Маркер AI Mode Conversation: " + (/AI Mode Conversation:/i.test(text) ? "есть" : "нет"));
+      lines.push("Маркер You said: " + (/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/i.test(text) ? "есть" : "нет"));
+    } else {
+      lines.push("Открытая сессия: main не найден");
+    }
+    const thread = document.querySelector("main [data-session-thread-id],main [data-thread-id],main [data-conversation-id]");
+    lines.push("ID в содержимом страницы: " + (thread ? "есть" : "нет"));
     return lines.join("\n");
   }
 
   function buildDiagnosticText(scan) {
     const rows = scan ? scan.rows : [];
-    const url = rows.filter((r) => r.hasUrl).length;
-    const id = rows.filter((r) => r.hasId).length;
-    const keys = Object.keys(state.chats);
-    const assigned = new Set(collectAssignedUrls(state.folders));
-    const titles = new Map();
-    rows.forEach((r) => titles.set(normTitle(r.title), (titles.get(normTitle(r.title)) || 0) + 1));
-    const repeated = Array.from(titles.values()).filter((n) => n > 1).length;
+    const keys = getAllChatUrls();
+    const oneTurn = keys.filter((key) => state.chats[key].userMessageCount === 1).length;
+    const multiTurn = keys.filter((key) => Number.isInteger(state.chats[key].userMessageCount) && state.chats[key].userMessageCount >= 2).length;
+    const unknownCount = keys.filter((key) => !Number.isInteger(state.chats[key].userMessageCount)).length;
+    const unverified = Object.keys(state.chats).filter((key) => !isStableChatKey(key)).length;
     const lines = [
       "Версия " + VERSION + " · скрипт ЗАГРУЖЕН",
       "Страница: " + location.pathname + " · " + location.hostname + " · AI-страница: " + (isCurrentAiPage() ? "да" : "нет"),
@@ -1058,20 +1270,17 @@
       lines.push("Заголовок «Недавнее»: НАЙДЕН x=" + Math.round(hr.left) + " y=" + Math.round(hr.top));
       lines.push("Область истории: " + scan.region.tagName.toLowerCase() + " x=" + Math.round(rr.left) + " w=" + Math.round(rr.width) +
         " h=" + Math.round(rr.height) + (scan.scroller ? " · прокрутка " + scan.scroller.scrollHeight + "/" + scan.scroller.clientHeight : " · без прокрутки"));
-      lines.push("Строк в истории Google: " + rows.length + " (по URL " + url + " · по id " + id + " · по названию " + (rows.length - url - id) + ")");
+      lines.push("Подтверждённых диалогов: " + rows.length + " · без thread ID: " + scan.unclassifiedCount);
       lines.push("Список загружен полностью: " + (scan.complete ? "да" : "нет") + (activePriming ? " · идёт подгрузка…" : ""));
-      lines.push("Повторяющихся названий: " + repeated + " (ключи различаются суффиксом, записи не склеиваются)");
     } else {
       lines.push("Заголовок «Недавнее»: НЕ НАЙДЕН");
     }
-    const missingCount = keys.filter((k) => state.chats[k].missing).length;
-    lines.push("В базе: " + keys.length + " · в папках " + assigned.size + " · вне текущей истории " + missingCount + " · проиндексировано " + keys.filter((k) => state.chats[k].text).length);
+    const stats = currentMessageStats();
+    lines.push("Текущая сессия: " + (stats.count === null ? "реплики не определены" : stats.count + " репл. пользователя") + " · источник: " + stats.source);
+    lines.push("В базе: " + keys.length + " подтверждённых · 1 реплика: " + oneTurn + " · 2+: " + multiTurn + " · не рассчитано: " + unknownCount);
+    lines.push("Скрыто неподтверждённых локальных записей: " + unverified);
     lines.push("Органайзер: " + (host && host.isConnected ? (uiPrefs.open ? "заменяет список" : "свёрнут") : "НЕ ВСТАВЛЕН") +
       " · родной список скрыт: " + (nativeHidden ? "да" : "нет"));
-    rows.slice(0, 3).forEach((row, i) => {
-      lines.push("  #" + (i + 1) + " <" + row.el.tagName.toLowerCase() + (row.el.getAttribute("role") ? " role=" + row.el.getAttribute("role") : "") +
-        "> ключ: " + (row.hasUrl ? "URL" : row.hasId ? "id" : "название") + " · название " + row.title.length + " симв.");
-    });
     return lines.join("\n");
   }
 
@@ -1134,8 +1343,13 @@
   }
 
   function currentThreadId() {
-    const node = document.querySelector("[data-session-thread-id]");
-    return node ? node.getAttribute("data-session-thread-id") || "" : "";
+    const main = document.querySelector("main,[role='main']");
+    const node = main && main.querySelector("[data-session-thread-id],[data-thread-id],[data-conversation-id],[data-chat-id]");
+    if (node) {
+      const id = attributeId(node);
+      if (id) return id;
+    }
+    return extractThreadIdFromUrl(location.href);
   }
 
   function isCurrentRow(el) {
@@ -1148,20 +1362,17 @@
   function resolveCurrentKey() {
     const threadId = currentThreadId();
     if (threadId) {
-      const byThread = Object.keys(state.chats).find((k) => state.chats[k].threadId === threadId);
+      const byThread = Object.keys(state.chats).find((key) => isStableChatKey(key) && state.chats[key].threadId === threadId);
       if (byThread) return byThread;
+      const idKey = "id:" + threadId;
+      if (state.chats[idKey]) return idKey;
     }
     if (lastScan) {
-      const row = lastScan.rows.find((r) => isCurrentRow(r.el));
+      const row = lastScan.rows.find((item) => isCurrentRow(item.el));
       if (row && state.chats[row.key]) return row.key;
     }
-    const urlKey = toKey(location.href);
+    const urlKey = toStableThreadKey(location.href);
     if (urlKey && state.chats[urlKey]) return urlKey;
-    const title = normTitle(pageTitle());
-    if (title) {
-      const same = Object.keys(state.chats).filter((k) => normTitle(state.chats[k].title) === title);
-      if (same.length === 1) return same[0];
-    }
     return urlKey;
   }
 
@@ -1182,22 +1393,36 @@
   function captureCurrentPage() {
     if (!isCurrentAiPage()) return;
     const key = resolveCurrentKey();
-    if (!key) return;
+    if (!key || !isStableChatKey(key)) return;
     const text = extractPageText();
+    const stats = currentMessageStats();
     const threadId = currentThreadId();
-    const previous = state.chats[key] || { title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "", threadId: "", order: null, missing: false };
-    if (text.length < 40 || (text === previous.text && (!threadId || previous.threadId === threadId))) return;
+    const previous = state.chats[key] || {
+      title: pageTitle() || titleForUrl(key), text: "", updatedAt: 0, url: "",
+      threadId: "", order: null, missing: false, userMessageCount: null,
+      countSource: "unknown", classification: "unknown"
+    };
+    const nextCount = Number.isInteger(stats.count) ? stats.count : previous.userMessageCount;
+    const nextClassification = nextCount === null ? "unknown" : (nextCount >= 2 ? "multi-turn" : "single-turn");
+    const textChanged = text.length >= 40 && text !== previous.text;
+    const countChanged = nextCount !== previous.userMessageCount || stats.source !== previous.countSource;
+    if (!textChanged && !countChanged && (!threadId || previous.threadId === threadId)) return;
+
     state.chats[key] = Object.assign({}, previous, {
-      text: text, updatedAt: Date.now(), threadId: threadId || previous.threadId,
-      url: previous.url || location.href
+      text: textChanged ? text : previous.text,
+      updatedAt: textChanged || countChanged ? Date.now() : previous.updatedAt,
+      threadId: threadId || previous.threadId,
+      url: previous.url || location.href,
+      userMessageCount: nextCount,
+      countSource: Number.isInteger(stats.count) ? stats.source : previous.countSource,
+      classification: nextClassification
     });
-    const keys = Object.keys(state.chats).sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
+    const keys = Object.keys(state.chats).filter(isStableChatKey)
+      .sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
     keys.slice(MAX_INDEXED_CHATS).forEach((oldKey) => { if (oldKey !== key) state.chats[oldKey].text = ""; });
     persist();
     render();
   }
-
-  // ===================== Main loop =====================
 
   function scanForChats() {
     scanTimer = null;
@@ -1212,9 +1437,9 @@
       region = scan.region;
       ensureInterface();
       if (applyScan(scan)) changed = true;
-      if (!activePriming) startPriming(scan);
+      if (!activePriming && scan.rows.length > 0) startPriming(scan);
       const positioned = positionHost();
-      setNativeHidden(uiPrefs.open && scan.complete && positioned);
+      setNativeHidden(uiPrefs.open && scan.complete && scan.rows.length > 0 && scan.unclassifiedCount === 0 && positioned);
     }
     updateDetectionDiagnostic(scan);
     if (isCurrentAiPage()) {
@@ -1259,7 +1484,10 @@
   if (typeof window.__GSACO_TEST__ === "object") {
     Object.assign(window.__GSACO_TEST__, {
       state: state, uiPrefs: uiPrefs, scanForChats: scanForChats, scanHistory: scanHistory, toKey: toKey, buildSnapshot: buildSnapshot,
-      getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init()
+      getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init(),
+      countUserTurns: countUserTurns, toStableThreadKey: toStableThreadKey,
+      isStableChatKey: isStableChatKey, currentMessageStats: currentMessageStats,
+      applyScan: applyScan, render: render
     });
   } else {
     init();
