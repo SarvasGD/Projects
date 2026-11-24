@@ -9,7 +9,7 @@ Adds nested folders, local full-text search over captured conversations, and Mar
 - Replaces Google's Recent history box with an overlay occupying the same measured area.
 - Detects clickable history rows even when they do not expose an ordinary `<a href>`.
 - Scrolls Google's own history scroller to the end before replacing the native list.
-- Keeps Google's original list available through the `⇄` collapse control.
+- Keeps Google's original list available through the `⌃` collapse control.
 - Supports four folder levels, rename, color, delete, drag-and-drop, local search and export.
 - Clicking an organizer row proxies the click to the live Google row; a saved URL is used as fallback when the row is no longer present.
 - Uses only `chrome.storage.local`; no background fetching or external service.
