@@ -73,6 +73,34 @@ async function waitForOrganizer(page, expectedDisplay) {
     );
     assert.deepEqual(multiTurn, ["Многоходовой диалог"], "2+ filter keeps only the read multi-turn session");
 
+    // External Google-side add/rename/delete should be reflected by MutationObserver sync.
+    await page.locator("#google-search-ai-chat-organizer").evaluate((host) => {
+      const filter = host.shadowRoot.querySelector("select[aria-label='Фильтр по количеству реплик пользователя']");
+      filter.value = "all";
+      filter.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.locator("#history-region [data-thread-id='thread-102']").evaluate((row) => {
+      row.textContent = "Переименовано непосредственно в Google";
+    });
+    await page.locator("#history-region").evaluate((region) => {
+      const added = document.createElement("button");
+      added.type = "button";
+      added.dataset.threadId = "thread-103";
+      added.textContent = "Новый чат из Google";
+      region.appendChild(added);
+    });
+    await page.waitForFunction(() => {
+      const host = document.querySelector("#google-search-ai-chat-organizer");
+      const names = Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((link) => link.textContent);
+      return names.includes("Переименовано непосредственно в Google") && names.includes("Новый чат из Google");
+    }, { timeout: 10000 });
+    await page.locator("#history-region [data-thread-id='thread-102']").evaluate((row) => row.remove());
+    await page.waitForFunction(() => {
+      const host = document.querySelector("#google-search-ai-chat-organizer");
+      return !Array.from(host.shadowRoot.querySelectorAll(".chat-link"))
+        .some((link) => link.textContent === "Переименовано непосредственно в Google");
+    }, { timeout: 10000 });
+
     // Collapse/restore must reveal the native Google list, then reopen the organizer.
     await page.locator("#google-search-ai-chat-organizer").evaluate((host) => {
       const button = Array.from(host.shadowRoot.querySelectorAll("button"))
