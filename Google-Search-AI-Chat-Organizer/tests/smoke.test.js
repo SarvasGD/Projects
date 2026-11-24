@@ -217,6 +217,24 @@ test("DOM snapshot reports role count without exposing conversation text",async(
   assert.ok(snapshot.includes("data-message-author-role"));
   assert.ok(!snapshot.includes("VERY PRIVATE") && !snapshot.includes("PRIVATE AI ANSWER"));
 });
+
+test("opening a stable AI Mode session stores its user-turn count",async()=>{
+  const url="https://www.google.com/search?udm=50#thread=thread-77";
+  const {w,T,saved}=await boot({titles:["History item"],url});
+  const main=w.document.querySelector("main");
+  main.innerHTML=[
+    '<div data-message-author-role="user">Question one</div>',
+    '<div data-message-author-role="assistant">Answer one</div>',
+    '<div data-message-author-role="user">Question two</div>',
+    '<div data-message-author-role="assistant">Answer two</div>'
+  ].join("");
+  T.captureCurrentPage();
+  assert.equal(T.state.chats["id:thread-77"].userMessageCount,2);
+  assert.equal(T.state.chats["id:thread-77"].classification,"multi-turn");
+  await sleep(0);
+  assert.equal(saved.google_ai_chats["id:thread-77"].userMessageCount,2);
+});
+
 test("organizer teardown restores native history when sidebar disappears",async()=>{
   const {w,T}=await boot({titles:["A chat"]});
   T.scanForChats(); assert.ok(T.getHost());
