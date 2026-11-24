@@ -261,6 +261,40 @@ test("opening a stable AI Mode session stores its user-turn count",async()=>{
   assert.equal(saved.google_ai_chats["id:thread-77"].userMessageCount,2);
 });
 
+test("Google add, rename and delete changes synchronize automatically",async()=>{
+  const {w,T}=await boot({titles:["Old name","Keep this one"]});
+  const folder={id:"f1",name:"Work",color:"#4285F4",children:[],chat_urls:["id:thread-1"]};
+  T.state.folders=[folder];
+
+  const first=w.document.querySelector('[data-thread-id="thread-0"]');
+  first.textContent="Renamed in Google";
+  const inner=w.document.getElementById("history-inner");
+  inner.insertAdjacentHTML("beforeend",
+    '<button data-thread-id="thread-2" data-rect="8,334,241,40">Added directly in Google</button>');
+  const addedScan=T.scanHistory();
+  addedScan.complete=true;
+  addedScan.unclassifiedCount=0;
+  T.applyScan(addedScan);
+  assert.equal(T.state.chats["id:thread-0"].title,"Renamed in Google");
+  assert.ok(T.state.chats["id:thread-2"],"new Google row is imported");
+  assert.deepEqual(Array.from(T.getAllChatUrls()),["id:thread-0","id:thread-1","id:thread-2"]);
+
+  w.document.querySelector('[data-thread-id="thread-1"]').remove();
+  const deleteScan1=T.scanHistory();
+  deleteScan1.complete=true;
+  deleteScan1.unclassifiedCount=0;
+  T.applyScan(deleteScan1);
+  assert.equal(T.state.chats["id:thread-1"].missing,true,"first full scan marks pending deletion");
+  assert.ok(!T.getAllChatUrls().includes("id:thread-1"),"pending deletion is hidden from active list");
+  assert.deepEqual(Array.from(folder.chat_urls),["id:thread-1"],"folder link waits for confirmation");
+
+  const deleteScan2=T.scanHistory();
+  deleteScan2.complete=true;
+  deleteScan2.unclassifiedCount=0;
+  T.applyScan(deleteScan2);
+  assert.equal(T.state.chats["id:thread-1"],undefined,"second consecutive complete scan confirms removal");
+  assert.deepEqual(Array.from(folder.chat_urls),[],"folder binding is cleaned automatically");
+});
 test("organizer teardown restores native history when sidebar disappears",async()=>{
   const {w,T}=await boot({titles:["A chat"]});
   T.scanForChats(); assert.ok(T.getHost());
