@@ -611,6 +611,7 @@
       if (!unassigned.length) contents.appendChild(createElement("div", "empty-note", "Нет диалогов для выбранного фильтра."));
       recent.appendChild(contents);
       ui.tree.appendChild(recent);
+    }
 
     const all = getAllChatUrls();
     const indexed = all.filter((url) => state.chats[url] && state.chats[url].text).length;
