@@ -245,6 +245,7 @@
       threadId: typeof src.threadId === "string" ? src.threadId : "",
       order: Number.isFinite(src.order) ? src.order : null,
       missing: !!src.missing,
+      missingScanCount: Number.isInteger(src.missingScanCount) && src.missingScanCount >= 0 ? src.missingScanCount : 0,
       userMessageCount: Number.isInteger(src.userMessageCount) && src.userMessageCount >= 0 ? src.userMessageCount : null,
       countSource: typeof src.countSource === "string" ? src.countSource : "unknown",
       classification: src.classification === "single-turn" || src.classification === "multi-turn" ? src.classification : "unknown"
@@ -409,10 +410,10 @@
 
   function getAllChatUrls() {
     const urls = new Set(
-      Object.keys(state.chats).filter((key) => isStableChatKey(key) && !isJunkTitle(state.chats[key].title))
+      Object.keys(state.chats).filter((key) => isStableChatKey(key) && !state.chats[key].missing && !isJunkTitle(state.chats[key].title))
     );
     collectAssignedUrls(state.folders).forEach((url) => {
-      if (isStableChatKey(url) && state.chats[url]) urls.add(url);
+      if (isStableChatKey(url) && state.chats[url] && !state.chats[url].missing) urls.add(url);
     });
     return Array.from(urls);
   }
@@ -523,7 +524,7 @@
 
   function renderFolder(folder, depth) {
     const direct = (folder.chat_urls || []).filter((url) =>
-      isStableChatKey(url) && state.chats[url] && isChatVisibleForFilter(url)
+      isStableChatKey(url) && state.chats[url] && !state.chats[url].missing && isChatVisibleForFilter(url)
     );
     const nested = (folder.children || []).map((child) => renderFolder(child, depth + 1)).filter(Boolean);
     if (uiPrefs.messageFilter !== "all" && direct.length === 0 && nested.length === 0) return null;
@@ -591,10 +592,6 @@
       const unassigned = getAllChatUrls().filter((url) =>
         !assigned.has(url) && !state.chats[url].missing && isChatVisibleForFilter(url)
       );
-      const missing = getAllChatUrls().filter((url) =>
-        !assigned.has(url) && state.chats[url].missing && isChatVisibleForFilter(url)
-      );
-
       const recent = createElement("details", "folder unassigned");
       recent.open = true;
       const summary = createElement("summary", "folder-summary");
@@ -613,21 +610,6 @@
       if (!unassigned.length) contents.appendChild(createElement("div", "empty-note", "Нет диалогов для выбранного фильтра."));
       recent.appendChild(contents);
       ui.tree.appendChild(recent);
-
-      if (missing.length) {
-        const archive = createElement("details", "folder archived");
-        const archiveSummary = createElement("summary", "folder-summary");
-        archiveSummary.append(createElement("span", "folder-marker neutral-marker"));
-        archiveSummary.append(createElement("span", "folder-name", "Нет в текущей истории"));
-        archiveSummary.append(createElement("span", "folder-count", String(missing.length)));
-        archive.appendChild(archiveSummary);
-        const archiveContents = createElement("div", "folder-contents");
-        missing.sort((a, b) => (state.chats[b].updatedAt || 0) - (state.chats[a].updatedAt || 0));
-        missing.forEach((url) => archiveContents.appendChild(createChatRow(url)));
-        archive.appendChild(archiveContents);
-        ui.tree.appendChild(archive);
-      }
-    }
 
     const all = getAllChatUrls();
     const indexed = all.filter((url) => state.chats[url] && state.chats[url].text).length;
@@ -960,7 +942,7 @@
         } else {
           item = {
             title: row.title, text: "", updatedAt: now, url: row.href,
-            threadId: row.threadId || "", order: index, missing: false,
+            threadId: row.threadId || "", order: index, missing: false, missingScanCount: 0,
             userMessageCount: null, countSource: "unknown", classification: "unknown"
           };
           entries[row.key] = item;
@@ -968,20 +950,31 @@
         changed = true;
       }
 
-      if (item.title !== row.title || item.order !== index || item.missing ||
+      if (item.title !== row.title || item.order !== index || item.missing || item.missingScanCount ||
           (row.href && item.url !== row.href) || (row.threadId && item.threadId !== row.threadId)) changed = true;
       item.title = row.title;
       item.order = index;
       item.missing = false;
+      item.missingScanCount = 0;
       if (row.href) item.url = row.href;
       if (row.threadId) item.threadId = row.threadId;
     });
 
-    // A missing row is meaningful only after a complete scan with no unclassified history rows.
-    if (scan.complete && scan.rows.length && scan.unclassifiedCount === 0) {
+    // A deleted Google conversation is removed from local cache and folder bindings
+    // only after two consecutive complete scans that contain no unclassified rows.
+    if (scan.complete && scan.rows.length > 0 && scan.unclassifiedCount === 0) {
       Object.keys(entries).forEach((key) => {
         if (!isStableChatKey(key) || scanKeys.has(key)) return;
-        if (!entries[key].missing) { entries[key].missing = true; changed = true; }
+        const item = entries[key];
+        const nextMissingCount = (Number(item.missingScanCount) || 0) + 1;
+        if (nextMissingCount >= 2) {
+          removeChatFromFolders(state.folders, key);
+          delete entries[key];
+        } else {
+          item.missing = true;
+          item.missingScanCount = nextMissingCount;
+        }
+        changed = true;
       });
     }
     return changed;
