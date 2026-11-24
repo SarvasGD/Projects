@@ -246,6 +246,7 @@
       order: Number.isFinite(src.order) ? src.order : null,
       missing: !!src.missing,
       missingScanCount: Number.isInteger(src.missingScanCount) && src.missingScanCount >= 0 ? src.missingScanCount : 0,
+      missingSince: Number(src.missingSince) || 0,
       userMessageCount: Number.isInteger(src.userMessageCount) && src.userMessageCount >= 0 ? src.userMessageCount : null,
       countSource: typeof src.countSource === "string" ? src.countSource : "unknown",
       classification: src.classification === "single-turn" || src.classification === "multi-turn" ? src.classification : "unknown"
@@ -950,12 +951,13 @@
         changed = true;
       }
 
-      if (item.title !== row.title || item.order !== index || item.missing || item.missingScanCount ||
+      if (item.title !== row.title || item.order !== index || item.missing || item.missingScanCount || item.missingSince ||
           (row.href && item.url !== row.href) || (row.threadId && item.threadId !== row.threadId)) changed = true;
       item.title = row.title;
       item.order = index;
       item.missing = false;
       item.missingScanCount = 0;
+      item.missingSince = 0;
       if (row.href) item.url = row.href;
       if (row.threadId) item.threadId = row.threadId;
     });
@@ -966,15 +968,17 @@
       Object.keys(entries).forEach((key) => {
         if (!isStableChatKey(key) || scanKeys.has(key)) return;
         const item = entries[key];
-        const nextMissingCount = (Number(item.missingScanCount) || 0) + 1;
-        if (nextMissingCount >= 2) {
+        const firstMissingAt = Number(item.missingSince) || 0;
+        if (!firstMissingAt) {
+          item.missing = true;
+          item.missingScanCount = 1;
+          item.missingSince = now;
+          changed = true;
+        } else if (now - firstMissingAt >= 2200) {
           removeChatFromFolders(state.folders, key);
           delete entries[key];
-        } else {
-          item.missing = true;
-          item.missingScanCount = nextMissingCount;
+          changed = true;
         }
-        changed = true;
       });
     }
     return changed;
