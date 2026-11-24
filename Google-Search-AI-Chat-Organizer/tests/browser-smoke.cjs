@@ -46,7 +46,7 @@ async function waitForOrganizer(page, expectedDisplay) {
 
     // Stable-ID history plus a real-looking open multi-turn AI Mode conversation.
     await routeFixture(page, stableHtml);
-    await page.goto("https://www.google.com/search?udm=50&q=fixture#thread=thread-101", { waitUntil: "domcontentloaded" });
+    await page.goto("https://www.google.com/search?udm=50&q=fixture#thread=thread-0", { waitUntil: "domcontentloaded" });
     await waitForOrganizer(page, "block");
 
     await page.waitForFunction(() => {
