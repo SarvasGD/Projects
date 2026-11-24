@@ -395,7 +395,7 @@
 
   function assignChat(url, folder) {
     const cleanUrl = normalizeKey(url);
-    if (!cleanUrl || !folder) return;
+    if (!cleanUrl || !folder || !isStableChatKey(cleanUrl)) return;
     if (!state.chats[cleanUrl]) state.chats[cleanUrl] = { title: titleForUrl(cleanUrl), text: "", updatedAt: Date.now() };
     removeChatFromFolders(state.folders, cleanUrl);
     folder.chat_urls = folder.chat_urls || [];
@@ -1487,7 +1487,7 @@
       getHost: () => host, getNativeHidden: () => nativeHidden, loaded: init(),
       countUserTurns: countUserTurns, toStableThreadKey: toStableThreadKey,
       isStableChatKey: isStableChatKey, currentMessageStats: currentMessageStats,
-      applyScan: applyScan, render: render
+      getAllChatUrls: getAllChatUrls, assignChat: assignChat, applyScan: applyScan, render: render
     });
   } else {
     init();
