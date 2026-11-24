@@ -97,6 +97,14 @@ test("counts You said markers and does not count AI replies", async()=>{
   ].join("\n");
   const result=T.countUserTurns(w.document.querySelector("main")); assert.equal(result.count,2); assert.equal(result.source,"conversation-markers");
 });
+test("You said markers without an AI Mode conversation header remain unknown",async()=>{
+  const {w,T}=await boot();
+  const main=w.document.querySelector("main");
+  main.textContent="Search result page\nYou said: a search query\nAI answer excerpt";
+  const result=T.countUserTurns(main);
+  assert.equal(result.count,null);
+  assert.equal(result.source,"unknown");
+});
 test("one-turn, multi-turn and unknown states are distinct", async()=>{
   const {w,T}=await boot();
   const main=w.document.querySelector("main");
@@ -138,6 +146,24 @@ test("overlay hides native history only after full stable-ID scan",async()=>{
   assert.equal(w.document.getElementById("scroller").style.getPropertyValue("visibility"),"hidden");
   T.uiPrefs.open=false; T.scanForChats();
   assert.equal(w.document.getElementById("scroller").style.getPropertyValue("visibility"),"");
+});
+test("organizer overlay stays hidden when Google rows are unclassified",async()=>{
+  const {T}=await boot({kind:"q",titles:["Only q row"]});
+  T.scanForChats();
+  assert.equal(T.getNativeHidden(),null);
+  assert.equal(T.getHost().style.display,"none");
+});
+test("partial or unclassified scans never mark stable local chats as deleted",async()=>{
+  const oldUrl="https://www.google.com/search?udm=50#thread=thread-old";
+  const stored={
+    google_ai_chats:{"id:thread-old":{title:"Old chat",threadId:"thread-old",url:oldUrl,missing:false}},
+    google_ai_folders:[]
+  };
+  const {T}=await boot({kind:"q",titles:["A one-shot query"],stored});
+  const scan=T.scanHistory();
+  assert.equal(scan.unclassifiedCount,1);
+  T.applyScan(scan);
+  assert.equal(T.state.chats["id:thread-old"].missing,false);
 });
 test("lazy loading discovers newly appended stable-ID rows",async()=>{
   const {w,T}=await boot({titles:["Chat 0","Chat 1"]});
