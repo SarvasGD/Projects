@@ -21,7 +21,7 @@ Chromium Manifest V3 extension for organizing **actual Google AI Mode conversati
 ## Current limitations
 - User-turn count is available after a session is opened/read. Full history importer with progress, Resume and retry is not implemented.
 - Exact thread identity and message markers must be confirmed against the live Google AI Mode DOM. CI uses fixtures and cannot prove current account DOM.
-- Full external synchronization of Google additions, renames and deletions remains in progress.
+- History DOM changes (add/rename/delete) are covered by jsdom and Chromium fixtures. Full history import, explicit empty-history handling and live Google DOM verification remain outstanding.
 - Playwright browser harness is implemented: CI loads the unpacked MV3 extension into Chromium on Google-origin fixtures and checks stable identity, message count, filtering, collapse/restore and q-only fallback. It does not prove the current live Google account DOM.
 - This is a technical prototype candidate, not an MVP.
 
@@ -41,7 +41,7 @@ From this directory:
     npm run test:browser
     npm run test:all
 
-CI validates Manifest V3, referenced scripts, JS syntax, jsdom tests and the MV3 extension in Chromium. Fixtures do not replace live Google DOM validation.
+CI validates Manifest V3, referenced scripts, JS syntax, 22 jsdom tests and the MV3 extension in Chromium. Latest passing run: https://github.com/SarvasGD/Projects/actions/runs/45357784393. Fixtures do not replace live Google DOM validation.
 
 ## User testing policy
 The developer performs all routine checks first. User participation is reserved for consolidated Prototype Gate, MVP Gate and Closed Beta acceptance — not individual UI patches, buttons or PRs.
