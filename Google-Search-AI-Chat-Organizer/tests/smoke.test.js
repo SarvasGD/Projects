@@ -120,7 +120,7 @@ test("message-count filter separates one, multi and unknown",async()=>{
   assert.deepEqual([...T.getHost().shadowRoot.querySelectorAll(".chat-link")].map(n=>n.textContent),["Unknown"]);
 });
 test("filter control persists selection",async()=>{
-  const {T,saved}=await boot({titles:["One"]});
+  const {w,T,saved}=await boot({titles:["One"]});
   const control=T.getHost().shadowRoot.querySelector("select[aria-label='Фильтр по количеству реплик пользователя']");
   assert.ok(control);
   control.value="multi";
