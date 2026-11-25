@@ -136,7 +136,7 @@ body{font-family:var(--font-ui);color:var(--ink);user-select:none;-webkit-user-s
 #timeBox{text-align:center;min-width:92px}
 #clock{font-size:24px;color:var(--cream);line-height:1.05}
 #waveTag{font-size:11px;letter-spacing:.1em;opacity:.75}
-#bossWrap{position:absolute;left:50%;top:calc(78px + env(safe-area-inset-top));transform:translateX(-50%);width:min(520px,72vw);display:none;text-align:center}
+#bossWrap{position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);width:min(520px,72vw);display:none;text-align:center}
 #bossWrap.on{display:block;animation:screenIn .3s both}
 #bossWrap.rage #bossName{color:#ff5848;text-shadow:0 0 12px rgba(255,70,45,.8),0 2px 0 #000;animation:bossPulse .5s ease-in-out infinite alternate}
 #bossWrap.rage #bossBar{box-shadow:0 0 0 2px rgba(255,80,60,.45),0 0 16px rgba(255,55,35,.35)}
@@ -2100,7 +2100,8 @@ function startBoss(){
   const wrap=document.getElementById('bossWrap');
   wrap.classList.add('on'); wrap.classList.remove('rage');
   document.getElementById('bossName').textContent=T('bossName');
-}function bossQueueAttack(i){
+}
+function bossQueueAttack(i){
   const b=G.boss;
   const q=[], P=(t,type,opt)=>q.push({t,type,opt:Object.assign({boss:true},opt||{})});
   const rage=clamp((b.anger||0)/6,0,1);
@@ -2118,7 +2119,7 @@ function startBoss(){
       for(let k=0;k<(rage>.55?4:3);k++) P(k*.36*fast,'spray',{scale:1.02*force});
       break;
     case 3:
-      for(let k=0;k<5+Math.floor(rage*2);k++) P(k*.17*fast,'press',{scale:force});
+      for(let k=0;k<5+Math.round(rage);k++) P(k*.17*fast,'press',{scale:force});
       break;
     case 4:
       P(0,'vacuum',{});
@@ -2126,7 +2127,8 @@ function startBoss(){
       break;
   }
   b.queue=q; b.qT=0;
-}function bossAnger(n,p){
+}
+function bossAnger(n,p){
   const b=G.boss; if(!b||b.done||b.state==='intro') return;
   // Eating annoys Grandma and raises her rage; it must not make her surrender.
   b.anger=Math.min(6,(b.anger||0)+n);
@@ -2138,7 +2140,8 @@ function startBoss(){
     wrap.classList.add('rage');
     document.getElementById('bossName').textContent=LANG==='ru'?'БАБУШКА В ЯРОСТИ':'GRANDMA IS FURIOUS';
   }
-}function endBoss(win){
+}
+function endBoss(win){
   const b=G.boss; if(!b||b.done) return;
   b.done=true; b.state='leave'; b.t=0;
   const wrap=document.getElementById('bossWrap');
@@ -2152,7 +2155,8 @@ function startBoss(){
     G.stats.boss=true; SAVE.totals.bosses++;
     G.endlessFrom=G.t;
   }
-}function updateBoss(dt){
+}
+function updateBoss(dt){
   const b=G.boss; if(!b) return;
   b.t+=dt; b.sweat=Math.max(0,b.sweat-dt);
   const hh=b.hand;
@@ -3122,7 +3126,8 @@ function drawBoss(g){
   // The hands now use the animated hand position updated by the boss state machine.
   g.save();
   g.fillStyle='#f0c9a4'; outline(g,6);
-  const handProgress=clamp(((b.hand&&b.hand.y)||-160+160)/340,0,1);
+  const handY=(b.hand&&typeof b.hand.y==='number')?b.hand.y:-160;
+  const handProgress=clamp((handY+160)/340,0,1);
   const armTopY=viewTop-200+228*k;
   const armBottomY=viewTop-40+handProgress*250*k;
   for(const side of [-1,1]){
@@ -3732,7 +3737,7 @@ function pointerToWorld(x,y){
 }
 function isGameUiTarget(target){
   return !!(target&&target.closest&&target.closest(
-    '.tbtn,.btn,.tile,.upcard,.sw,.mini,.switch,input,.hudBox,#bossWrap'
+    '.tbtn,.btn,.tile,.upcard,.sw,.mini,.switch,input,#touch,.hudBox,#bossWrap'
   ));
 }
 const stickEl=$('stick'), knobEl=$('stickKnob');
@@ -3821,7 +3826,8 @@ function readInputs(){
     }
   }
   for(const k in jp) delete jp[k];
-}function bindTouchBtn(el,fn){
+}
+function bindTouchBtn(el,fn){
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation();
     AudioSys.resume(); if(G.state==='play') fn(); },{passive:false});
 }
