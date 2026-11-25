@@ -510,7 +510,7 @@ ru:{
   subtitle:"Ты — не молоток. Ты — тот, по кому бьют.",
   c1h:"Жри и выживай", c1p:"Собирай крошки и наращивай комбо. Но чем ты сытее — тем медленнее бежишь: сытость — это и топливо рывка, и гири на лапах.",
   c2h:"Читай тени", c2p:"Мухобойка, тапок, газета, мышеловка, кот и кипяток всегда показывают, куда ударят. Успей уйти из тени.",
-  c3h:"Собирай билд", c3p:"Каждую волну — мутация на выбор. 30 карточек, 6 тараканов и босс: Бабушка с тапком.",
+  c3h:"Собирай билд", c3p:"Каждую волну — мутация на выбор. 32 карточки, 6 тараканов и босс: Бабушка с тапком.",
   play:"▶ ИГРАТЬ", versus:"👥 НА ДВОИХ", daily:"📅 ВЫЗОВ ДНЯ", nest:"🪳 ГНЕЗДО",
   controlsHint:"Мышь: удерживай ЛКМ и веди курсор · WASD / стрелки: бег · SPACE: рывок · SHIFT: притвориться мёртвым · E: отрыжка · P: пауза",
   hunger:"Сытость", stamina:"Дыхалка", coins:"Крошки", wave:"ВОЛНА",
@@ -551,7 +551,7 @@ en:{
   subtitle:"You are not the hammer. You are what it hits.",
   c1h:"Eat & survive", c1p:"Gobble crumbs and build combos. But the fuller you are, the slower you run: fullness fuels your dash and weighs you down.",
   c2h:"Read the shadows", c2p:"The swatter, slipper, newspaper, mousetrap, cat and kettle always telegraph. Get out of the shadow in time.",
-  c3h:"Build a mutation", c3p:"Pick a mutation every wave. 30 cards, 6 roaches and one boss: Grandma with a slipper.",
+  c3h:"Build a mutation", c3p:"Pick a mutation every wave. 32 cards, 6 roaches and one boss: Grandma with a slipper.",
   play:"▶ PLAY", versus:"👥 2 PLAYERS", daily:"📅 DAILY", nest:"🪳 THE NEST",
   controlsHint:"Mouse: hold left button and move the cursor · WASD / arrows: move · SPACE: dash · SHIFT: play dead · E: burp · P: pause",
   hunger:"Fullness", stamina:"Stamina", coins:"Crumbs", wave:"WAVE",
@@ -2467,19 +2467,20 @@ function drawZones(g){
         : (LANG==='ru'?'ЗАМЕДЛЯЕТ':'SLOWS');
       g.save();
       g.globalAlpha=Math.min(1,a*1.25);
-      g.font='900 14px "Nunito",sans-serif';
+      const labelScale=1/Math.max(.55,Math.min(2,VIEW.scale));
+      g.font='900 '+(14*labelScale)+'px "Nunito",sans-serif';
       const title=D.ico+' '+name;
-      const badgeW=Math.min(176,Math.max(96,g.measureText(title).width+24));
-      const badgeH=38, badgeX=z.x-badgeW/2, badgeY=z.y-z.r*.20-badgeH/2;
+      const badgeW=Math.min(176*labelScale,Math.max(96*labelScale,g.measureText(title).width+24*labelScale));
+      const badgeH=38*labelScale, badgeX=z.x-badgeW/2, badgeY=z.y-z.r*.20-badgeH/2;
       g.fillStyle='rgba(31,18,11,.88)';
       rr(g,badgeX,badgeY,badgeW,badgeH,9); g.fill();
       g.strokeStyle='rgba(255,255,255,.78)'; g.lineWidth=1.5; g.stroke();
       g.textAlign='center'; g.textBaseline='middle';
-      g.fillStyle='#fff'; g.font='900 13px "Nunito",sans-serif';
-      g.fillText(title,z.x,badgeY+12);
+      g.fillStyle='#fff'; g.font='900 '+(13*labelScale)+'px "Nunito",sans-serif';
+      g.fillText(title,z.x,badgeY+12*labelScale);
       g.fillStyle=D.dmg>0?'#ffb6a8':'#ffe2a8';
-      g.font='900 10px "Nunito",sans-serif';
-      g.fillText(effect,z.x,badgeY+27);
+      g.font='900 '+(10*labelScale)+'px "Nunito",sans-serif';
+      g.fillText(effect,z.x,badgeY+27*labelScale);
       g.restore();
     }
   }
