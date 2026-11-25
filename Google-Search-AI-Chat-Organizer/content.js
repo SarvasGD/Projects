@@ -1209,6 +1209,7 @@
       const selector=["[data-message-author-role]","[data-message-author]","[data-role]","user-query","model-response","response-container"].join(",");
       const messages=Array.from(main.querySelectorAll(selector)).slice(0,80);
       lines.push("Найдено узлов с признаками роли: "+messages.length);
+      lines.push("Имена data-* атрибутов в main: "+(dataAttributeNames(main).join(",")||"none"));
       messages.forEach((el,index)=>{
         const role=el.getAttribute("data-message-author-role")||el.getAttribute("data-message-author")||el.getAttribute("data-role")||el.tagName.toLowerCase();
         lines.push("  #"+(index+1)+" role="+role+" "+describeNode(el)+" data-attrs="+(dataAttributeNames(el).join(",")||"none"));
@@ -1219,7 +1220,7 @@
       lines.push("Маркер AI Mode Conversation: "+(/(?:AI Mode Conversation:|Разговор в режиме ИИ:)/i.test(text)?"есть":"нет"));
       lines.push("Маркер You said: "+(/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/i.test(text)?"есть":"нет"));
     }else lines.push("Открытая сессия: main не найден");
-    const thread=document.querySelector("main [data-session-thread-id],main [data-thread-id],main [data-conversation-id],main [data-chat-id],main [data-session-id]");
+    const thread=document.querySelector("main [data-session-thread-id],main [data-thread-id],main [data-conversation-id],main [data-chat-id],main [data-session-id],main [data-mtid]");
     const details=thread?attributeIdDetails(thread):{value:"",name:""};
     lines.push("ID в содержимом страницы: "+(details.value?details.name+" (значение скрыто)":"нет"));
     const url=new URL(location.href);
@@ -1322,7 +1323,7 @@
 
   function currentThreadId() {
     const main = document.querySelector("main,[role='main']");
-    const node = main && main.querySelector("[data-session-thread-id],[data-thread-id],[data-conversation-id],[data-chat-id]");
+    const node = main && main.querySelector("[data-session-thread-id],[data-thread-id],[data-conversation-id],[data-chat-id],[data-session-id],[data-mtid]");
     if (node) {
       const id = attributeId(node);
       if (id) return id;
@@ -1463,7 +1464,7 @@
         invalidateHistorySnapshot(mutations);
         scheduleScan();
       });
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href","data-session-thread-id","data-thread-id","data-conversation-id","data-chat-id","data-session-id","data-mtid"] });
     }
     window.addEventListener("popstate", scheduleScan);
     window.addEventListener("hashchange", scheduleScan);

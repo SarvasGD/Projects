@@ -285,6 +285,17 @@ test("q-only DOM snapshot exposes safe row metadata but no query text or values"
   assert.ok(!snapshot.includes(secret));
 });
 
+test("current session resolves identity from semantic data-session-id",async()=>{
+  const {w,T}=await boot();
+  const main=w.document.querySelector("main");
+  const marker=w.document.createElement("div");
+  marker.setAttribute("data-session-id","session-77");
+  main.appendChild(marker);
+  T.captureCurrentPage();
+  assert.ok(T.state.chats["id:session-77"]);
+  assert.equal(T.state.chats["id:session-77"].userMessageCount,2);
+});
+
 test("opening a stable AI Mode session stores its user-turn count",async()=>{
   const url="https://www.google.com/search?udm=50&mtid=thread-77";
   const {w,T,saved}=await boot({titles:["History item"],url});
