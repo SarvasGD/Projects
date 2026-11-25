@@ -160,15 +160,17 @@ test("organizer overlay stays hidden when Google rows are unclassified",async()=
   assert.equal(T.getNativeHidden(),null);
   assert.equal(T.getHost().style.display,"none");
 });
-test("partial or unclassified scans never mark stable local chats as deleted",async()=>{
-  const oldUrl="https://www.google.com/search?udm=50#thread=thread-old";
+test("partial scans with known q-only rows never mark stable local chats as deleted",async()=>{
+  const oldUrl="https://www.google.com/search?mtid=thread-old";
   const stored={
     google_ai_chats:{"id:thread-old":{title:"Old chat",threadId:"thread-old",url:oldUrl,missing:false}},
     google_ai_folders:[]
   };
   const {T}=await boot({kind:"q",titles:["A one-shot query"],stored});
   const scan=T.scanHistory();
-  assert.equal(scan.unclassifiedCount,1);
+  assert.equal(scan.unclassifiedCount,0);
+  assert.equal(scan.complete,false);
+  assert.equal(scan.excludedSearchCount,2);
   T.applyScan(scan);
   assert.equal(T.state.chats["id:thread-old"].missing,false);
 });
