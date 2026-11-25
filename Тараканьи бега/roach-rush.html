@@ -141,7 +141,8 @@ body{font-family:var(--font-ui);color:var(--ink);user-select:none;-webkit-user-s
 #bossWrap.rage #bossName{color:#ff5848;text-shadow:0 0 12px rgba(255,70,45,.8),0 2px 0 #000;animation:bossPulse .5s ease-in-out infinite alternate}
 #bossWrap.rage #bossBar{box-shadow:0 0 0 2px rgba(255,80,60,.45),0 0 16px rgba(255,55,35,.35)}
 @keyframes bossPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
-#bossName{font-family:var(--font-disp);color:#ffb3a3;font-size:15px;text-shadow:0 2px 0 #000;letter-spacing:.08em}
+#bossName{font-family:var(--font-disp);color:#ffb3a3;font-size:16px;text-shadow:0 2px 0 #000;letter-spacing:.08em}
+#bossFed{font-family:var(--font-ui);font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--cream);text-shadow:0 2px 0 #000;margin-top:2px}
 #bossBar{height:15px;background:rgba(0,0,0,.5);border:3px solid var(--ink);border-radius:99px;overflow:hidden;margin-top:4px}
 #bossBar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5d47,#ffb03a)}
 .hudBottom{position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;padding:0 14px;gap:10px}
@@ -319,7 +320,7 @@ h3.sec{font-family:var(--font-disp);margin:18px 0 8px;font-size:18px}
         <div id="comboBox"><i></i></div>
       </div>
     </div>
-    <div id="bossWrap"><div id="bossName">БАБУШКИНО ТЕРПЕНИЕ</div><div id="bossBar"><i></i></div></div>
+    <div id="bossWrap"><div id="bossName">НАКОРМИ БАБУШКУ</div><div id="bossFed">СКОРМЛЕНО: 0 / 45</div><div id="bossBar"><i></i></div></div>
     <div class="hudBottom">
       <div id="abilityRow">
         <div class="ab" id="abDash">💨<div class="cd"></div><span class="key">SPC</span></div>
@@ -526,7 +527,7 @@ ru:{
   stFood:"Съедено", stCombo:"Лучшее комбо", stTime:"Прожито", stWaves:"Волн пройдено", stBoss:"Босс", stDashes:"Рывков",
   earned:"заработано крошек", unlock:"НОВЫЙ ТАРАКАН!", bought:"Куплено!", needMore:"Не хватает крошек",
   dash:"РЫВОК", playdead:"ПРИТВО-<br>РИТЬСЯ", burp:"ОТРЫВ",
-  bossName:"БАБУШКИНО ТЕРПЕНИЕ", bossIntro:"БАБУШКА ПРОСНУЛАСЬ", bossIntroSub:"она вышла на тропу войны",
+  bossName:"НАКОРМИ БАБУШКУ", bossRage:"БАБУШКА В ЯРОСТИ", bossFed:"СКОРМЛЕНО", bossIntro:"БАБУШКА ПРОСНУЛАСЬ", bossIntroSub:"она вышла на тропу войны",
   bossWin:"БАБУШКА СДАЛАСЬ!", bossWinSub:"Стол ваш. Пока что.",
   waveUp:"ВОЛНА", danger:"ОПАСНОСТЬ РАСТЁТ",
   full:"ПЕРЕЕЛ!", vsTitle:"КТО СЪЕСТ БОЛЬШЕ",
@@ -567,7 +568,7 @@ en:{
   stFood:"Food eaten", stCombo:"Best combo", stTime:"Survived", stWaves:"Waves", stBoss:"Boss", stDashes:"Dashes",
   earned:"crumbs earned", unlock:"NEW ROACH!", bought:"Bought!", needMore:"Not enough crumbs",
   dash:"DASH", playdead:"PLAY<br>DEAD", burp:"BURP",
-  bossName:"GRANDMA'S PATIENCE", bossIntro:"GRANDMA WOKE UP", bossIntroSub:"she is on the warpath",
+  bossName:"FEED GRANDMA", bossRage:"GRANDMA IS FURIOUS", bossFed:"FED", bossIntro:"GRANDMA WOKE UP", bossIntroSub:"she is on the warpath",
   bossWin:"GRANDMA GAVE UP!", bossWinSub:"The table is yours. For now.",
   waveUp:"WAVE", danger:"DANGER RISING",
   full:"STUFFED!", vsTitle:"WHO EATS MORE",
@@ -2092,20 +2093,26 @@ function updatePredators(dt){
 /* ============================== 11. БОСС: БАБУШКА ============================== */
 function startBoss(){
   if(G.boss) return;
-  G.boss={patience:6,max:6,anger:0,state:'intro',t:0,atk:0,queue:[],qT:0,done:false,
-    hand:{x:TABLE.W*.5,y:-160,ang:0,s:1},face:0,sweat:0};
+  G.boss={
+    patience:8,max:8,fed:0,feedTarget:45,anger:0,
+    state:'intro',t:0,atk:0,queue:[],qT:0,done:false,
+    hand:{x:TABLE.W*.5,y:-160,ang:0,s:1},face:0,sweat:0
+  };
   G.hazards.length=0;
   banner(T('bossIntro'),T('bossIntroSub'),2.8);
   SFX('bossIn'); AudioSys.setIntensity(1); addShake(18); addFlash(.18,'#b32b21');
   const wrap=document.getElementById('bossWrap');
   wrap.classList.add('on'); wrap.classList.remove('rage');
   document.getElementById('bossName').textContent=T('bossName');
-}
-function bossQueueAttack(i){
+  setText($('bossFed'),T('bossFed')+': 0 / 45');
+  $('bossBar').firstElementChild.style.width='0%';
+}function bossQueueAttack(i){
   const b=G.boss;
   const q=[], P=(t,type,opt)=>q.push({t,type,opt:Object.assign({boss:true},opt||{})});
   const rage=clamp((b.anger||0)/6,0,1);
-  const fast=1-rage*.34, force=1+rage*.22;
+  const fatigue=1-clamp(b.patience/b.max,0,1);
+  const pressure=Math.max(rage,fatigue*.65);
+  const fast=1-pressure*.34, force=1+pressure*.22;
   switch(i%5){
     case 0:
       P(0,'slipper',{scale:1.32*force,aim:true});
@@ -2113,35 +2120,40 @@ function bossQueueAttack(i){
       break;
     case 1:
       P(0,'news',{scale:1.12*force});
-      if(rage>.3) P(.48*fast,'news',{scale:1.05*force});
+      if(pressure>.3) P(.48*fast,'news',{scale:1.05*force});
       break;
     case 2:
-      for(let k=0;k<(rage>.55?4:3);k++) P(k*.36*fast,'spray',{scale:1.02*force});
+      for(let k=0;k<(pressure>.55?4:3);k++) P(k*.36*fast,'spray',{scale:1.02*force});
       break;
     case 3:
-      for(let k=0;k<5+Math.round(rage);k++) P(k*.17*fast,'press',{scale:force});
+      for(let k=0;k<5+Math.round(pressure);k++) P(k*.17*fast,'press',{scale:force});
       break;
     case 4:
       P(0,'vacuum',{});
-      if(rage>.45) P(.68*fast,'slipper',{scale:1.18*force,aim:true});
+      if(pressure>.45) P(.68*fast,'slipper',{scale:1.18*force,aim:true});
       break;
   }
   b.queue=q; b.qT=0;
-}
-function bossAnger(n,p){
+}function bossAnger(n,p){
   const b=G.boss; if(!b||b.done||b.state==='intro') return;
-  // Eating annoys Grandma and raises her rage; it must not make her surrender.
-  b.anger=Math.min(6,(b.anger||0)+n);
+  const bites=Math.max(1,Math.floor(Number(n)||1));
+  b.fed=Math.min(b.feedTarget,b.fed+bites);
+  b.anger=clamp((b.fed/b.feedTarget)*6,0,6);
   b.sweat=1.5;
   addShake(5+b.anger);
-  pop(LANG==='ru'?'НАГЛОСТЬ!':'SASS!',TABLE.W/2,PLAY.y+70,'#ffb3a3',26,.9);
-  if(b.anger>=3){
+  if(b.fed%5===0 || b.fed>=b.feedTarget){
+    pop(LANG==='ru'?'ЕЩЁ КУСОЧЕК!':'ONE MORE BITE!',TABLE.W/2,PLAY.y+70,'#ffb3a3',24,.9);
+  }
+  if(b.fed>=25){
     const wrap=document.getElementById('bossWrap');
     wrap.classList.add('rage');
-    document.getElementById('bossName').textContent=LANG==='ru'?'БАБУШКА В ЯРОСТИ':'GRANDMA IS FURIOUS';
+    document.getElementById('bossName').textContent=T('bossRage');
   }
-}
-function endBoss(win){
+  if(b.fed>=b.feedTarget){
+    b.fed=b.feedTarget;
+    endBoss(true);
+  }
+}function endBoss(win){
   const b=G.boss; if(!b||b.done) return;
   b.done=true; b.state='leave'; b.t=0;
   const wrap=document.getElementById('bossWrap');
@@ -2176,6 +2188,7 @@ function updateBoss(dt){
     if(!b.queue.length && !G.hazards.some(h=>h.boss)){
       if(b.t>3.4){
         b.state='rest'; b.t=0;
+        // Короткая передышка: на стол падает еда для выполнения цели 45 кусочков.
         for(let i=0;i<6;i++) spawnFood(1,{float:true,vy:R(60,-40)});
         SFX('wave');
       }
@@ -2185,8 +2198,9 @@ function updateBoss(dt){
     b.face=1;
     if(b.t>2.6){
       b.face=0; b.atk++;
+      // Failsafe из GDD: бой не должен затягиваться бесконечно.
       b.patience=Math.max(0,b.patience-1);
-      pop(LANG==='ru'?'БАБУШКА УСТАЛА':'GRANDMA TIRES',TABLE.W/2,PLAY.y+120,'#ffd769',24,1.2);
+      pop(LANG==='ru'?'БАБУШКА УСТАЛА':'GRANDMA IS TIRED',TABLE.W/2,PLAY.y+120,'#ffd769',24,1.2);
       if(b.patience<=0){ endBoss(true); }
       else { b.state='attack'; b.t=0; bossQueueAttack(b.atk); }
     }
@@ -2194,8 +2208,7 @@ function updateBoss(dt){
     hh.y=lerp(hh.y,-260,1-Math.exp(-dt*2));
     if(b.t>2.4) b.state='gone';
   }
-}
-/* ============================== 12. РЕЖИССЁР (волны, спавн, сложность) ============================== */
+}/* ============================== 12. РЕЖИССЁР (волны, спавн, сложность) ============================== */
 function hazardPool(){
   return HAZ_KEYS.filter(k=>HAZ_DEF[k].minWave<=G.wave && k!=='trap');
 }
@@ -3271,10 +3284,14 @@ function updateHUD(){
     const n=p.cards.filter(c=>c===id).length;
     return '<span class="chip">'+u.ico+(n>1?' <b>x'+n+'</b>':'')+'</span>'; }).join('');
   setHTML($('upgRow'),chips);
-  // босс
-  if(G.boss&&!G.boss.done){ $('bossWrap').classList.add('on');
-    $('bossBar').firstElementChild.style.width=clamp(G.boss.patience/G.boss.max*100,0,100)+'%'; }
-  else $('bossWrap').classList.remove('on');
+  // Босс: полоса — прогресс кормления, терпение — резервный ограничитель длительности боя.
+  if(G.boss&&!G.boss.done){
+    $('bossWrap').classList.add('on');
+    const fed=G.boss.fed||0, target=G.boss.feedTarget||45;
+    $('bossBar').firstElementChild.style.width=clamp(fed/target*100,0,100)+'%';
+    setText($('bossFed'),T('bossFed')+': '+fed+' / '+target);
+    setText($('bossName'),fed>=25?T('bossRage'):T('bossName'));
+  } else $('bossWrap').classList.remove('on');
 }
 
 /* ---------- DRAFT (карточки мутаций) ---------- */
