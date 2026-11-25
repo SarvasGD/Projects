@@ -138,6 +138,9 @@ body{font-family:var(--font-ui);color:var(--ink);user-select:none;-webkit-user-s
 #waveTag{font-size:11px;letter-spacing:.1em;opacity:.75}
 #bossWrap{position:absolute;left:50%;top:calc(78px + env(safe-area-inset-top));transform:translateX(-50%);width:min(520px,72vw);display:none;text-align:center}
 #bossWrap.on{display:block;animation:screenIn .3s both}
+#bossWrap.rage #bossName{color:#ff5848;text-shadow:0 0 12px rgba(255,70,45,.8),0 2px 0 #000;animation:bossPulse .5s ease-in-out infinite alternate}
+#bossWrap.rage #bossBar{box-shadow:0 0 0 2px rgba(255,80,60,.45),0 0 16px rgba(255,55,35,.35)}
+@keyframes bossPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
 #bossName{font-family:var(--font-disp);color:#ffb3a3;font-size:15px;text-shadow:0 2px 0 #000;letter-spacing:.08em}
 #bossBar{height:15px;background:rgba(0,0,0,.5);border:3px solid var(--ink);border-radius:99px;overflow:hidden;margin-top:4px}
 #bossBar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5d47,#ffb03a)}
@@ -508,7 +511,7 @@ ru:{
   c2h:"Читай тени", c2p:"Мухобойка, тапок, газета, мышеловка, кот и кипяток всегда показывают, куда ударят. Успей уйти из тени.",
   c3h:"Собирай билд", c3p:"Каждую волну — мутация на выбор. 30 карточек, 6 тараканов и босс: Бабушка с тапком.",
   play:"▶ ИГРАТЬ", versus:"👥 НА ДВОИХ", daily:"📅 ВЫЗОВ ДНЯ", nest:"🪳 ГНЕЗДО",
-  controlsHint:"WASD / стрелки — бег · SPACE — рывок · SHIFT — притвориться мёртвым · E — отрыжка · P — пауза",
+  controlsHint:"Мышь: удерживай ЛКМ и веди курсор · WASD / стрелки: бег · SPACE: рывок · SHIFT: притвориться мёртвым · E: отрыжка · P: пауза",
   hunger:"Сытость", stamina:"Дыхалка", coins:"Крошки", wave:"ВОЛНА",
   nestTitle:"ГНЕЗДО", nestLead:"Трать крошки на новых тараканов и косметику. Навык важнее, но стиль — тоже сила.",
   skins:"Окрас", hats:"Головной убор", records:"Рекорды и статистика", back:"← НАЗАД", reset:"🗑 СБРОС ПРОГРЕССА",
@@ -549,7 +552,7 @@ en:{
   c2h:"Read the shadows", c2p:"The swatter, slipper, newspaper, mousetrap, cat and kettle always telegraph. Get out of the shadow in time.",
   c3h:"Build a mutation", c3p:"Pick a mutation every wave. 30 cards, 6 roaches and one boss: Grandma with a slipper.",
   play:"▶ PLAY", versus:"👥 2 PLAYERS", daily:"📅 DAILY", nest:"🪳 THE NEST",
-  controlsHint:"WASD / arrows — run · SPACE — dash · SHIFT — play dead · E — burp · P — pause",
+  controlsHint:"Mouse: hold left button and move the cursor · WASD / arrows: move · SPACE: dash · SHIFT: play dead · E: burp · P: pause",
   hunger:"Fullness", stamina:"Stamina", coins:"Crumbs", wave:"WAVE",
   nestTitle:"THE NEST", nestLead:"Spend crumbs on new roaches and cosmetics. Skill matters most, but style is power too.",
   skins:"Color", hats:"Headwear", records:"Records & stats", back:"← BACK", reset:"🗑 RESET SAVE",
@@ -1450,13 +1453,13 @@ function comicPop(x,y,o){ pop(o[LANG]||o.ru||'', x,y, '#ffd769', 40, .8); }
 
 /* ---------- ЗОНЫ (яд, лужи, осколки, пар, паутина, масло) ---------- */
 const ZONE_DEF={
-  poison:{col:'#a3d94a',col2:'rgba(163,217,74,.34)',dmg:1,tick:1.05,slow:.15,ico:'☠'},
-  steam :{col:'#cfe6ef',col2:'rgba(207,230,239,.30)',dmg:1,tick:1.25,slow:.10,ico:'♨'},
-  shards:{col:'#dfe8ee',col2:'rgba(223,232,238,.22)',dmg:1,tick:1.15,slow:.05,ico:'✦'},
-  puddle:{col:'#8a5a2b',col2:'rgba(122,84,44,.30)',dmg:0,tick:0,slow:.50,ico:'💧'},
-  jam   :{col:'#c0392b',col2:'rgba(192,57,43,.30)',dmg:0,tick:0,slow:.45,ico:'🍓'},
-  web   :{col:'#e8eef2',col2:'rgba(232,238,242,.34)',dmg:0,tick:0,slow:.62,ico:'🕸'},
-  oil   :{col:'#4a4a55',col2:'rgba(60,60,72,.30)',dmg:0,tick:0,slow:.30,ico:'🛢'}
+  poison:{col:'#a3d94a',col2:'rgba(163,217,74,.34)',dmg:1,tick:1.05,slow:.15,ico:'☠',labelRu:'ЯД',labelEn:'POISON'},
+  steam :{col:'#cfe6ef',col2:'rgba(207,230,239,.30)',dmg:1,tick:1.25,slow:.10,ico:'♨',labelRu:'ПАР',labelEn:'STEAM'},
+  shards:{col:'#dfe8ee',col2:'rgba(223,232,238,.22)',dmg:1,tick:1.15,slow:.05,ico:'✦',labelRu:'ОСКОЛКИ',labelEn:'SHARDS'},
+  puddle:{col:'#8a5a2b',col2:'rgba(122,84,44,.30)',dmg:0,tick:0,slow:.50,ico:'💧',labelRu:'ЛУЖА',labelEn:'PUDDLE'},
+  jam   :{col:'#c0392b',col2:'rgba(192,57,43,.30)',dmg:0,tick:0,slow:.45,ico:'🍯',labelRu:'ВАРЕНЬЕ',labelEn:'JAM'},
+  web   :{col:'#e8eef2',col2:'rgba(232,238,242,.34)',dmg:0,tick:0,slow:.62,ico:'🕸',labelRu:'ПАУТИНА',labelEn:'WEB'},
+  oil   :{col:'#4a4a55',col2:'rgba(60,60,72,.30)',dmg:0,tick:0,slow:.30,ico:'🛢',labelRu:'МАСЛО',labelEn:'OIL'}
 };
 function addZone(type,x,y,r,dur){
   G.zones.push({type,x,y,r,dur:dur||9,t:0,tick:0,seed:R(99),ang:R(TAU)});
@@ -2089,49 +2092,67 @@ function updatePredators(dt){
 /* ============================== 11. БОСС: БАБУШКА ============================== */
 function startBoss(){
   if(G.boss) return;
-  G.boss={patience:8,max:8,state:'intro',t:0,atk:0,queue:[],qT:0,done:false,hand:{x:TABLE.W*.5,y:-160,ang:0,s:1},
-    face:0,sweat:0};
+  G.boss={patience:6,max:6,anger:0,state:'intro',t:0,atk:0,queue:[],qT:0,done:false,
+    hand:{x:TABLE.W*.5,y:-160,ang:0,s:1},face:0,sweat:0};
   G.hazards.length=0;
-  banner(T('bossIntro'),T('bossIntroSub'),2.4);
-  SFX('bossIn'); AudioSys.setIntensity(1); addShake(12);
-  document.getElementById('bossWrap').classList.add('on');
+  banner(T('bossIntro'),T('bossIntroSub'),2.8);
+  SFX('bossIn'); AudioSys.setIntensity(1); addShake(18); addFlash(.18,'#b32b21');
+  const wrap=document.getElementById('bossWrap');
+  wrap.classList.add('on'); wrap.classList.remove('rage');
   document.getElementById('bossName').textContent=T('bossName');
-}
-function bossQueueAttack(i){
+}function bossQueueAttack(i){
+  const b=G.boss;
   const q=[], P=(t,type,opt)=>q.push({t,type,opt:Object.assign({boss:true},opt||{})});
-  const fast = 1 - (1-G.boss.patience/G.boss.max)*.28;
+  const rage=clamp((b.anger||0)/6,0,1);
+  const fast=1-rage*.34, force=1+rage*.22;
   switch(i%5){
-    case 0: P(0,'slipper',{scale:1.4,aim:true}); P(.66*fast,'slipper',{scale:1.4,aim:true}); break;
-    case 1: P(0,'news',{scale:1.15}); break;
-    case 2: P(0,'spray',{scale:1.05}); P(.45*fast,'spray',{scale:1.05}); P(.9*fast,'spray',{scale:1.05}); break;
-    case 3: for(let k=0;k<5;k++) P(k*.17*fast,'press',{item:'sugar',scale:1}); break;
-    case 4: P(0,'vacuum',{}); break;
+    case 0:
+      P(0,'slipper',{scale:1.32*force,aim:true});
+      P(.54*fast,'slipper',{scale:1.32*force,aim:true});
+      break;
+    case 1:
+      P(0,'news',{scale:1.12*force});
+      if(rage>.3) P(.48*fast,'news',{scale:1.05*force});
+      break;
+    case 2:
+      for(let k=0;k<(rage>.55?4:3);k++) P(k*.36*fast,'spray',{scale:1.02*force});
+      break;
+    case 3:
+      for(let k=0;k<5+Math.floor(rage*2);k++) P(k*.17*fast,'press',{scale:force});
+      break;
+    case 4:
+      P(0,'vacuum',{});
+      if(rage>.45) P(.68*fast,'slipper',{scale:1.18*force,aim:true});
+      break;
   }
-  G.boss.queue=q; G.boss.qT=0;
-}
-function bossAnger(n,p){
-  if(!G.boss||G.boss.done||G.boss.state==='intro') return;
-  G.boss.patience-=n;
-  G.boss.sweat=1;
-  addShake(5);
+  b.queue=q; b.qT=0;
+}function bossAnger(n,p){
+  const b=G.boss; if(!b||b.done||b.state==='intro') return;
+  // Eating annoys Grandma and raises her rage; it must not make her surrender.
+  b.anger=Math.min(6,(b.anger||0)+n);
+  b.sweat=1.5;
+  addShake(5+b.anger);
   pop(LANG==='ru'?'НАГЛОСТЬ!':'SASS!',TABLE.W/2,PLAY.y+70,'#ffb3a3',26,.9);
-  if(G.boss.patience<=0){ G.boss.patience=0; endBoss(true); }
-}
-function endBoss(win){
+  if(b.anger>=3){
+    const wrap=document.getElementById('bossWrap');
+    wrap.classList.add('rage');
+    document.getElementById('bossName').textContent=LANG==='ru'?'БАБУШКА В ЯРОСТИ':'GRANDMA IS FURIOUS';
+  }
+}function endBoss(win){
   const b=G.boss; if(!b||b.done) return;
   b.done=true; b.state='leave'; b.t=0;
-  document.getElementById('bossWrap').classList.remove('on');
+  const wrap=document.getElementById('bossWrap');
+  wrap.classList.remove('on','rage');
   G.hazards.length=0;
   for(const pr of G.preds) pr.stun=Math.max(pr.stun||0,2.5);
   if(win){
     banner(T('bossWin'),T('bossWinSub'),2.6);
-    SFX('win'); addFlash(.4,'#ffd769');
+    SFX('win'); addFlash(.4,'#ffd769'); addShake(14);
     const p=G.players[0]; if(p) addScore(p,2000,undefined,undefined,false);
     G.stats.boss=true; SAVE.totals.bosses++;
     G.endlessFrom=G.t;
   }
-}
-function updateBoss(dt){
+}function updateBoss(dt){
   const b=G.boss; if(!b) return;
   b.t+=dt; b.sweat=Math.max(0,b.sweat-dt);
   const hh=b.hand;
@@ -2144,32 +2165,32 @@ function updateBoss(dt){
       const q=b.queue.shift();
       const pt=q.opt.aim?aimPoint(HAZ_DEF[q.type].warn):randPoint(80,0);
       const h=spawnHazard(q.type,pt.x,pt.y,q.opt);
-      if(h&&q.opt.boss){ h.warn*=.92; }
+      if(h&&q.opt.boss) h.warn*=.92;
     }
     hh.y=lerp(hh.y,120+Math.sin(G.t*2)*16,1-Math.exp(-dt*4));
     hh.x=lerp(hh.x,TABLE.W*.5+Math.sin(G.t*.7)*220,1-Math.exp(-dt*2));
     if(!b.queue.length && !G.hazards.some(h=>h.boss)){
-      if(b.t>3.4){ b.state='rest'; b.t=0;
-        // награда: на стол сыплется еда
-        for(let i=0;i<9;i++) spawnFood(1,{float:true,vy:R(60,-40)});
-        SFX('wave'); }
+      if(b.t>3.4){
+        b.state='rest'; b.t=0;
+        for(let i=0;i<6;i++) spawnFood(1,{float:true,vy:R(60,-40)});
+        SFX('wave');
+      }
     }
   } else if(b.state==='rest'){
     hh.y=lerp(hh.y,-170,1-Math.exp(-dt*2.2));
     b.face=1;
-    if(b.t>3.6){
-      b.face=0; b.atk++; b.state='attack'; b.t=0; bossQueueAttack(b.atk);
-      // предохранитель: даже если игрок совсем не ест, бабушка устаёт и уходит
+    if(b.t>2.6){
+      b.face=0; b.atk++;
       b.patience=Math.max(0,b.patience-1);
       pop(LANG==='ru'?'БАБУШКА УСТАЛА':'GRANDMA TIRES',TABLE.W/2,PLAY.y+120,'#ffd769',24,1.2);
-      if(b.patience<=0) endBoss(true);
+      if(b.patience<=0){ endBoss(true); }
+      else { b.state='attack'; b.t=0; bossQueueAttack(b.atk); }
     }
   } else if(b.state==='leave'){
     hh.y=lerp(hh.y,-260,1-Math.exp(-dt*2));
-    if(b.t>2.4){ b.state='gone'; }
+    if(b.t>2.4) b.state='gone';
   }
 }
-
 /* ============================== 12. РЕЖИССЁР (волны, спавн, сложность) ============================== */
 function hazardPool(){
   return HAZ_KEYS.filter(k=>HAZ_DEF[k].minWave<=G.wave && k!=='trap');
@@ -2422,9 +2443,28 @@ function drawZones(g){
         g.stroke(); }
     }
     g.restore();
-    if(D.ico&&a>.5){ g.save(); g.globalAlpha=a*.35;
-      g.font=(z.r*.5)+'px "Nunito",sans-serif'; g.textAlign='center'; g.textBaseline='middle';
-      g.fillText(D.ico,z.x,z.y); g.restore(); }
+    if(a>.25){
+      const name=LANG==='ru'?D.labelRu:D.labelEn;
+      const effect=D.dmg>0
+        ? (LANG==='ru'?'НАНОСИТ УРОН':'DAMAGE')
+        : (LANG==='ru'?'ЗАМЕДЛЯЕТ':'SLOWS');
+      g.save();
+      g.globalAlpha=Math.min(1,a*1.25);
+      g.font='900 14px "Nunito",sans-serif';
+      const title=D.ico+' '+name;
+      const badgeW=Math.min(176,Math.max(96,g.measureText(title).width+24));
+      const badgeH=38, badgeX=z.x-badgeW/2, badgeY=z.y-z.r*.20-badgeH/2;
+      g.fillStyle='rgba(31,18,11,.88)';
+      rr(g,badgeX,badgeY,badgeW,badgeH,9); g.fill();
+      g.strokeStyle='rgba(255,255,255,.78)'; g.lineWidth=1.5; g.stroke();
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillStyle='#fff'; g.font='900 13px "Nunito",sans-serif';
+      g.fillText(title,z.x,badgeY+12);
+      g.fillStyle=D.dmg>0?'#ffb6a8':'#ffe2a8';
+      g.font='900 10px "Nunito",sans-serif';
+      g.fillText(effect,z.x,badgeY+27);
+      g.restore();
+    }
   }
 }
 
@@ -3001,87 +3041,105 @@ function drawDizzy(g,x,y){
 }
 function drawBoss(g){
   const b=G.boss; if(!b||b.state==='gone') return;
-  const k = b.state==='intro'? easeOut(clamp(b.t/1.8,0,1))
-          : (b.state==='leave'? 1-clamp(b.t/2.0,0,1) : 1);
+  const k=b.state==='intro'?easeOut(clamp(b.t/1.8,0,1))
+    :(b.state==='leave'?1-clamp(b.t/2.0,0,1):1);
   if(k<=0) return;
-  const anger = 1-b.patience/b.max;
-  // тень фигуры на столе
+  const rage=clamp((b.anger||0)/6,0,1);
+  const anger=Math.max(1-b.patience/b.max,rage);
+  const viewTop=VIEW.y, centerX=VIEW.x+VIEW.w*.5;
+
+  // Grandma is anchored to the visible camera, not a fixed world coordinate.
   g.save();
-  const grd=g.createLinearGradient(0,PLAY.y-60,0,PLAY.y+300*k);
-  grd.addColorStop(0,'rgba(28,12,5,'+(.6*k)+')'); grd.addColorStop(1,'rgba(28,12,5,0)');
-  g.fillStyle=grd; g.fillRect(VIEW.x-60,PLAY.y-80,VIEW.w+120,340*k+80);
+  const grd=g.createLinearGradient(0,viewTop-60,0,viewTop+300*k);
+  grd.addColorStop(0,'rgba(28,12,5,'+(.72*k)+')');
+  grd.addColorStop(1,'rgba(28,12,5,0)');
+  g.fillStyle=grd; g.fillRect(VIEW.x-60,viewTop-80,VIEW.w+120,340*k+80);
   g.restore();
-  // голова, нависающая над столом
-  const hx=TABLE.W*.5+Math.sin(G.t*.55)*36, hy=-150+228*k;
+
+  const hx=centerX+Math.sin(G.t*.55)*Math.min(36,VIEW.w*.025);
+  const hy=viewTop-150+228*k;
   g.save(); g.translate(hx,hy); g.rotate(Math.sin(G.t*.8)*.03);
-  const R0=104;
-  // пучок волос
+  const R0=118;
+
+  // Hair and head
   g.fillStyle='#2a1a12'; outline(g,6);
   g.beginPath(); g.arc(0,-R0*.92,R0*.42,0,TAU); g.fill(); g.stroke();
-  // голова
   g.beginPath(); g.arc(0,0,R0,0,TAU); g.fill(); g.stroke();
-  // платок
+
+  // Headscarf
   g.fillStyle='#7a3b52'; outline(g,5);
   g.beginPath(); g.arc(0,-8,R0*1.02,Math.PI*1.08,Math.PI*1.92); g.closePath(); g.fill(); g.stroke();
   g.fillStyle='rgba(255,220,230,.25)';
-  for(let i=0;i<5;i++){ g.beginPath(); g.arc(-R0*.6+i*R0*.3,-R0*.55+((i%2)?8:0),7,0,TAU); g.fill(); }
-  // очки
+  for(let i=0;i<5;i++){
+    g.beginPath(); g.arc(-R0*.6+i*R0*.3,-R0*.55+((i%2)?8:0),7,0,TAU); g.fill();
+  }
+
+  // Glasses and eyes
   g.strokeStyle='#e8d9b0'; g.lineWidth=6;
-  for(const s of [-1,1]){
-    g.beginPath(); g.arc(s*R0*.42,R0*.06,R0*.30,0,TAU); g.stroke();
+  for(const side of [-1,1]){
+    g.beginPath(); g.arc(side*R0*.42,R0*.06,R0*.30,0,TAU); g.stroke();
     g.fillStyle='rgba(155,232,255,'+(.16+anger*.3)+')'; g.fill();
   }
   g.beginPath(); g.moveTo(-R0*.12,R0*.06); g.lineTo(R0*.12,R0*.06); g.stroke();
-  // глаза
-  for(const s of [-1,1]){
+  for(const side of [-1,1]){
     g.fillStyle='#fff';
-    g.beginPath(); g.ellipse(s*R0*.42,R0*.06,R0*.15,R0*.13*(1-anger*.25),0,0,TAU); g.fill();
-    g.fillStyle=anger>.6?'#ef4b3c':'#3a2a1a';
-    g.beginPath(); g.arc(s*R0*.42+Math.sin(G.t)*3,R0*.08,R0*.07,0,TAU); g.fill();
+    g.beginPath(); g.ellipse(side*R0*.42,R0*.06,R0*.15,R0*.13*(1-anger*.25),0,0,TAU); g.fill();
+    g.fillStyle=anger>.55?'#ef4b3c':'#3a2a1a';
+    g.beginPath(); g.arc(side*R0*.42+Math.sin(G.t)*3,R0*.08,R0*.07,0,TAU); g.fill();
   }
-  // брови (злее по мере потери терпения)
+
+  // Expression changes with rage.
   g.strokeStyle='#2a1a12'; g.lineWidth=9; g.lineCap='round';
-  for(const s of [-1,1]){
-    g.beginPath(); g.moveTo(s*R0*.60,-R0*.16);
-    g.lineTo(s*R0*.24,-R0*.16+anger*R0*.16); g.stroke();
+  for(const side of [-1,1]){
+    g.beginPath(); g.moveTo(side*R0*.60,-R0*.16);
+    g.lineTo(side*R0*.24,-R0*.16+anger*R0*.16); g.stroke();
   }
-  // рот
   g.strokeStyle='#1a0f08'; g.lineWidth=7;
   g.beginPath();
-  if(b.state==='rest'||b.face){ g.arc(0,R0*.42,R0*.22,Math.PI*1.15,Math.PI*1.85); }
-  else { g.arc(0,R0*.62,R0*.26,Math.PI*1.1+anger*.2,Math.PI*1.9-anger*.2); }
+  if(b.state==='rest'||b.face) g.arc(0,R0*.42,R0*.22,Math.PI*1.15,Math.PI*1.85);
+  else g.arc(0,R0*.62,R0*.26,Math.PI*1.1+anger*.2,Math.PI*1.9-anger*.2);
   g.stroke();
-  // щёки
+
   g.fillStyle='rgba(232,120,110,'+(.25+anger*.3)+')';
-  for(const s of [-1,1]){ g.beginPath(); g.ellipse(s*R0*.66,R0*.34,R0*.16,R0*.11,0,0,TAU); g.fill(); }
-  // пар из ушей, когда терпение на исходе
-  if(anger>.7){
-    g.fillStyle='rgba(255,255,255,'+(.2+.2*Math.sin(G.t*8))+')';
-    for(const s of [-1,1]) for(let i=0;i<3;i++){
-      g.beginPath(); g.arc(s*R0*1.05, -R0*.2-i*22-((G.t*40)%22), 10-i*2,0,TAU); g.fill(); }
+  for(const side of [-1,1]){
+    g.beginPath(); g.ellipse(side*R0*.66,R0*.34,R0*.16,R0*.11,0,0,TAU); g.fill();
+  }
+  if(anger>.55){
+    g.fillStyle='rgba(255,255,255,'+(.25+.25*Math.sin(G.t*8))+')';
+    for(const side of [-1,1]) for(let i=0;i<3;i++){
+      g.beginPath(); g.arc(side*R0*1.05,-R0*.2-i*22-((G.t*40)%22),10-i*2,0,TAU); g.fill();
+    }
   }
   if(b.sweat>0){
     g.fillStyle='#9be8ff'; outline(g,3);
-    g.beginPath(); g.moveTo(R0*.9,-R0*.5); g.quadraticCurveTo(R0*1.06,-R0*.2,R0*.9,-R0*.16);
-    g.quadraticCurveTo(R0*.76,-R0*.24,R0*.9,-R0*.5); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(R0*.9,-R0*.5);
+    g.quadraticCurveTo(R0*1.06,-R0*.2,R0*.9,-R0*.16);
+    g.quadraticCurveTo(R0*.76,-R0*.24,R0*.9,-R0*.5);
+    g.fill(); g.stroke();
   }
   g.restore();
-  // руки по краям
+
+  // The hands now use the animated hand position updated by the boss state machine.
   g.save();
   g.fillStyle='#f0c9a4'; outline(g,6);
-  const reach=(b.state==='attack')? 90:40;
-  for(const s of [-1,1]){
-    const ax=TABLE.W*.5+s*(TABLE.W*.30+Math.sin(G.t*.7+s)*24), ay=-40+reach*k;
-    g.beginPath(); g.moveTo(ax-46,-200); g.lineTo(ax+46,-200);
-    g.quadraticCurveTo(ax+40,ay-30,ax+30,ay); g.lineTo(ax-30,ay);
-    g.quadraticCurveTo(ax-40,ay-30,ax-46,-200); g.closePath(); g.fill(); g.stroke();
+  const handProgress=clamp(((b.hand&&b.hand.y)||-160+160)/340,0,1);
+  const armTopY=viewTop-200+228*k;
+  const armBottomY=viewTop-40+handProgress*250*k;
+  for(const side of [-1,1]){
+    const ax=centerX+side*(VIEW.w*.30+Math.sin(G.t*.7+side)*24);
+    g.beginPath(); g.moveTo(ax-46,armTopY); g.lineTo(ax+46,armTopY);
+    g.quadraticCurveTo(ax+40,armBottomY-30,ax+30,armBottomY);
+    g.lineTo(ax-30,armBottomY);
+    g.quadraticCurveTo(ax-40,armBottomY-30,ax-46,armTopY);
+    g.closePath(); g.fill(); g.stroke();
     g.fillStyle='#e0b48c';
-    for(let i=-1;i<=1;i++){ g.beginPath(); g.ellipse(ax+i*20,ay-6,11,15,0,0,TAU); g.fill(); }
+    for(let i=-1;i<=1;i++){
+      g.beginPath(); g.ellipse(ax+i*20,armBottomY-6,11,15,0,0,TAU); g.fill();
+    }
     g.fillStyle='#f0c9a4';
   }
   g.restore();
-}
-/* ---------- экранные эффекты ---------- */
+}/* ---------- экранные эффекты ---------- */
 function drawScreenFx(g){
   g.setTransform(DPR,0,0,DPR,0,0);
   if(G.flash>0.01){ g.save(); g.globalAlpha=Math.min(.62,G.flash*.62);
@@ -3659,11 +3717,24 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyM'){ SAVE.settings.musOn=!SAVE.settings.musOn; save(); applyAudioSettings(); renderSettings(); }
 });
 window.addEventListener('keyup',e=>{ keys[e.code]=false; });
-window.addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; if(G.state==='play') togglePause(true); });
+window.addEventListener('blur',()=>{ mouse.active=false; mouse.id=null; for(const k in keys) keys[k]=false; if(G.state==='play') togglePause(true); });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&G.state==='play') togglePause(true); });
 
 /* тач: динамический джойстик слева + кнопки справа */
 const touch={active:false,id:null,ox:0,oy:0,x:0,y:0};
+const mouse={active:false,id:null,x:0,y:0};
+function pointerToWorld(x,y){
+  const scale=Math.max(.001,VIEW.scale);
+  return {
+    x:VIEW.x+VIEW.w*.5+(x-cvW*.5)/scale,
+    y:VIEW.y+VIEW.h*.5+(y-cvH*.5)/scale
+  };
+}
+function isGameUiTarget(target){
+  return !!(target&&target.closest&&target.closest(
+    '.tbtn,.btn,.tile,.upcard,.sw,.mini,.switch,input,.hudBox,#bossWrap'
+  ));
+}
 const stickEl=$('stick'), knobEl=$('stickKnob');
 function stickPos(x,y){
   const r=stickEl.offsetWidth/2||90;
@@ -3672,20 +3743,38 @@ function stickPos(x,y){
 }
 window.addEventListener('pointerdown',e=>{
   AudioSys.init(); AudioSys.resume();
-  if(e.target.closest&&e.target.closest('.tbtn,.btn,.tile,.upcard,.sw,.mini,.switch,input')) return;
+  if(isGameUiTarget(e.target)) return;
   if(G.state!=='play') return;
+
+  // Desktop: hold the left mouse button and steer toward the cursor.
+  // This is independent from the touch joystick and works on every side of the roach.
+  if(e.pointerType==='mouse'){
+    if(e.button!==0||G.mode==='versus') return;
+    mouse.active=true; mouse.id=e.pointerId;
+    mouse.x=e.clientX; mouse.y=e.clientY;
+    if(e.target&&e.target.setPointerCapture){
+      try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+    }
+    return;
+  }
+
+  // Touch / pen: retain the dynamic joystick on the left side.
   if(e.clientX<window.innerWidth*0.55&&!touch.active){
     touch.active=true; touch.id=e.pointerId; touch.ox=e.clientX; touch.oy=e.clientY;
     stickPos(e.clientX,e.clientY); stickEl.style.opacity='.85';
   }
 },{passive:true});
 window.addEventListener('pointermove',e=>{
+  if(mouse.active&&e.pointerId===mouse.id){
+    mouse.x=e.clientX; mouse.y=e.clientY;
+    return;
+  }
   if(!touch.active||e.pointerId!==touch.id) return;
   const dx=e.clientX-touch.ox, dy=e.clientY-touch.oy;
   const l=Math.hypot(dx,dy), max=58;
   const k=l>max?max/l:1;
-  touch.x=clamp(dx/ (l||1) * Math.min(1,l/max),-1,1);
-  touch.y=clamp(dy/ (l||1) * Math.min(1,l/max),-1,1);
+  touch.x=clamp(dx/(l||1)*Math.min(1,l/max),-1,1);
+  touch.y=clamp(dy/(l||1)*Math.min(1,l/max),-1,1);
   knobEl.style.transform='translate(calc(-50% + '+(dx*k)+'px), calc(-50% + '+(dy*k)+'px))';
 },{passive:true});
 function endTouch(e){
@@ -3694,6 +3783,12 @@ function endTouch(e){
   stickEl.style.opacity='.5'; stickEl.style.left='0px'; stickEl.style.bottom='0px'; stickEl.style.top='auto';
   knobEl.style.transform='translate(-50%,-50%)';
 }
+function endMouse(e){
+  if(!mouse.active||(e&&e.pointerId!==mouse.id)) return;
+  mouse.active=false; mouse.id=null;
+}
+window.addEventListener('pointerup',endMouse);
+window.addEventListener('pointercancel',endMouse);
 window.addEventListener('pointerup',endTouch);
 window.addEventListener('pointercancel',endTouch);
 
@@ -3706,18 +3801,27 @@ function readInputs(){
       p1.input.x=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0); p1.input.y=(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);
       if(jp.Digit1) p1.tryDash(); if(jp.Digit2) p1.toggleHide(); if(jp.Digit3) p1.tryBurp();
     } else {
-      let x=(keys.KeyD?1:0)-(keys.KeyA?1:0)+(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);
-      let y=(keys.KeyS?1:0)-(keys.KeyW?1:0)+(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);
-      if(touch.active){ x+=touch.x; y+=touch.y; }
-      p0.input.x=clamp(x,-1,1); p0.input.y=clamp(y,-1,1);
+      if(mouse.active){
+        const target=pointerToWorld(mouse.x,mouse.y);
+        const dx=target.x-p0.x, dy=target.y-p0.y, distance=Math.hypot(dx,dy);
+        const deadZone=14/Math.max(.1,VIEW.scale);
+        const ramp=70/Math.max(.1,VIEW.scale);
+        const strength=clamp((distance-deadZone)/ramp,0,1);
+        p0.input.x=distance>0?dx/distance*strength:0;
+        p0.input.y=distance>0?dy/distance*strength:0;
+      } else {
+        let x=(keys.KeyD?1:0)-(keys.KeyA?1:0)+(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);
+        let y=(keys.KeyS?1:0)-(keys.KeyW?1:0)+(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);
+        if(touch.active){ x+=touch.x; y+=touch.y; }
+        p0.input.x=clamp(x,-1,1); p0.input.y=clamp(y,-1,1);
+      }
       if(jp.Space) p0.tryDash();
       if(jp.ShiftLeft||jp.ShiftRight) p0.toggleHide();
       if(jp.KeyE) p0.tryBurp();
     }
   }
   for(const k in jp) delete jp[k];
-}
-function bindTouchBtn(el,fn){
+}function bindTouchBtn(el,fn){
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation();
     AudioSys.resume(); if(G.state==='play') fn(); },{passive:false});
 }
