@@ -284,7 +284,7 @@ test("q-only DOM snapshot exposes safe row metadata but no query text or values"
 });
 
 test("opening a stable AI Mode session stores its user-turn count",async()=>{
-  const url="https://www.google.com/search?udm=50#thread=thread-77";
+  const url="https://www.google.com/search?udm=50&mtid=thread-77";
   const {w,T,saved}=await boot({titles:["History item"],url});
   const main=w.document.querySelector("main");
   main.innerHTML=[
