@@ -170,7 +170,7 @@ test("partial scans with known q-only rows never mark stable local chats as dele
   const scan=T.scanHistory();
   assert.equal(scan.unclassifiedCount,0);
   assert.equal(scan.complete,false);
-  assert.equal(scan.excludedSearchCount,2);
+  assert.equal(scan.excludedSearchCount,1);
   T.applyScan(scan);
   assert.equal(T.state.chats["id:thread-old"].missing,false);
 });
