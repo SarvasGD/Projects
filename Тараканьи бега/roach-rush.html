@@ -2135,7 +2135,7 @@ function startBoss(){
   }
   b.queue=q; b.qT=0;
 }function bossAnger(n,p){
-  const b=G.boss; if(!b||b.done||b.state==='intro') return;
+  const b=G.boss; if(!b||b.done) return;
   const bites=Math.max(1,Math.floor(Number(n)||1));
   b.fed=Math.min(b.feedTarget,b.fed+bites);
   b.anger=clamp((b.fed/b.feedTarget)*6,0,6);
