@@ -1492,7 +1492,7 @@ function zoneSlowAt(x,y,p){
   let s=0;
   for(const z of G.zones){
     const D=ZONE_DEF[z.type]; if(!D||!D.slow) continue;
-    if(z.type!=='oil' && p && p.up.stickRes>=1 && (z.type==='jam'||z.type==='puddle'||z.type==='web')) continue;
+    if(p && p.up.stickRes>=1 && (z.type==='jam'||z.type==='puddle'||z.type==='web'||z.type==='oil')) continue;
     if(dist2(x,y,z.x,z.y) < (z.r*.95)*(z.r*.95)) s=Math.max(s,D.slow);
   }
   return s;
