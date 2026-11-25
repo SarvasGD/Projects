@@ -37,7 +37,7 @@ function pageHtml(kind, titles) {
     '<a data-rect="-9999,0,1,1" href="/search?q=x&udm=50#settings">Skip to settings</a>' +
     '<a data-rect="8,64,241,40" href="/">Новый чат</a>' +
     '<div role="button" data-rect="8,110,241,40">Поиск цепочек</div>' +
-    '<div id="scroller" style="overflow-y:auto" data-rect="8,166,241,780" data-sh="8572" data-ch="780">' +
+    '<div id="scroller" style="overflow-y:auto" data-rect="8,166,241,780" data-sh="2300" data-ch="780">' +
     '<div id="history-inner" data-rect="8,166,241,8572"><button role="button" data-rect="9,166,240,40">Недавнее</button>' +
     makeRows(kind, titles) + "</div></div></nav>";
 }
@@ -147,7 +147,7 @@ test("overlay hides native history only after full stable-ID scan",async()=>{
   const {w,T}=await boot({titles:["One","Two"]});
   T.scanForChats();
   assert.equal(T.getNativeHidden(),null);
-  await sleep(2600);
+  await sleep(6200);
   T.scanForChats();
   assert.ok(T.getNativeHidden());
   assert.equal(w.document.getElementById("scroller").style.getPropertyValue("visibility"),"hidden");
@@ -175,9 +175,12 @@ test("partial or unclassified scans never mark stable local chats as deleted",as
 test("lazy loading accumulates identities across virtualized history pages",async()=>{
   const {w,T}=await boot({titles:["Chat 0","Chat 1"]});
   const scroller=w.document.getElementById("scroller"),inner=w.document.getElementById("history-inner");
+  let top=0,batchIndex=1;
   const batches=[["Chat 0","Chat 1"],["Chat 2","Chat 3"],["Chat 4","Chat 5"],["Chat 6","Chat 7"],["Chat 8","Chat 9"],["Chat 10","Chat 11"]];
-  let batchIndex=1;
-  Object.defineProperty(scroller,"scrollTop",{get(){return 0;},set(){
+  Object.defineProperty(scroller,"scrollHeight",{get(){return 6000;},configurable:true});
+  Object.defineProperty(scroller,"clientHeight",{get(){return 1200;},configurable:true});
+  Object.defineProperty(scroller,"scrollTop",{get(){return top;},set(value){
+    top=value;
     if(batchIndex>=batches.length)return;
     inner.querySelectorAll("button[data-thread-id]").forEach(node=>node.remove());
     const batch=batches[batchIndex++];
@@ -257,6 +260,17 @@ test("DOM snapshot reports role count without exposing conversation text",async(
   assert.ok(snapshot.includes("Реплик пользователя: 2"));
   assert.ok(snapshot.includes("data-message-author-role"));
   assert.ok(!snapshot.includes("VERY PRIVATE") && !snapshot.includes("PRIVATE AI ANSWER"));
+});
+
+test("known q-only search rows do not block a confirmed conversation overlay",async()=>{
+  const {w,T}=await boot({titles:["Confirmed AI thread"]});
+  const inner=w.document.getElementById("history-inner");
+  inner.insertAdjacentHTML("beforeend",'<a href="/search?q=one&udm=50" data-rect="8,260,241,40">Single search request</a>');
+  T.scanForChats();
+  const scan=T.scanHistory();
+  assert.equal(scan.rows.length,1);
+  assert.equal(scan.unclassifiedCount,0);
+  assert.ok(scan.excludedSearchCount>=1);
 });
 
 test("q-only DOM snapshot exposes safe row metadata but no query text or values",async()=>{

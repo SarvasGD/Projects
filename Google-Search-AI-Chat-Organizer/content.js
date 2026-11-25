@@ -806,9 +806,14 @@
     });
   }
   function getUnclassifiedRows(root, heading) {
-    return getHistoryRowCandidates(root, heading).map(describeRow).filter((row) => !row.key || !isStableChatKey(row.key));
+    return getHistoryRowCandidates(root, heading)
+      .map(describeRow)
+      .filter((row) => !row.key || !isStableChatKey(row.key));
   }
-  function countUnclassifiedRows(root, heading) { return getUnclassifiedRows(root, heading).length; }
+
+  function countUnclassifiedRows(root, heading) {
+    return getUnclassifiedRows(root, heading).filter((row) => row.identityStatus !== "query-only").length;
+  }
 
   function countUnclassifiedRows(root, heading) {
     if (!root) return 0;
@@ -845,18 +850,22 @@
   function describeRow(el) {
     const title = rowTitle(el);
     const anchor = el.matches("a[href]") ? el : el.querySelector("a[href]");
-    let href = "", urlKey = null;
+    let href = "", urlKey = null, identityStatus = "ambiguous";
     if (anchor) try {
       const url = new URL(anchor.getAttribute("href"), location.href);
-      urlKey = toStableThreadKey(url.href);
-      if (urlKey) href = url.href;
+      if (isGoogleHost(url.hostname) && url.pathname === "/search") {
+        href = url.href;
+        urlKey = toStableThreadKey(url.href);
+        if (!urlKey && url.searchParams.has("q")) identityStatus = "query-only";
+      }
     } catch (_error) {}
     const idDetails = attributeIdDetails(el);
     const id = idDetails.value;
     const threadId = id || (urlKey ? urlKey.slice(3) : "");
     const base = id ? "id:" + id : urlKey;
-    return { el, title, href, urlKey, threadId, base, hasUrl:!!urlKey, hasId:!!id,
-      identitySource:id ? idDetails.name : (urlKey ? "href:mtid" : "unknown"), key:base };
+    return { el, title, href, urlKey, threadId, base, hasUrl:!!href, hasId:!!id, identityStatus,
+      identitySource:id ? idDetails.name : (urlKey ? "href:mtid" : (identityStatus === "query-only" ? "q-only" : "unknown")),
+      key:base };
   }
 
   function scanHistory() {
@@ -866,12 +875,15 @@
     const candidates = getHistoryRowCandidates(found.region, heading).map(describeRow);
     const visibleRows = candidates.filter((row) => row.key && isStableChatKey(row.key));
     const unclassifiedRows = candidates.filter((row) => !row.key || !isStableChatKey(row.key));
+    const ambiguousCount = unclassifiedRows.filter((row) => row.identityStatus !== "query-only").length;
+    const queryOnlyCount = unclassifiedRows.filter((row) => row.identityStatus === "query-only").length;
     const merged = new Map();
     const snapshot = found.scroller && completedSnapshots.get(found.scroller);
     if (snapshot) snapshot.rows.forEach((row) => merged.set(row.key, row));
     visibleRows.forEach((row) => merged.set(row.key, row));
     return { heading, region:found.region, scroller:found.scroller, rows:Array.from(merged.values()),
-      unclassifiedRows, unclassifiedCount:Math.max(snapshot ? snapshot.unclassifiedCount : 0,unclassifiedRows.length),
+      unclassifiedRows, unclassifiedCount:Math.max(snapshot ? snapshot.unclassifiedCount : 0,ambiguousCount),
+      excludedSearchCount:Math.max(snapshot ? snapshot.excludedSearchCount : 0,queryOnlyCount),
       complete:!found.scroller || !!snapshot };
   }
 
@@ -1069,8 +1081,12 @@
   // ===================== Priming lazy-loaded history =====================
 
   function finishPriming(scroller,progress,stable) {
-    if(scroller.isConnected) scroller.scrollTop=progress.initialScrollTop;
-    if(stable) completedSnapshots.set(scroller,{rows:Array.from(progress.rows.values()),unclassifiedCount:progress.hasUnclassified?1:0});
+    if(scroller.isConnected)scroller.scrollTop=progress.initialScrollTop;
+    if(stable)completedSnapshots.set(scroller,{
+      rows:Array.from(progress.rows.values()),
+      unclassifiedCount:progress.hasUnclassified?1:0,
+      excludedSearchCount:progress.excludedSearchCount||0
+    });
     else primedScrollers.delete(scroller);
     activePriming=null;
     scheduleScan();
@@ -1078,7 +1094,12 @@
 
   function stepPriming(scroller,heading,progress) {
     if(!scroller.isConnected){finishPriming(scroller,progress,false);return;}
-    scroller.scrollTop=scroller.scrollHeight;
+    const clientHeight=Math.max(1,Number(scroller.clientHeight)||640);
+    const maxTop=Math.max(0,(Number(scroller.scrollHeight)||0)-clientHeight);
+    const currentTop=Math.max(0,Number(scroller.scrollTop)||0);
+    const stepSize=Math.max(180,Math.floor(clientHeight*0.9));
+    const nextTop=Math.min(maxTop,currentTop+stepSize);
+    if(nextTop>currentTop+1)scroller.scrollTop=nextTop;
     progress.steps+=1;
     window.setTimeout(()=>{
       if(!scroller.isConnected){finishPriming(scroller,progress,false);return;}
@@ -1087,18 +1108,22 @@
       candidates.forEach(el=>{
         const row=describeRow(el);
         if(row.key&&isStableChatKey(row.key)){if(!progress.rows.has(row.key))discovered+=1;progress.rows.set(row.key,row);}
+        else if(row.identityStatus==="query-only")progress.excludedSearchCount=1;
         else progress.hasUnclassified=true;
       });
       const height=Number(scroller.scrollHeight)||0;
+      const actualTop=Math.max(0,Number(scroller.scrollTop)||0);
+      const actualMaxTop=Math.max(0,height-(Number(scroller.clientHeight)||clientHeight));
+      const atBottom=actualTop>=actualMaxTop-2;
       const busy=Array.from(scroller.querySelectorAll('[aria-busy="true"],[role="progressbar"],[data-loading="true"]')).some(el=>{
         const rect=el.getBoundingClientRect(),style=window.getComputedStyle(el);
         return rect.width>0&&rect.height>0&&style.display!=="none"&&style.visibility!=="hidden";
       });
-      if(discovered>0||height!==progress.previousScrollHeight||busy)progress.stableSteps=0;
+      if(discovered>0||height!==progress.previousScrollHeight||busy||!atBottom)progress.stableSteps=0;
       else progress.stableSteps+=1;
       progress.previousScrollHeight=height;
       if(progress.stableSteps>=8)finishPriming(scroller,progress,true);
-      else if(progress.steps>=120)finishPriming(scroller,progress,false);
+      else if(progress.steps>=160)finishPriming(scroller,progress,false);
       else stepPriming(scroller,heading,progress);
     },450);
   }
@@ -1109,8 +1134,11 @@
     primedScrollers.add(scroller);
     activePriming=scroller;
     const rows=new Map();scan.rows.forEach(row=>rows.set(row.key,row));
-    stepPriming(scroller,scan.heading,{initialScrollTop:scroller.scrollTop,rows,
-      hasUnclassified:scan.unclassifiedCount>0,previousScrollHeight:Number(scroller.scrollHeight)||0,stableSteps:0,steps:0});
+    stepPriming(scroller,scan.heading,{
+      initialScrollTop:scroller.scrollTop,rows,hasUnclassified:scan.unclassifiedCount>0,
+      excludedSearchCount:scan.excludedSearchCount||0,
+      previousScrollHeight:Number(scroller.scrollHeight)||0,stableSteps:0,steps:0
+    });
   }
 
   function saveUiPrefs() {
@@ -1167,12 +1195,12 @@
     if(scan){
       lines.push("Цепочка предков заголовка:");
       let node=scan.heading;
-      for(let i=0;i<9&&node&&node!==document.body;i+=1,node=node.parentElement) lines.push("  "+describeNode(node));
-      lines.push("Подтверждённые строки: "+scan.rows.length+" · не классифицировано: "+scan.unclassifiedCount);
+      for(let i=0;i<9&&node&&node!==document.body;i+=1,node=node.parentElement)lines.push("  "+describeNode(node));
+      lines.push("Подтверждённые строки: "+scan.rows.length+" · неоднозначные: "+scan.unclassifiedCount+" · поисковые записи без mtid исключены: "+(scan.excludedSearchCount||0));
       scan.rows.slice(0,8).forEach((row,index)=>lines.push("Строка "+(index+1)+": "+describeNode(row.el)+" identity="+row.identitySource+" · "+safeHrefSummary(row.el)));
       const unresolved=getUnclassifiedRows(scan.region,scan.heading);
       lines.push("Неопознанные строки (значения атрибутов и текст скрыты): "+unresolved.length);
-      unresolved.slice(0,12).forEach((row,index)=>lines.push("  ?#"+(index+1)+" "+describeNode(row.el)+" data-attrs="+(dataAttributeNames(row.el).join(",")||"none")+" · "+safeHrefSummary(row.el)));
+      unresolved.slice(0,12).forEach((row,index)=>lines.push("  ?#"+(index+1)+" "+describeNode(row.el)+" type="+row.identityStatus+" data-attrs="+(dataAttributeNames(row.el).join(",")||"none")+" · "+safeHrefSummary(row.el)));
       lines.push("Полный обход истории завершён: "+(scan.complete?"да":"нет"));
     }
     const main=document.querySelector("main,[role='main']");
@@ -1190,7 +1218,7 @@
       const text=String(main.innerText||main.textContent||"");
       lines.push("Маркер AI Mode Conversation: "+(/(?:AI Mode Conversation:|Разговор в режиме ИИ:)/i.test(text)?"есть":"нет"));
       lines.push("Маркер You said: "+(/(?:^|\n)\s*(?:You said|Вы сказали)\s*:/i.test(text)?"есть":"нет"));
-    } else lines.push("Открытая сессия: main не найден");
+    }else lines.push("Открытая сессия: main не найден");
     const thread=document.querySelector("main [data-session-thread-id],main [data-thread-id],main [data-conversation-id],main [data-chat-id],main [data-session-id]");
     const details=thread?attributeIdDetails(thread):{value:"",name:""};
     lines.push("ID в содержимом страницы: "+(details.value?details.name+" (значение скрыто)":"нет"));

@@ -105,8 +105,7 @@ async function waitForOrganizer(page, expectedDisplay) {
       row.textContent = "Переименовано непосредственно в Google";
     });
     await page.locator("#history-region").evaluate((region) => {
-      const added = document.createElement("button");
-      added.type = "button";
+      const added = document.createElement("a");
       added.href = "/search?mtid=thread-103";
       added.textContent = "Новый чат из Google";
       region.appendChild(added);
