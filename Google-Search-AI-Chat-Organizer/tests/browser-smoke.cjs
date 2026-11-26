@@ -93,7 +93,7 @@ async function waitForOrganizer(page, expectedDisplay) {
     const multiTurn = await page.locator("#google-search-ai-chat-organizer").evaluate((host) =>
       Array.from(host.shadowRoot.querySelectorAll(".chat-link")).map((link) => link.textContent)
     );
-    assert.deepEqual(multiTurn, ["Многоходовой диалог"], "2+ filter keeps only the read multi-turn session");
+    assert.deepEqual(multiTurn, ["Многоходовой диалог с полным названием строки истории"], "2+ filter keeps only the read multi-turn session");
 
     // External Google-side add/rename/delete should be reflected by MutationObserver sync.
     await page.locator("#google-search-ai-chat-organizer").evaluate((host) => {
