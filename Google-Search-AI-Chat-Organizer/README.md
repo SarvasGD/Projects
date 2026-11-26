@@ -1,83 +1,67 @@
 # Google Search AI Chat Organizer
 
-Manifest V3 extension for Chromium-based browsers (Yandex Browser, Vivaldi, Opera, Chrome).
+**Версия:** 0.4.1  
+**Стадия:** технический прототип; автоматические проверки пройдены, Prototype Gate по живому Google DOM ещё ожидает подтверждения.
 
-Adds nested folders, local full-text search over captured conversations, and Markdown export to Google AI Mode history.
+Расширение Manifest V3 для Яндекс Браузера, Vivaldi, Opera и Chromium. Заменяет штатную область истории Google AI Mode деревом папок и локальным поиском.
 
-## User-facing behaviour
+## Что реализовано
 
-- Replaces Google's Recent history box with an overlay occupying the same measured area.
-- Detects clickable history rows even when they do not expose an ordinary `<a href>`.
-- Scrolls Google's own history scroller to the end before replacing the native list.
-- Keeps Google's original list available through the `⇄` collapse control.
-- Supports four folder levels, rename, color, delete, drag-and-drop, local search and export.
-- Clicking an organizer row proxies the click to the live Google row; a saved URL is used as fallback when the row is no longer present.
-- Uses only `chrome.storage.local`; no background fetching or external service.
+- Overlay занимает область штатной истории Google; оригинальный список возвращается при сворачивании.
+- Папки до четырёх уровней, цвет, переименование, удаление папки и Drag-and-Drop.
+- Локальное хранение в `chrome.storage.local`.
+- Markdown-экспорт и локальный поиск по названию/уже захваченному тексту.
+- Фильтр по числу реплик пользователя: все, одна, две и более, не рассчитано.
+- Строгая идентификация: запрос `q` и само наличие кликабельной строки не доказывают, что это диалог.
+- Legacy-записи без подтверждённого ID сохраняются, но не показываются как подтверждённые диалоги.
+- Строки с обычным `q` без `mtid` исключаются как поисковые записи, а не диалоги. Неоднозначные элементы и незавершённая подгрузка не позволяют скрывать родную историю Google.
 
-## Detection and identity
+## Идентификация
 
-The visible `Recent / Недавнее` heading identifies the history area. The overlay is positioned over a bounded history region, not inserted into Google's navigation layout. The nearest bounded scroll container is used for lazy loading; a larger enclosing box is selected only when it remains within the left rail and does not contain New chat, Search threads or Settings.
+Подтверждённый URL-идентификатор Google AI Mode — параметр `mtid` в URL вида `/search?mtid=...`. Chromium использует `https://google.com/search?mtid=123` как пример thread URL в тестах Contextual Tasks. Значения `q`, `udm`, `tid`, `thread` и hash без `mtid` самостоятельным ID не считаются.
 
-Rows are detected from clickable elements and row geometry, not only from `q` links. Identity priority is:
+В живой истории Google подтверждён `data-thread-id` на вложенной кнопке внутри `div[role=listitem]`. Внешний listitem содержит полный заголовок; кнопка — стабильный ID. Другие атрибуты (`data-session-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id`, `data-mtid`) остаются резервными кандидатами и не считаются доказанными live-маркерами без отдельного снимка.
 
-1. Explicit row data ID (`data-session-thread-id`, `data-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id`, `data-mtid`).
-2. Canonical Google URL identity: host, path, `q`, `udm` and known thread ID query parameters.
-3. Normalised title as a fallback.
+## Подсчёт сообщений
 
-When multiple rows share a base key, they remain separate with an order suffix. Their order can change if Google reorders rows that expose no unique ID or URL identity.
+Считаются реплики пользователя, не ответы AI. Приоритет у role markers; текстовые маркеры применяются только внутри явного заголовка AI Mode Conversation. Неизвестное остаётся «не рассчитано», а не превращается в 0 или 1.
 
-## Reconciliation and data safety
+## Подгрузка истории
 
-- Existing 0.2.x records are migrated with an exact old-URL-to-new-key map; collisions are preserved as separate suffixed records rather than merged.
-- Folder assignments follow the same migration map.
-- Obvious accessibility skip-links such as `Skip to settings` are excluded.
-- Once Google confirms that its history list is fully loaded, records absent from the current list are marked missing and placed in a collapsed `Нет в текущей истории` group (or remain in their assigned folder).
-- Old records are not automatically deleted. This avoids losing conversations that are archived, temporarily unavailable or not currently shown by Google.
+Список прокручивается до устойчивого конца. Стабильные ID накапливаются на каждом проходе, поэтому поддерживается и вариант виртуализированного списка, где Google заменяет одни DOM-строки другими. Требуется восемь последовательных стабильных проходов без новых ID, изменения высоты и видимого loading state. Любая DOM-мутация в области истории инвалидирует снимок и запускает повторное сканирование. Неполный проход не разрешает скрытие Google history и не подтверждает удаления.
 
-## Full-text index and export
+## Проверки
 
-Text is captured only while an AI Mode chat is open in the active tab. There are no background requests for old sessions. Up to 100 most recently indexed chats retain up to 10,000 characters each. Export contains a text snapshot, title and source URL.
+- `npm test` — jsdom/DOM fixtures для ID, отказа от q-only, реплик, фильтров, overlay, миграций, папок, partial scan и виртуализированной подгрузки.
+- `npm run test:browser` — запуск самой MV3-сборки в Chromium на Google-origin fixtures.
+- `npm run test:all` — полный набор.
+- GitHub Actions выполняет все проверки для PR и изменений проекта.
 
-## Diagnostics
+## Диагностика живого Google DOM
 
-The top-right diagnostic card reports the detected heading, history region, row count and key types, lazy-load completion, overlay visibility, native-list visibility and retained missing records. It provides **Копировать**, **Снимок DOM** (an anonymised DOM outline without titles/query values), and **Скрыть**.
+Кнопка «Снимок DOM» выводит обезличенную структуру:
+- имена атрибутов и роли без значений;
+- путь и имена URL-параметров без поисковых запросов и ID;
+- структуру user/assistant message nodes без текста сообщений;
+- счётчик user turns и источник подсчёта.
 
-## Permissions
+Этот снимок нужен только для единой проверки Prototype Gate. Он не отправляется на сторонний сервер.
 
-Only the `storage` permission is requested. Folder structure and captured text remain in browser-local extension storage.
+## Ограничение текущего прототипа
 
-## Supported Google domains
+Автоматические тесты проверяют алгоритм на контролируемых DOM-fixtures. Они не доказывают, что актуальный Google DOM конкретного аккаунта содержит указанные атрибуты. Полный импорт всей истории с прогрессом/Resume/retry относится к MVP, а не к прототипу.
 
-`google.com`, `google.ru`, `google.se`, `google.co.uk`, `google.de`, `google.fr`, `google.es`, `google.ca`, `google.com.au`, `google.co.in`.
+Подробнее: `Документация/Функциональная дорожная карта продукта.md` и `Документация/План-реализации-и-контрольные-вехи.md`.
 
-## Automated tests
+## Источники технической гипотезы
 
-The jsdom smoke suite covers row discovery without q-links, explicit row IDs, duplicate titles, overlay geometry, lazy loading, non-destructive migration, folder assignment preservation, click proxying, teardown and anonymised diagnostics.
+- Chromium test: https://chromium.googlesource.com/chromium/src/+/4fef79f06e4aec6e52462437cee96021459e4639/chrome/browser/contextual_tasks/contextual_tasks_page_handler_unittest.cc
+- Google AI Mode history: https://support.google.com/websearch/answer/16011537
+- LLMnesia Google AI Mode history importer: https://www.llmnesia.com/blog/google-ai-mode-history
 
-Run from this directory:
 
-```bash
-npm install --no-save --package-lock=false
-npm test
-```
+## Проверка на живой странице Google — 26.11.2026
 
-These tests use synthetic DOM geometry. They verify the logic but do not replace a real-browser visual check.
+Получен реальный DOM-снимок версии 0.3.2: 20 строк истории, у всех 20 найден `data-thread-id`; ID находится на вложенном `button`, а полный заголовок — на внешнем `div[role=listitem]`. Область истории имеет размер 261×763 CSS px и scrollHeight около 11 492 px; Google сообщил, что список полностью загружен. В коде v0.4.1 строка теперь нормализуется к внешнему `role=listitem`, ID читается с вложенной кнопки, заголовок — с внешнего элемента, а открытие проксируется на вложенную кнопку.
 
-## Milestone browser acceptance
-
-The developer runs automated and fixture-based checks for every change. A real-account browser check is requested from the user only at consolidated milestones:
-
-- **Prototype gate:** identity/classification, user-message count, full history loading, and overlay/native-list fallback.
-- **MVP gate:** one end-to-end pass covering sync, folders/moves, search and Markdown export.
-- **Closed Beta gate:** native Google deletion, recovery, and supported-browser compatibility.
-
-Do not ask the user to test individual CSS changes, controls, commits or pull requests.
-
-## Документация проекта
-
-- [Функциональная дорожная карта продукта](Документация/Функциональная%20дорожная%20карта%20продукта.md)
-- [Постановка задачи и критерии приёмки](Документация/Постановка-задачи-и-критерии-приёмки.md)
-- [Архитектура данных и автоматическая синхронизация](Документация/Архитектура-данных-и-автоматической-синхронизации.md)
-- [Инструментарий и автоматизированная проверка](Документация/Инструментарий-и-автоматизированная-проверка.md)
-- [План реализации и контрольные вехи](Документация/План-реализации-и-контрольные-вехи.md)
-- [Реестр наработок диалога](Meta/Наработки-диалога.md)
+Снимок подтверждает identity истории и структуру строк, но не содержит достаточных сведений о DOM user/assistant внутри открытой сессии. Подсчёт реплик остаётся отдельным незакрытым пунктом Prototype Gate.

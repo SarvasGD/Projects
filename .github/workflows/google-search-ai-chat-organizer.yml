@@ -61,3 +61,9 @@ jobs:
 
       - name: Run DOM smoke tests
         run: npm test
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium
+
+      - name: Run extension browser smoke tests
+        run: xvfb-run -a npm run test:browser
