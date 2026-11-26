@@ -786,8 +786,12 @@
     const accepted = [];
     nodes.forEach((node) => {
       if (node === heading || node.contains(heading) || heading.contains(node)) return;
-      let candidate = node;
-      if (!candidate.matches("button,a,[role='button'],[role='link']")) candidate = node.closest("button,a,[role='button'],[role='link']") || node;
+      // Google stores data-thread-id on a nested button; the complete title belongs to the outer role=listitem.
+      const listItem = node.matches("[role='listitem']") ? node : node.closest("[role='listitem']");
+      let candidate = listItem && root.contains(listItem) ? listItem : node;
+      if (!candidate.matches("[role='listitem'],button,a,[role='button'],[role='link']")) {
+        candidate = candidate.closest("[role='listitem'],button,a,[role='button'],[role='link']") || candidate;
+      }
       if (!root.contains(candidate) || candidate === heading || candidate.contains(heading)) return;
       if (accepted.some((existing) => existing === candidate || existing.contains(candidate))) return;
       const rect = candidate.getBoundingClientRect();
@@ -799,6 +803,7 @@
     });
     return accepted;
   }
+
   function detectRows(root, heading) {
     return getHistoryRowCandidates(root, heading).filter((el) => {
       const row = describeRow(el);
@@ -981,10 +986,15 @@
   }
 
   function clickNative(row) {
-    const anchor = row.matches("a[href]") ? row : row.querySelector("a[href]");
+    if (!row) return;
+    const target = row.matches("button,a,[role='button'],[role='link']")
+      ? row
+      : row.querySelector("button[data-thread-id],button[data-session-thread-id],button[data-conversation-id],button[data-chat-id],button[data-session-id],button[data-mtid],a[href],button,[role='button'],[role='link']");
+    const clickable = target || row;
+    const anchor = clickable.matches("a[href]") ? clickable : clickable.querySelector("a[href]");
     if (anchor) { anchor.click(); return; }
-    ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((type) => {
-      row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 }));
+    ["pointerdown","mousedown","pointerup","mouseup","click"].forEach((type) => {
+      clickable.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,view:window,button:0}));
     });
   }
 

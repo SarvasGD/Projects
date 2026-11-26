@@ -231,6 +231,28 @@ test("same title never rebinds legacy data to a new thread",async()=>{
   assert.equal(T.state.chats["id:thread-0"].text,"");
   assert.deepEqual(Array.from(T.state.folders[0].chat_urls),["t:same title"]);
 });
+test("uses Google role=listitem title and clicks its nested data-thread-id button",async()=>{
+  const {w,T}=await boot();
+  const inner=w.document.getElementById("history-inner");
+  const fullTitle="Полный заголовок диалога из живой истории Google AI";
+  inner.insertAdjacentHTML("beforeend",
+    '<div role="listitem" aria-posinset="1" aria-setsize="1" data-rect="8,214,241,40">'+
+      '<div role="presentation">'+fullTitle+'</div>\n'+
+      '<button id="google-thread-button-77" data-thread-id="thread-77" aria-label="Короткая подпись кнопки" data-rect="8,214,235,40">Открыть</button>'+
+    '</div>');
+  let clicked=0;
+  inner.querySelector("button[data-thread-id='thread-77']").addEventListener("click",()=>clicked++);
+  T.scanForChats();
+  const scan=T.scanHistory();
+  assert.equal(scan.rows.length,1);
+  assert.equal(scan.rows[0].el.getAttribute("role"),"listitem");
+  assert.equal(scan.rows[0].title,fullTitle);
+  const link=T.getHost().shadowRoot.querySelector(".chat-link");
+  assert.ok(link);
+  link.dispatchEvent(new w.MouseEvent("click",{bubbles:true,cancelable:true,button:0}));
+  assert.equal(clicked,1);
+});
+
 test("organizer click proxies to exact native row by ID",async()=>{
   const {w,T}=await boot({titles:["First chat","Second chat"]});
   let first=0,second=0;
@@ -288,9 +310,13 @@ test("q-only DOM snapshot exposes safe row metadata but no query text or values"
 test("current session resolves identity from semantic data-session-id",async()=>{
   const {w,T}=await boot();
   const main=w.document.querySelector("main");
-  const marker=w.document.createElement("div");
-  marker.setAttribute("data-session-id","session-77");
-  main.appendChild(marker);
+  main.innerHTML=[
+    '<div data-session-id="session-77"></div>',
+    '<div data-message-author-role="user">First question</div>',
+    '<div data-message-author-role="assistant">First answer</div>',
+    '<div data-message-author-role="user">Follow-up question</div>',
+    '<div data-message-author-role="assistant">Second answer</div>'
+  ].join("");
   T.captureCurrentPage();
   assert.ok(T.state.chats["id:session-77"]);
   assert.equal(T.state.chats["id:session-77"].userMessageCount,2);

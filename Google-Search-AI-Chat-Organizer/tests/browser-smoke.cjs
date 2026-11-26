@@ -77,7 +77,7 @@ async function waitForOrganizer(page, expectedDisplay) {
       }))
     );
     assert.deepEqual(initial, [
-      { title: "Многоходовой диалог", key: "id:thread-101" },
+      { title: "Многоходовой диалог с полным названием строки истории", key: "id:thread-101" },
       { title: "Ещё один диалог", key: "id:123" }
     ], "opened session must update the existing history row, not create a duplicate");
 
