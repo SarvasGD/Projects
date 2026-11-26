@@ -20,7 +20,7 @@
 
 Подтверждённый URL-идентификатор Google AI Mode — параметр `mtid` в URL вида `/search?mtid=...`. Chromium использует `https://google.com/search?mtid=123` как пример thread URL в тестах Contextual Tasks. Значения `q`, `udm`, `tid`, `thread` и hash без `mtid` самостоятельным ID не считаются.
 
-Дополнительно распознаются семантические DOM-атрибуты `data-thread-id`, `data-session-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id` и `data-mtid`. Их наличие в текущем живом Google DOM должно быть подтверждено диагностическим снимком; синтетические fixtures сами по себе не доказывают, что Google их использует.
+В живой истории Google подтверждён `data-thread-id` на вложенной кнопке внутри `div[role=listitem]`. Внешний listitem содержит полный заголовок; кнопка — стабильный ID. Другие атрибуты (`data-session-thread-id`, `data-conversation-id`, `data-chat-id`, `data-session-id`, `data-mtid`) остаются резервными кандидатами и не считаются доказанными live-маркерами без отдельного снимка.
 
 ## Подсчёт сообщений
 
@@ -58,3 +58,10 @@
 - Chromium test: https://chromium.googlesource.com/chromium/src/+/4fef79f06e4aec6e52462437cee96021459e4639/chrome/browser/contextual_tasks/contextual_tasks_page_handler_unittest.cc
 - Google AI Mode history: https://support.google.com/websearch/answer/16011537
 - LLMnesia Google AI Mode history importer: https://www.llmnesia.com/blog/google-ai-mode-history
+
+
+## Проверка на живой странице Google — 26.11.2026
+
+Получен реальный DOM-снимок версии 0.3.2: 20 строк истории, у всех 20 найден `data-thread-id`; ID находится на вложенном `button`, а полный заголовок — на внешнем `div[role=listitem]`. Область истории имеет размер 261×763 CSS px и scrollHeight около 11 492 px; Google сообщил, что список полностью загружен. В коде v0.4.1 строка теперь нормализуется к внешнему `role=listitem`, ID читается с вложенной кнопки, заголовок — с внешнего элемента, а открытие проксируется на вложенную кнопку.
+
+Снимок подтверждает identity истории и структуру строк, но не содержит достаточных сведений о DOM user/assistant внутри открытой сессии. Подсчёт реплик остаётся отдельным незакрытым пунктом Prototype Gate.
