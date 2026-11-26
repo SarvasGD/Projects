@@ -307,19 +307,19 @@ test("q-only DOM snapshot exposes safe row metadata but no query text or values"
   assert.ok(!snapshot.includes(secret));
 });
 
-test("current session resolves identity from semantic data-session-id",async()=>{
+test("current session resolves identity from the live Google data-thread-id marker",async()=>{
   const {w,T}=await boot();
   const main=w.document.querySelector("main");
   main.innerHTML=[
-    '<div data-session-id="session-77"></div>',
+    '<div data-thread-id="thread-77"></div>',
     '<div data-message-author-role="user">First question</div>',
     '<div data-message-author-role="assistant">First answer</div>',
     '<div data-message-author-role="user">Follow-up question</div>',
     '<div data-message-author-role="assistant">Second answer</div>'
   ].join("");
   T.captureCurrentPage();
-  assert.ok(T.state.chats["id:session-77"]);
-  assert.equal(T.state.chats["id:session-77"].userMessageCount,2);
+  assert.ok(T.state.chats["id:thread-77"]);
+  assert.equal(T.state.chats["id:thread-77"].userMessageCount,2);
 });
 
 test("opening a stable AI Mode session stores its user-turn count",async()=>{
