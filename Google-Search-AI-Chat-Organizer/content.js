@@ -1353,8 +1353,9 @@
     if (threadId) {
       const byThread = Object.keys(state.chats).find((key) => isStableChatKey(key) && state.chats[key].threadId === threadId);
       if (byThread) return byThread;
-      const idKey = "id:" + threadId;
-      if (state.chats[idKey]) return idKey;
+      // A currently opened session may be new to local storage. Its explicit DOM ID
+      // is sufficient to create the first local record; do not require a prior history scan.
+      return "id:" + threadId;
     }
     if (lastScan) {
       const row = lastScan.rows.find((item) => isCurrentRow(item.el));
